@@ -17,11 +17,11 @@ const STATUS_COLORS = {
   archived: "bg-slate-500/10 text-slate-600 border-slate-500/20"
 };
 
-export default function OpportunitiesList() {
+export default function ProductIdeasList() {
   const [status, setStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
-  
-  const { data: opps, isLoading } = useListOpportunities({ 
+
+  const { data: ideas, isLoading } = useListOpportunities({
     status: status === "all" ? undefined : status,
     search: search || undefined
   });
@@ -32,12 +32,14 @@ export default function OpportunitiesList() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Lightbulb className="size-8 text-primary" />
-            Opportunities
+            Product Ideas
           </h1>
-          <p className="text-muted-foreground mt-1">Discovered problems and feature requests waiting to be addressed.</p>
+          <p className="text-muted-foreground mt-1">Your central workspace for every product opportunity — from signal to release.</p>
         </div>
-        <Button className="shrink-0 gap-2">
-          <Plus className="size-4" /> New Opportunity
+        <Button className="shrink-0 gap-2" asChild>
+          <Link href="/discovery/opportunities/new">
+            <Plus className="size-4" /> New Product Idea
+          </Link>
         </Button>
       </header>
 
@@ -51,12 +53,12 @@ export default function OpportunitiesList() {
             <TabsTrigger value="archived" className="data-[state=active]:bg-secondary">Archived</TabsTrigger>
           </TabsList>
         </Tabs>
-        
+
         <div className="flex items-center gap-2 w-full sm:w-auto px-2 pb-2 sm:p-0">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search opportunities..." 
+            <Input
+              placeholder="Search product ideas..."
               className="pl-9 bg-background"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -73,10 +75,10 @@ export default function OpportunitiesList() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b">
               <tr>
-                <th className="px-6 py-4 font-medium">Opportunity</th>
+                <th className="px-6 py-4 font-medium">Product Idea</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium">Source</th>
-                <th className="px-6 py-4 font-medium">AI Match</th>
+                <th className="px-6 py-4 font-medium">AI Confidence</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -91,49 +93,49 @@ export default function OpportunitiesList() {
                     <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-16 inline-block" /></td>
                   </tr>
                 ))
-              ) : opps?.length === 0 ? (
+              ) : ideas?.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
-                    No opportunities found matching your criteria.
+                    No product ideas found. Create your first one to get started.
                   </td>
                 </tr>
               ) : (
-                opps?.map((opp) => (
-                  <tr key={opp.id} className="hover:bg-muted/30 transition-colors group">
+                ideas?.map((idea) => (
+                  <tr key={idea.id} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{opp.title}</div>
-                      <div className="text-muted-foreground line-clamp-1 max-w-xl">{opp.description}</div>
+                      <div className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{idea.title}</div>
+                      <div className="text-muted-foreground line-clamp-1 max-w-xl">{idea.description}</div>
                       <div className="flex gap-2 mt-2">
-                        {opp.category && <Badge variant="secondary" className="text-[10px]">{opp.category}</Badge>}
+                        {idea.category && <Badge variant="secondary" className="text-[10px]">{idea.category.replace(/_/g, ' ')}</Badge>}
                         <span className="text-[10px] text-muted-foreground flex items-center">
-                          Created {format(new Date(opp.createdAt), 'MMM d, yyyy')}
+                          Created {format(new Date(idea.createdAt), 'MMM d, yyyy')}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant="outline" className={STATUS_COLORS[opp.status as keyof typeof STATUS_COLORS] || ""}>
-                        {opp.status.replace(/_/g, ' ')}
+                      <Badge variant="outline" className={STATUS_COLORS[idea.status as keyof typeof STATUS_COLORS] || ""}>
+                        {idea.status.replace(/_/g, ' ')}
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-mono text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
-                        {opp.sourceType}
+                        {idea.sourceType}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {opp.confidenceScore ? (
+                      {idea.confidenceScore ? (
                         <div className="flex items-center gap-1.5 text-ai font-medium">
                           <BrainCircuit className="size-4" />
-                          {Math.round(opp.confidenceScore * 100)}%
+                          {Math.round(idea.confidenceScore * 100)}%
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-xs">Unscored</span>
+                        <span className="text-muted-foreground text-xs">Not analyzed</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/discovery/opportunities/${opp.id}`}>
-                          View
+                        <Link href={`/discovery/opportunities/${idea.id}`}>
+                          Open
                         </Link>
                       </Button>
                     </td>
