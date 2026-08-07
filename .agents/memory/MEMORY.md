@@ -1,0 +1,1 @@
+- [PM Copilot import fixes](pm-copilot-import-fixes.md) — design subagent tends to import from non-exported subpaths and use missing react-icons; fix patterns documented.
