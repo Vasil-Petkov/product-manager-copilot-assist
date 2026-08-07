@@ -58,7 +58,7 @@ export default function Home() {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Opportunities", value: stats?.totalOpportunities, icon: Sparkles },
+          { label: "Product Ideas", value: stats?.totalOpportunities, icon: Sparkles },
           { label: "New Signals", value: stats?.totalSignals, icon: Users },
           { label: "Competitors Tracked", value: stats?.totalCompetitors, icon: TrendingUp },
           { label: "Meetings Analyzed", value: stats?.totalMeetings, icon: CheckCircle2 },
@@ -81,10 +81,10 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Recent Opportunities Panel */}
+      {/* Recent Product Ideas Panel */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">Recent Opportunities</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Recent Product Ideas</h2>
           <Button variant="outline" asChild size="sm">
             <Link href="/discovery/opportunities">
               View All <ArrowRight className="ml-2 size-4" />
@@ -126,7 +126,7 @@ export default function Home() {
             ))}
             {(!opps || opps.length === 0) && (
               <div className="col-span-full py-12 text-center border rounded-lg bg-card text-muted-foreground border-dashed">
-                No new opportunities found. Try importing some feedback signals.
+                No Product Ideas yet. Add one from the Product Ideas page or analyze a meeting transcript.
               </div>
             )}
           </div>

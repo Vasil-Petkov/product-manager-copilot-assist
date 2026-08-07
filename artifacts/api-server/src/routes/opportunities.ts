@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, ilike, and, desc, SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { opportunitiesTable, signalsTable, feedbackTable } from "@workspace/db";
+import { recordTimeline } from "./product-ideas";
 
 const router: IRouter = Router();
 
@@ -50,6 +51,9 @@ router.post("/opportunities", async (req, res): Promise<void> => {
       status: status ?? "new",
     })
     .returning();
+
+  // Record timeline event
+  await recordTimeline(opp!.id, "created", `Product Idea created from ${sourceType ?? "manual"} source`);
 
   res.status(201).json({ ...opp!, tags: opp!.tags ?? [] });
 });
@@ -189,6 +193,12 @@ Return only valid JSON, no markdown.`,
     })
     .where(eq(opportunitiesTable.id, id))
     .returning();
+
+  await recordTimeline(id, "ai_analyzed", "AI analysis completed", {
+    sentiment: updated!.sentiment,
+    urgency: updated!.urgency,
+    confidenceScore: updated!.confidenceScore,
+  });
 
   res.json({ ...updated!, tags: updated!.tags ?? [] });
 });

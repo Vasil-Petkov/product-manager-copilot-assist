@@ -7,3 +7,6 @@ export * from "./insights";
 export * from "./prioritization";
 export * from "./conversations";
 export * from "./messages";
+export * from "./idea-comments";
+export * from "./idea-timeline";
+export * from "./idea-relations";

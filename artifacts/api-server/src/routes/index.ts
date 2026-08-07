@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import dashboardRouter from "./dashboard";
 import opportunitiesRouter from "./opportunities";
+import productIdeasRouter from "./product-ideas";
 import signalsRouter from "./signals";
 import competitorsRouter from "./competitors";
 import meetingsRouter from "./meetings";
@@ -14,6 +15,7 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(dashboardRouter);
+router.use(productIdeasRouter);  // product-ideas routes first (more specific paths)
 router.use(opportunitiesRouter);
 router.use(signalsRouter);
 router.use(competitorsRouter);

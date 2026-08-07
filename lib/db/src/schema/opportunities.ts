@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, real, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -9,17 +9,28 @@ export const opportunitiesTable = pgTable("opportunities", {
   category: text("category"),
   sourceType: text("source_type").notNull().default("manual"),
   originalContent: text("original_content"),
+  // AI Analysis fields
   aiSummary: text("ai_summary"),
+  problemStatement: text("problem_statement"),
+  rootCause: text("root_cause"),
   customerProblem: text("customer_problem"),
   suggestedSolution: text("suggested_solution"),
   businessValue: text("business_value"),
+  customerValue: text("customer_value"),
   estimatedCustomerImpact: text("estimated_customer_impact"),
   estimatedBusinessImpact: text("estimated_business_impact"),
+  dependencies: text("dependencies"),
+  aiRecommendation: text("ai_recommendation"),
+  openQuestions: text("open_questions").array().notNull().default([]),
+  // Scoring & status
   urgency: text("urgency"),
   confidenceScore: real("confidence_score"),
+  healthScore: real("health_score"),
   sentiment: text("sentiment"),
+  // Metadata
   tags: text("tags").array().notNull().default([]),
   status: text("status").notNull().default("new"),
+  owner: text("owner"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
