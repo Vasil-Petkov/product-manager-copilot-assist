@@ -1,12 +1,7 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, and, SQL } from "drizzle-orm";
+import { eq, ilike, and, desc, SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
-import {
-  opportunitiesTable,
-  signalsTable,
-  feedbackTable,
-  meetingsTable,
-} from "@workspace/db";
+import { opportunitiesTable, signalsTable, feedbackTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -20,36 +15,30 @@ router.get("/opportunities", async (req, res): Promise<void> => {
   if (sentiment) conditions.push(eq(opportunitiesTable.sentiment, sentiment));
   if (search) conditions.push(ilike(opportunitiesTable.title, `%${search}%`));
 
-  const opps =
-    conditions.length > 0
-      ? await db
-          .select()
-          .from(opportunitiesTable)
-          .where(and(...conditions))
-          .orderBy(opportunitiesTable.createdAt)
-      : await db.select().from(opportunitiesTable).orderBy(opportunitiesTable.createdAt);
+  const opps = conditions.length > 0
+    ? await db.select().from(opportunitiesTable).where(and(...conditions)).orderBy(desc(opportunitiesTable.createdAt))
+    : await db.select().from(opportunitiesTable).orderBy(desc(opportunitiesTable.createdAt));
 
-  res.json(
-    opps.map((o) => ({
-      ...o,
-      tags: o.tags ?? [],
-    }))
-  );
+  res.json(opps.map((o) => ({ ...o, tags: o.tags ?? [] })));
 });
 
 router.post("/opportunities", async (req, res): Promise<void> => {
   const { title, description, sourceType, category, originalContent, customerProblem, suggestedSolution, businessValue, urgency, tags, status } = req.body;
 
-  if (!title || !description) {
-    res.status(400).json({ error: "title and description are required" });
+  if (!title || !title.trim()) {
+    res.status(400).json({ error: "title is required" });
+    return;
+  }
+  if (!description || !description.trim()) {
+    res.status(400).json({ error: "description is required" });
     return;
   }
 
   const [opp] = await db
     .insert(opportunitiesTable)
     .values({
-      title,
-      description,
+      title: title.trim(),
+      description: description.trim(),
       sourceType: sourceType ?? "manual",
       category: category ?? null,
       originalContent: originalContent ?? null,
@@ -57,7 +46,7 @@ router.post("/opportunities", async (req, res): Promise<void> => {
       suggestedSolution: suggestedSolution ?? null,
       businessValue: businessValue ?? null,
       urgency: urgency ?? null,
-      tags: tags ?? [],
+      tags: Array.isArray(tags) ? tags : [],
       status: status ?? "new",
     })
     .returning();
@@ -66,32 +55,32 @@ router.post("/opportunities", async (req, res): Promise<void> => {
 });
 
 router.get("/opportunities/:id", async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
+  const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const [opp] = await db.select().from(opportunitiesTable).where(eq(opportunitiesTable.id, id));
   if (!opp) { res.status(404).json({ error: "Not found" }); return; }
 
-  // Build evidence panel
-  const signalCount = await db.select().from(signalsTable).where(eq(signalsTable.opportunityId, String(id)));
-  const feedbackCount = await db.select().from(feedbackTable).where(eq(feedbackTable.opportunityId, String(id)));
+  const [relatedSignals, relatedFeedback] = await Promise.all([
+    db.select().from(signalsTable).where(eq(signalsTable.opportunityId, String(id))),
+    db.select().from(feedbackTable).where(eq(feedbackTable.opportunityId, String(id))),
+  ]);
 
   const evidence = {
-    customerRequestCount: signalCount.length,
-    stakeholderMentions: feedbackCount.length,
+    customerRequestCount: relatedSignals.length,
+    stakeholderMentions: relatedFeedback.length,
     meetingMentions: 0,
     competitorReferences: 0,
-    socialMentions: signalCount.filter((s) => s.sourceType === "social_media").length,
-    exampleQuotes: signalCount.slice(0, 3).map((s) => s.content.substring(0, 150)),
-    sourceLinks: signalCount.filter((s) => s.sourceUrl).map((s) => s.sourceUrl!),
+    socialMentions: relatedSignals.filter((s) => s.sourceType === "social_media").length,
+    exampleQuotes: relatedSignals.slice(0, 3).map((s) => s.content.substring(0, 150)),
+    sourceLinks: relatedSignals.filter((s) => s.sourceUrl).map((s) => s.sourceUrl!),
   };
 
   res.json({
     ...opp,
     tags: opp.tags ?? [],
     evidence,
-    relatedSignals: signalCount.map((s) => ({
+    relatedSignals: relatedSignals.map((s) => ({
       ...s,
       opportunityId: s.opportunityId ? parseInt(s.opportunityId, 10) : null,
     })),
@@ -99,14 +88,24 @@ router.get("/opportunities/:id", async (req, res): Promise<void> => {
 });
 
 router.patch("/opportunities/:id", async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
+  const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
+  const fields = [
+    "title", "description", "category", "sourceType", "originalContent",
+    "customerProblem", "suggestedSolution", "businessValue", "urgency",
+    "tags", "status", "aiSummary", "sentiment", "confidenceScore",
+    "estimatedCustomerImpact", "estimatedBusinessImpact",
+  ];
+
   const updateData: Record<string, unknown> = {};
-  const fields = ["title", "description", "category", "sourceType", "customerProblem", "suggestedSolution", "businessValue", "urgency", "tags", "status"];
   for (const field of fields) {
     if (req.body[field] !== undefined) updateData[field] = req.body[field];
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    res.status(400).json({ error: "No fields to update" });
+    return;
   }
 
   const [updated] = await db
@@ -120,8 +119,7 @@ router.patch("/opportunities/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/opportunities/:id", async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
+  const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const [deleted] = await db.delete(opportunitiesTable).where(eq(opportunitiesTable.id, id)).returning();
@@ -130,46 +128,47 @@ router.delete("/opportunities/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/opportunities/:id/analyze", async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
+  const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const [opp] = await db.select().from(opportunitiesTable).where(eq(opportunitiesTable.id, id));
   if (!opp) { res.status(404).json({ error: "Not found" }); return; }
 
-  const { openai } = await import("@workspace/integrations-openai-ai-server");
-
-  const prompt = `Analyze this product opportunity and return a JSON object with these fields:
-- summary (string): 2-3 sentence executive summary of the opportunity
-- sentiment (string): one of "positive", "negative", "neutral", "mixed"
-- urgency (string): one of "low", "medium", "high", "critical"
-- category (string): one of "feature_request", "bug", "improvement", "pain_point", "market_opportunity", "integration"
-- confidenceScore (number 0-1): how confident you are in this analysis
-- estimatedCustomerImpact (string): brief assessment of customer impact
-- estimatedBusinessImpact (string): brief assessment of business/revenue impact
-
-Opportunity Title: ${opp.title}
-Description: ${opp.description}
-Source Type: ${opp.sourceType}
-Original Content: ${opp.originalContent ?? "N/A"}
-Customer Problem: ${opp.customerProblem ?? "N/A"}
-
-Return only valid JSON, no markdown.`;
-
   let aiResult: Record<string, unknown> = {};
   try {
+    const { openai } = await import("@workspace/integrations-openai-ai-server");
+
     const response = await openai.chat.completions.create({
       model: "gpt-5.6-luna",
       max_completion_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{
+        role: "user",
+        content: `Analyze this product opportunity and return a JSON object with:
+- summary (string): 2-3 sentence executive summary
+- sentiment (string): one of "positive", "negative", "neutral", "mixed"
+- urgency (string): one of "low", "medium", "high", "critical"
+- category (string): one of "feature_request", "bug", "improvement", "pain_point", "market_opportunity", "integration"
+- confidenceScore (number 0-1): confidence in this analysis
+- estimatedCustomerImpact (string): brief customer impact assessment
+- estimatedBusinessImpact (string): brief business/revenue impact assessment
+
+Title: ${opp.title}
+Description: ${opp.description}
+Source: ${opp.sourceType}
+Customer Problem: ${opp.customerProblem ?? "N/A"}
+Original Content: ${opp.originalContent ?? "N/A"}
+
+Return only valid JSON, no markdown.`,
+      }],
     });
-    const raw = response.choices[0]?.message?.content ?? "{}";
-    aiResult = JSON.parse(raw.replace(/```json\n?|\n?```/g, "").trim());
+
+    const raw = (response.choices[0]?.message?.content ?? "{}").replace(/```json\n?|\n?```/g, "").trim();
+    aiResult = JSON.parse(raw);
   } catch {
     aiResult = {
-      summary: `${opp.title} represents a product opportunity requiring further analysis.`,
-      sentiment: "neutral",
-      urgency: "medium",
+      summary: `${opp.title} is a product opportunity requiring attention. Review the description and customer context for full assessment.`,
+      sentiment: opp.sentiment ?? "neutral",
+      urgency: opp.urgency ?? "medium",
       category: opp.category ?? "feature_request",
       confidenceScore: 0.5,
       estimatedCustomerImpact: "To be assessed",
@@ -180,13 +179,13 @@ Return only valid JSON, no markdown.`;
   const [updated] = await db
     .update(opportunitiesTable)
     .set({
-      aiSummary: aiResult.summary as string,
-      sentiment: aiResult.sentiment as string,
-      urgency: aiResult.urgency as string,
-      category: aiResult.category as string,
-      confidenceScore: aiResult.confidenceScore as number,
-      estimatedCustomerImpact: aiResult.estimatedCustomerImpact as string,
-      estimatedBusinessImpact: aiResult.estimatedBusinessImpact as string,
+      aiSummary: typeof aiResult.summary === "string" ? aiResult.summary : null,
+      sentiment: typeof aiResult.sentiment === "string" ? aiResult.sentiment : null,
+      urgency: typeof aiResult.urgency === "string" ? aiResult.urgency : null,
+      category: typeof aiResult.category === "string" ? aiResult.category : opp.category,
+      confidenceScore: typeof aiResult.confidenceScore === "number" ? aiResult.confidenceScore : null,
+      estimatedCustomerImpact: typeof aiResult.estimatedCustomerImpact === "string" ? aiResult.estimatedCustomerImpact : null,
+      estimatedBusinessImpact: typeof aiResult.estimatedBusinessImpact === "string" ? aiResult.estimatedBusinessImpact : null,
     })
     .where(eq(opportunitiesTable.id, id))
     .returning();
