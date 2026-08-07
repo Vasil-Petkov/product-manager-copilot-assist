@@ -43,8 +43,8 @@ export default function Home() {
                   <div>
                     <span className="font-semibold block mb-1">Attention Required</span>
                     <ul className="list-disc list-inside pl-4 space-y-1">
-                      {summary.urgentItems.map((item, i) => (
-                        <li key={i}>{item}</li>
+                      {summary.urgentItems.map((item: string | { id: number; title: string; urgency: string; status: string }, i: number) => (
+                        <li key={i}>{typeof item === "string" ? item : item.title}</li>
                       ))}
                     </ul>
                   </div>
