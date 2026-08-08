@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useListCompetitors, useCreateCompetitor, getListCompetitorsQueryKey } from "@workspace/api-client-react";
+import { useListCompetitors, useCreateCompetitor, useDeleteCompetitor, getListCompetitorsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Target, ExternalLink, Activity, Plus, Globe } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Target, ExternalLink, Activity, Plus, Globe, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,6 +23,7 @@ const THREAT_COLORS = {
 export default function CompetitorsList() {
   const { data: competitors, isLoading } = useListCompetitors();
   const createCompetitor = useCreateCompetitor();
+  const deleteCompetitor = useDeleteCompetitor();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -113,11 +115,42 @@ export default function CompetitorsList() {
               <CardHeader className="p-5 pb-3">
                 <div className="flex justify-between items-start mb-2">
                   <Badge variant="outline" className="text-xs bg-muted/50">{comp.industry || "Uncategorized"}</Badge>
-                  {comp.threatLevel && (
-                    <Badge variant="outline" className={THREAT_COLORS[comp.threatLevel.toLowerCase() as keyof typeof THREAT_COLORS] || ""}>
-                      {comp.threatLevel} Threat
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {comp.threatLevel && (
+                      <Badge variant="outline" className={THREAT_COLORS[comp.threatLevel.toLowerCase() as keyof typeof THREAT_COLORS] || ""}>
+                        {comp.threatLevel} Threat
+                      </Badge>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this competitor?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            <strong>{comp.name}</strong> and all its intelligence data will be permanently removed.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => deleteCompetitor.mutate({ id: comp.id }, {
+                              onSuccess: () => {
+                                toast({ title: "Competitor deleted." });
+                                queryClient.invalidateQueries({ queryKey: getListCompetitorsQueryKey() });
+                              }
+                            })}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
                 <CardTitle className="text-xl flex items-center gap-2">
                   {comp.name}
