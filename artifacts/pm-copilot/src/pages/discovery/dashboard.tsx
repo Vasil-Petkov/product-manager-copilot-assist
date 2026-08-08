@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetDashboardStats, useGetDailySummary } from "@workspace/api-client-react";
 import { Brain, Compass, Users, Map, AlertCircle, BarChart3, MessageSquare } from "lucide-react";
+import { HelpTooltip } from "@/components/help-tooltip";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 const COLORS = {
@@ -25,7 +26,18 @@ export default function DiscoveryDashboard() {
     <div className="p-8 w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Discovery Intelligence</h1>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            Discovery Intelligence
+            <HelpTooltip
+              purpose="Your command center for Product Discovery."
+              bullets={[
+                "View overall discovery health",
+                "Monitor new opportunities",
+                "Track insights and sentiment",
+                "See key metrics at a glance",
+              ]}
+            />
+          </h1>
           <p className="text-muted-foreground mt-1">Aggregate signals and uncover what to build next.</p>
         </div>
       </header>

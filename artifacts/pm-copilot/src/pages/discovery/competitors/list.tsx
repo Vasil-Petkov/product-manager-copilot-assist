@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Target, ExternalLink, Activity, Plus, Globe, Trash2 } from "lucide-react";
+import { HelpTooltip } from "@/components/help-tooltip";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -57,6 +58,15 @@ export default function CompetitorsList() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Target className="size-8 text-primary" />
             Competitor Intelligence
+            <HelpTooltip
+              purpose="Monitor competitors and market positioning."
+              bullets={[
+                "Track competitors",
+                "Compare products",
+                "Review AI competitive insights",
+                "Identify market threats",
+              ]}
+            />
           </h1>
           <p className="text-muted-foreground mt-1">Track market movements, feature parity, and positioning.</p>
         </div>
