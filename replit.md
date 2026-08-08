@@ -1,45 +1,60 @@
-# [Project name]
+# Copilot Assist — Product Manager AI SaaS
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+## Project overview
 
-## Run & Operate
+AI-powered product management copilot. Captures signals from customer feedback, meetings, and competitor research; organises them into Product Ideas; runs AI analysis via a centralised **Context Engine**; and supports RICE/ICE/MoSCoW prioritisation.
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+**Current sprint:** 2.6 — Architecture Stabilization & Production Readiness
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+| Layer        | Technology                                      |
+|--------------|-------------------------------------------------|
+| Frontend     | React 18 + Vite, Wouter v3, React Query, shadcn/ui |
+| Backend      | Express 5 + TypeScript, Pino                    |
+| Database     | PostgreSQL via Drizzle ORM                      |
+| Auth         | Replit Auth (OpenID Connect / PKCE)             |
+| AI           | OpenAI `gpt-5.6-luna` via integrations proxy    |
+| Codegen      | OpenAPI spec → Orval → React Query + Zod        |
 
-## Where things live
+## Key paths
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- Frontend: `artifacts/pm-copilot/` — served at `/`
+- API server: `artifacts/api-server/` — served at `/api`, port 8080
+- DB schema: `lib/db/src/schema/`
+- OpenAPI spec: `lib/api-spec/openapi.yaml` (source of truth for API shape)
+- Generated client: `lib/api-client-react/src/generated/`
+- Generated Zod schemas: `lib/api-zod/src/generated/`
+- Context Engine: `artifacts/api-server/src/services/contextEngine.ts`
+- Developer docs: `docs/ARCHITECTURE.md`
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **Context Engine is backend-only** — no UI; internal service gathers all Product Idea context before AI calls.
+- **Auth is Replit Auth (OIDC)** — modular so it can be replaced with Clerk/Auth0 later.
+- **`userId` FK is nullable** on all entity tables — preserves backward compatibility with pre-auth data.
+- **Codegen**: avoid `format: email` / `format: uri` in OpenAPI schemas — generates `z.email()` / `z.url()` (Zod v4 only), project uses Zod v3.
+- **Text→integer migrations**: done with raw SQL USING cast before `drizzle-kit push` (drizzle-kit cannot auto-cast text→integer).
 
-## Product
+## Running the project
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+```bash
+# Install
+pnpm install
+
+# Push DB schema
+pnpm --filter @workspace/db run push
+
+# Regenerate API client + Zod schemas
+pnpm --filter @workspace/api-spec run codegen
+
+# Dev (both servers via workflows)
+# API server:  artifacts/api-server: API Server
+# Frontend:    artifacts/pm-copilot: web
+```
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- No new business features in Sprint 2.6 — architecture only.
+- Keep `userId` FK nullable on all entity tables.
+- When in doubt about API response shape changes, prefer backward-compatible flat arrays over wrapped objects so generated hooks keep working.

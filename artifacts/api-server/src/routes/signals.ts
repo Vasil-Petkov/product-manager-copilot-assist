@@ -2,138 +2,176 @@ import { Router, type IRouter } from "express";
 import { eq, and, SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { signalsTable, opportunitiesTable } from "@workspace/db";
+import { z } from "zod";
+import { requireAuth } from "../middlewares/requireAuth";
+import { validate } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router: IRouter = Router();
 
-router.get("/signals", async (req, res): Promise<void> => {
-  const { source_type, processed } = req.query as Record<string, string>;
-
-  const conditions: SQL[] = [];
-  if (source_type) conditions.push(eq(signalsTable.sourceType, source_type));
-  if (processed !== undefined) {
-    conditions.push(eq(signalsTable.processed, processed === "true"));
-  }
-
-  const signals =
-    conditions.length > 0
-      ? await db.select().from(signalsTable).where(and(...conditions)).orderBy(signalsTable.createdAt)
-      : await db.select().from(signalsTable).orderBy(signalsTable.createdAt);
-
-  res.json(
-    signals.map((s) => ({
-      ...s,
-      opportunityId: s.opportunityId ? parseInt(s.opportunityId, 10) : null,
-    }))
-  );
+const createSignalSchema = z.object({
+  content: z.string().min(1, "content is required"),
+  sourceType: z.string().min(1, "sourceType is required"),
+  sourcePlatform: z.string().optional().nullable(),
+  author: z.string().optional().nullable(),
+  sourceUrl: z.string().optional().nullable(),
+  votes: z.number().int().optional().nullable(),
+  customerId: z.string().optional().nullable(),
 });
 
-router.post("/signals", async (req, res): Promise<void> => {
-  const { content, sourceType, sourcePlatform, author, sourceUrl, votes, customerId } = req.body;
-
-  if (!content || !sourceType) {
-    res.status(400).json({ error: "content and sourceType are required" });
-    return;
-  }
-
-  // Insert signal
-  const [signal] = await db
-    .insert(signalsTable)
-    .values({
-      content,
-      sourceType,
-      sourcePlatform: sourcePlatform ?? null,
-      author: author ?? null,
-      sourceUrl: sourceUrl ?? null,
-      votes: votes ? String(votes) : null,
-      customerId: customerId ?? null,
-      sentiment: detectSentiment(content),
-      processed: false,
-    })
-    .returning();
-
-  // Auto-create opportunity from signal
-  const [opp] = await db
-    .insert(opportunitiesTable)
-    .values({
-      title: `Signal: ${content.substring(0, 60)}${content.length > 60 ? "..." : ""}`,
-      description: content,
-      sourceType,
-      originalContent: content,
-      sentiment: signal!.sentiment,
-      status: "new",
-      tags: [],
-    })
-    .returning();
-
-  // Mark signal as processed and link to opportunity
-  const [updatedSignal] = await db
-    .update(signalsTable)
-    .set({ processed: true, opportunityId: String(opp!.id) })
-    .where(eq(signalsTable.id, signal!.id))
-    .returning();
-
-  res.status(201).json({
-    signal: { ...updatedSignal!, opportunityId: opp!.id },
-    opportunity: { ...opp!, tags: opp!.tags ?? [] },
-  });
+const bulkSignalSchema = z.object({
+  signals: z.array(z.union([
+    z.string(),
+    z.object({
+      content: z.string(),
+      sourceType: z.string().optional(),
+      sourcePlatform: z.string().optional().nullable(),
+      author: z.string().optional().nullable(),
+    }),
+  ])).min(1),
+  sourceType: z.string().optional(),
 });
 
-router.delete("/signals/:id", async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+// ─── List ────────────────────────────────────────────────────────────────────
 
-  const [deleted] = await db.delete(signalsTable).where(eq(signalsTable.id, id)).returning();
-  if (!deleted) { res.status(404).json({ error: "Not found" }); return; }
-  res.sendStatus(204);
+router.get("/signals", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const { source_type, processed, limit = "50", offset = "0" } = req.query as Record<string, string>;
+    const take = Math.min(parseInt(limit, 10) || 50, 200);
+    const skip = parseInt(offset, 10) || 0;
+
+    const conditions: SQL[] = [];
+    if (source_type) conditions.push(eq(signalsTable.sourceType, source_type));
+    if (processed !== undefined) conditions.push(eq(signalsTable.processed, processed === "true"));
+
+    const signals = conditions.length > 0
+      ? await db.select().from(signalsTable).where(and(...conditions))
+          .orderBy(signalsTable.createdAt).limit(take).offset(skip)
+      : await db.select().from(signalsTable)
+          .orderBy(signalsTable.createdAt).limit(take).offset(skip);
+
+    res.json(signals);
+  } catch (err) { next(err); }
 });
 
-router.post("/signals/bulk", async (req, res): Promise<void> => {
-  const { signals, sourceType } = req.body;
-  if (!Array.isArray(signals) || signals.length === 0) {
-    res.status(400).json({ error: "signals array is required" });
-    return;
-  }
+// ─── Create (auto-creates opportunity) ───────────────────────────────────────
 
-  const insertedSignals = [];
-  let opportunitiesCreated = 0;
+router.post(
+  "/signals",
+  requireAuth,
+  validate(createSignalSchema),
+  async (req, res, next): Promise<void> => {
+    try {
+      const body = req.body as z.infer<typeof createSignalSchema>;
 
-  for (const s of signals) {
-    const content = s.content ?? s;
-    if (!content) continue;
+      const [signal] = await db.insert(signalsTable).values({
+        content: body.content,
+        sourceType: body.sourceType,
+        sourcePlatform: body.sourcePlatform ?? null,
+        author: body.author ?? null,
+        sourceUrl: body.sourceUrl ?? null,
+        votes: body.votes ?? null,
+        customerId: body.customerId ?? null,
+        sentiment: detectSentiment(body.content),
+        processed: false,
+      }).returning();
 
-    const [signal] = await db
-      .insert(signalsTable)
-      .values({
-        content: String(content),
-        sourceType: s.sourceType ?? sourceType ?? "other",
-        sourcePlatform: s.sourcePlatform ?? null,
-        author: s.author ?? null,
-        sentiment: detectSentiment(String(content)),
-        processed: true,
-      })
-      .returning();
+      // Auto-create opportunity from signal
+      const [opp] = await db.insert(opportunitiesTable).values({
+        title: `Signal: ${body.content.substring(0, 60)}${body.content.length > 60 ? "..." : ""}`,
+        description: body.content,
+        sourceType: body.sourceType,
+        originalContent: body.content,
+        sentiment: signal!.sentiment,
+        status: "new",
+        tags: [],
+        userId: req.user!.id,
+      }).returning();
 
-    // Create opportunity
-    await db.insert(opportunitiesTable).values({
-      title: `Signal: ${String(content).substring(0, 60)}${String(content).length > 60 ? "..." : ""}`,
-      description: String(content),
-      sourceType: s.sourceType ?? sourceType ?? "other",
-      originalContent: String(content),
-      sentiment: signal!.sentiment,
-      status: "new",
-      tags: [],
-    });
-    opportunitiesCreated++;
-    insertedSignals.push({ ...signal!, opportunityId: null });
-  }
+      // Mark signal as processed and link to opportunity
+      const [updatedSignal] = await db
+        .update(signalsTable)
+        .set({ processed: true, opportunityId: opp!.id })
+        .where(eq(signalsTable.id, signal!.id))
+        .returning();
 
-  res.status(201).json({
-    imported: insertedSignals.length,
-    opportunitiesCreated,
-    signals: insertedSignals,
-  });
+      res.status(201).json({
+        signal: updatedSignal!,
+        opportunity: { ...opp!, tags: opp!.tags ?? [] },
+      });
+    } catch (err) { next(err); }
+  },
+);
+
+// ─── Delete ──────────────────────────────────────────────────────────────────
+
+router.delete("/signals/:id", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) throw new AppError(400, "Invalid id");
+
+    const [deleted] = await db.delete(signalsTable).where(eq(signalsTable.id, id)).returning();
+    if (!deleted) throw new AppError(404, "Signal not found");
+    res.sendStatus(204);
+  } catch (err) { next(err); }
 });
+
+// ─── Bulk Import ─────────────────────────────────────────────────────────────
+
+router.post(
+  "/signals/bulk",
+  requireAuth,
+  validate(bulkSignalSchema),
+  async (req, res, next): Promise<void> => {
+    try {
+      const { signals, sourceType } = req.body as z.infer<typeof bulkSignalSchema>;
+      const insertedSignals = [];
+      let opportunitiesCreated = 0;
+
+      for (const s of signals) {
+        const content = typeof s === "string" ? s : s.content;
+        if (!content) continue;
+
+        const srcType = (typeof s === "object" ? s.sourceType : null) ?? sourceType ?? "other";
+
+        const [signal] = await db.insert(signalsTable).values({
+          content,
+          sourceType: srcType,
+          sourcePlatform: typeof s === "object" ? s.sourcePlatform ?? null : null,
+          author: typeof s === "object" ? s.author ?? null : null,
+          sentiment: detectSentiment(content),
+          processed: true,
+        }).returning();
+
+        const [opp] = await db.insert(opportunitiesTable).values({
+          title: `Signal: ${content.substring(0, 60)}${content.length > 60 ? "..." : ""}`,
+          description: content,
+          sourceType: srcType,
+          originalContent: content,
+          sentiment: signal!.sentiment,
+          status: "new",
+          tags: [],
+          userId: req.user!.id,
+        }).returning();
+
+        await db.update(signalsTable)
+          .set({ opportunityId: opp!.id })
+          .where(eq(signalsTable.id, signal!.id));
+
+        opportunitiesCreated++;
+        insertedSignals.push(signal!);
+      }
+
+      res.status(201).json({
+        imported: insertedSignals.length,
+        opportunitiesCreated,
+        signals: insertedSignals,
+      });
+    } catch (err) { next(err); }
+  },
+);
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function detectSentiment(text: string): string {
   const lower = text.toLowerCase();

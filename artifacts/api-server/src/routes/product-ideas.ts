@@ -1,10 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, ilike, or, and, SQL } from "drizzle-orm";
+import { eq, desc, ilike, or } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   opportunitiesTable,
-  signalsTable,
-  feedbackTable,
   meetingsTable,
   competitorsTable,
   ideaCommentsTable,
@@ -12,10 +10,15 @@ import {
   ideaMeetingsTable,
   ideaCompetitorsTable,
 } from "@workspace/db";
+import { z } from "zod";
+import { requireAuth } from "../middlewares/requireAuth";
+import { validate } from "../middlewares/validate";
+import { AppError, NotFoundError } from "../middlewares/errorHandler";
+import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
 
 const router: IRouter = Router();
 
-// ─── Internal helper ────────────────────────────────────────────────────────
+// ─── Internal Timeline Helper ─────────────────────────────────────────────────
 
 export async function recordTimeline(
   ideaId: number,
@@ -35,370 +38,290 @@ export async function recordTimeline(
   }
 }
 
-// ─── Workspace ──────────────────────────────────────────────────────────────
+// ─── Workspace Aggregate (uses Context Engine) ────────────────────────────────
 
-router.get("/product-ideas/:id/workspace", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [idea] = await db.select().from(opportunitiesTable).where(eq(opportunitiesTable.id, id));
-  if (!idea) { res.status(404).json({ error: "Not found" }); return; }
-
-  const [
-    relatedSignals,
-    relatedFeedback,
-    linkedMeetingRows,
-    linkedCompetitorRows,
-    commentCount,
-    timelineCount,
-  ] = await Promise.all([
-    db.select().from(signalsTable).where(eq(signalsTable.opportunityId, String(id))),
-    db.select().from(feedbackTable).where(eq(feedbackTable.opportunityId, String(id))),
-    db.select({ meetingId: ideaMeetingsTable.meetingId })
-      .from(ideaMeetingsTable).where(eq(ideaMeetingsTable.ideaId, id)),
-    db.select({ competitorId: ideaCompetitorsTable.competitorId })
-      .from(ideaCompetitorsTable).where(eq(ideaCompetitorsTable.ideaId, id)),
-    db.select().from(ideaCommentsTable).where(eq(ideaCommentsTable.ideaId, id)),
-    db.select().from(ideaTimelineTable).where(eq(ideaTimelineTable.ideaId, id)),
-  ]);
-
-  // Resolve linked objects
-  const linkedMeetings = linkedMeetingRows.length > 0
-    ? await db.select().from(meetingsTable).where(
-        or(...linkedMeetingRows.map(r => eq(meetingsTable.id, r.meetingId)))!
-      )
-    : [];
-  const linkedCompetitors = linkedCompetitorRows.length > 0
-    ? await db.select().from(competitorsTable).where(
-        or(...linkedCompetitorRows.map(r => eq(competitorsTable.id, r.competitorId)))!
-      )
-    : [];
-
-  const socialSignals = relatedSignals.filter(s => s.sourceType === "social_media");
-
-  const evidence = {
-    customerRequestCount: relatedSignals.length,
-    stakeholderMentions: relatedFeedback.length,
-    meetingMentions: linkedMeetings.length,
-    competitorReferences: linkedCompetitors.length,
-    socialMentions: socialSignals.length,
-    exampleQuotes: relatedSignals.slice(0, 4).map(s => s.content.substring(0, 200)),
-    sourceLinks: relatedSignals.filter(s => s.sourceUrl).map(s => s.sourceUrl!).slice(0, 5),
-    feedbackQuotes: relatedFeedback.slice(0, 3).map(f => f.description.substring(0, 200)),
-  };
-
-  // Compute health score inline
-  const health = computeHealthScore({
-    signals: relatedSignals.length,
-    feedback: relatedFeedback.length,
-    meetings: linkedMeetings.length,
-    competitors: linkedCompetitors.length,
-    confidenceScore: idea.confidenceScore ?? 0,
-    sourceTypes: [...new Set(relatedSignals.map(s => s.sourceType))].length,
-    updatedAt: idea.updatedAt,
-  });
-
-  res.json({
-    idea: { ...idea, tags: idea.tags ?? [], openQuestions: idea.openQuestions ?? [] },
-    evidence,
-    linkedMeetings: linkedMeetings.map(m => ({ ...m, attendees: m.attendees ?? [] })),
-    linkedCompetitors,
-    relatedSignals: relatedSignals.slice(0, 20).map(s => ({
-      ...s,
-      opportunityId: s.opportunityId ? parseInt(s.opportunityId, 10) : null,
-    })),
-    relatedFeedback,
-    commentCount: commentCount.length,
-    timelineCount: timelineCount.length,
-    health,
-  });
-});
-
-// ─── Comments ────────────────────────────────────────────────────────────────
-
-router.get("/product-ideas/:id/comments", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const comments = await db
-    .select()
-    .from(ideaCommentsTable)
-    .where(eq(ideaCommentsTable.ideaId, id))
-    .orderBy(desc(ideaCommentsTable.createdAt));
-
-  res.json(comments);
-});
-
-router.post("/product-ideas/:id/comments", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const { content, author } = req.body;
-  if (!content || typeof content !== "string" || !content.trim()) {
-    res.status(400).json({ error: "content is required" });
-    return;
-  }
-
-  const [comment] = await db
-    .insert(ideaCommentsTable)
-    .values({ ideaId: id, author: author?.trim() || "PM", content: content.trim() })
-    .returning();
-
-  await recordTimeline(id, "comment_added", `Comment added by ${comment!.author}`);
-
-  res.status(201).json(comment!);
-});
-
-router.delete("/product-ideas/:id/comments/:commentId", async (req, res): Promise<void> => {
-  const ideaId = parseInt(req.params.id, 10);
-  const commentId = parseInt(req.params.commentId, 10);
-  if (isNaN(ideaId) || isNaN(commentId)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [deleted] = await db
-    .delete(ideaCommentsTable)
-    .where(and(eq(ideaCommentsTable.id, commentId), eq(ideaCommentsTable.ideaId, ideaId)))
-    .returning();
-
-  if (!deleted) { res.status(404).json({ error: "Not found" }); return; }
-  res.sendStatus(204);
-});
-
-// ─── Timeline ────────────────────────────────────────────────────────────────
-
-router.get("/product-ideas/:id/timeline", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const events = await db
-    .select()
-    .from(ideaTimelineTable)
-    .where(eq(ideaTimelineTable.ideaId, id))
-    .orderBy(desc(ideaTimelineTable.createdAt));
-
-  res.json(events);
-});
-
-// ─── Health Score ─────────────────────────────────────────────────────────────
-
-router.get("/product-ideas/:id/health", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [idea] = await db.select().from(opportunitiesTable).where(eq(opportunitiesTable.id, id));
-  if (!idea) { res.status(404).json({ error: "Not found" }); return; }
-
-  const [signals, feedback, linkedMeetingRows, linkedCompetitorRows] = await Promise.all([
-    db.select().from(signalsTable).where(eq(signalsTable.opportunityId, String(id))),
-    db.select().from(feedbackTable).where(eq(feedbackTable.opportunityId, String(id))),
-    db.select({ meetingId: ideaMeetingsTable.meetingId }).from(ideaMeetingsTable).where(eq(ideaMeetingsTable.ideaId, id)),
-    db.select({ competitorId: ideaCompetitorsTable.competitorId }).from(ideaCompetitorsTable).where(eq(ideaCompetitorsTable.ideaId, id)),
-  ]);
-
-  const health = computeHealthScore({
-    signals: signals.length,
-    feedback: feedback.length,
-    meetings: linkedMeetingRows.length,
-    competitors: linkedCompetitorRows.length,
-    confidenceScore: idea.confidenceScore ?? 0,
-    sourceTypes: [...new Set(signals.map(s => s.sourceType))].length,
-    updatedAt: idea.updatedAt,
-  });
-
-  res.json(health);
-});
-
-// ─── Link / Unlink Meetings ──────────────────────────────────────────────────
-
-router.post("/product-ideas/:id/link-meeting/:meetingId", async (req, res): Promise<void> => {
-  const ideaId = parseInt(req.params.id, 10);
-  const meetingId = parseInt(req.params.meetingId, 10);
-  if (isNaN(ideaId) || isNaN(meetingId)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, meetingId));
-  if (!meeting) { res.status(404).json({ error: "Meeting not found" }); return; }
-
-  // Upsert — ignore if already linked
-  const existing = await db.select()
-    .from(ideaMeetingsTable)
-    .where(and(eq(ideaMeetingsTable.ideaId, ideaId), eq(ideaMeetingsTable.meetingId, meetingId)));
-
-  if (existing.length === 0) {
-    await db.insert(ideaMeetingsTable).values({ ideaId, meetingId });
-    await recordTimeline(ideaId, "meeting_linked", `Meeting linked: ${meeting.title}`, { meetingId });
-  }
-
-  res.json({ linked: true, meetingId, meetingTitle: meeting.title });
-});
-
-router.delete("/product-ideas/:id/link-meeting/:meetingId", async (req, res): Promise<void> => {
-  const ideaId = parseInt(req.params.id, 10);
-  const meetingId = parseInt(req.params.meetingId, 10);
-  if (isNaN(ideaId) || isNaN(meetingId)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  await db.delete(ideaMeetingsTable)
-    .where(and(eq(ideaMeetingsTable.ideaId, ideaId), eq(ideaMeetingsTable.meetingId, meetingId)));
-
-  res.sendStatus(204);
-});
-
-// ─── Link / Unlink Competitors ───────────────────────────────────────────────
-
-router.post("/product-ideas/:id/link-competitor/:competitorId", async (req, res): Promise<void> => {
-  const ideaId = parseInt(req.params.id, 10);
-  const competitorId = parseInt(req.params.competitorId, 10);
-  if (isNaN(ideaId) || isNaN(competitorId)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [competitor] = await db.select().from(competitorsTable).where(eq(competitorsTable.id, competitorId));
-  if (!competitor) { res.status(404).json({ error: "Competitor not found" }); return; }
-
-  const existing = await db.select()
-    .from(ideaCompetitorsTable)
-    .where(and(eq(ideaCompetitorsTable.ideaId, ideaId), eq(ideaCompetitorsTable.competitorId, competitorId)));
-
-  if (existing.length === 0) {
-    await db.insert(ideaCompetitorsTable).values({ ideaId, competitorId });
-    await recordTimeline(ideaId, "competitor_linked", `Competitor linked: ${competitor.name}`, { competitorId });
-  }
-
-  res.json({ linked: true, competitorId, competitorName: competitor.name });
-});
-
-router.delete("/product-ideas/:id/link-competitor/:competitorId", async (req, res): Promise<void> => {
-  const ideaId = parseInt(req.params.id, 10);
-  const competitorId = parseInt(req.params.competitorId, 10);
-  if (isNaN(ideaId) || isNaN(competitorId)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  await db.delete(ideaCompetitorsTable)
-    .where(and(eq(ideaCompetitorsTable.ideaId, ideaId), eq(ideaCompetitorsTable.competitorId, competitorId)));
-
-  res.sendStatus(204);
-});
-
-// ─── Duplicate Detection ─────────────────────────────────────────────────────
-
-router.post("/product-ideas/duplicate-check", async (req, res): Promise<void> => {
-  const { title, description } = req.body;
-  if (!title || !description) { res.status(400).json({ error: "title and description required" }); return; }
-
-  // Get existing ideas to compare against
-  const existing = await db
-    .select({ id: opportunitiesTable.id, title: opportunitiesTable.title, description: opportunitiesTable.description })
-    .from(opportunitiesTable)
-    .orderBy(desc(opportunitiesTable.createdAt))
-    .limit(30);
-
-  if (existing.length === 0) { res.json({ duplicates: [] }); return; }
-
+router.get("/product-ideas/:id/workspace", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const { openai } = await import("@workspace/integrations-openai-ai-server");
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const prompt = `You are a product deduplication engine. Given a new product idea and a list of existing ones, find any that are semantically similar (same problem, feature, or domain).
+    const ctx = await buildProductContext(id);
 
-New idea:
-Title: ${title}
-Description: ${description}
-
-Existing ideas (id, title, description):
-${existing.map(e => `[${e.id}] "${e.title}" — ${e.description.substring(0, 120)}`).join("\n")}
-
-Return a JSON array of matches with similarity > 0.6:
-[{ "id": number, "title": string, "similarity": number (0-1), "reason": string }]
-
-Return only valid JSON. Empty array if no matches.`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-5.6-luna",
-      max_completion_tokens: 512,
-      messages: [{ role: "user", content: prompt }],
+    res.json({
+      idea: { ...ctx.idea, tags: ctx.idea.tags ?? [] },
+      evidence: ctx.evidence,
+      linkedMeetings: ctx.linkedMeetings,
+      linkedCompetitors: ctx.linkedCompetitors,
+      timeline: ctx.timeline,
+      comments: ctx.comments,
+      prioritization: ctx.prioritization,
+      relatedIdeas: ctx.relatedIdeas,
+      relatedInsights: ctx.relatedInsights,
+      health: ctx.health,
+      assembledAt: ctx.assembledAt,
     });
-
-    const raw = (response.choices[0]?.message?.content ?? "[]").replace(/```json\n?|\n?```/g, "").trim();
-    const matches = JSON.parse(raw);
-
-    res.json({ duplicates: Array.isArray(matches) ? matches.slice(0, 3) : [] });
-  } catch {
-    res.json({ duplicates: [] });
-  }
+  } catch (err) { next(err); }
 });
 
-// ─── Global Search ───────────────────────────────────────────────────────────
+// ─── Comments ─────────────────────────────────────────────────────────────────
 
-router.get("/product-ideas/search", async (req, res): Promise<void> => {
-  const q = (req.query.q as string)?.trim();
-  if (!q || q.length < 2) { res.json({ ideas: [], meetings: [], competitors: [] }); return; }
-
-  const conditions: SQL[] = [
-    ilike(opportunitiesTable.title, `%${q}%`),
-    ilike(opportunitiesTable.description, `%${q}%`),
-  ];
-  if (opportunitiesTable.customerProblem) conditions.push(ilike(opportunitiesTable.customerProblem, `%${q}%`));
-  if (opportunitiesTable.aiSummary) conditions.push(ilike(opportunitiesTable.aiSummary, `%${q}%`));
-
-  const [ideas, meetings, competitors] = await Promise.all([
-    db.select({
-      id: opportunitiesTable.id,
-      title: opportunitiesTable.title,
-      description: opportunitiesTable.description,
-      status: opportunitiesTable.status,
-      category: opportunitiesTable.category,
-      confidenceScore: opportunitiesTable.confidenceScore,
-    }).from(opportunitiesTable).where(or(...conditions)!).orderBy(desc(opportunitiesTable.createdAt)).limit(10),
-
-    db.select({ id: meetingsTable.id, title: meetingsTable.title })
-      .from(meetingsTable).where(ilike(meetingsTable.title, `%${q}%`)).limit(5),
-
-    db.select({ id: competitorsTable.id, name: competitorsTable.name, industry: competitorsTable.industry })
-      .from(competitorsTable).where(ilike(competitorsTable.name, `%${q}%`)).limit(5),
-  ]);
-
-  res.json({ ideas, meetings, competitors, query: q });
+const createCommentSchema = z.object({
+  content: z.string().min(1, "content is required"),
+  author: z.string().optional().default("PM"),
 });
 
-// ─── Health Score Computation ────────────────────────────────────────────────
+router.get("/product-ideas/:id/comments", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-function computeHealthScore(params: {
-  signals: number;
-  feedback: number;
-  meetings: number;
-  competitors: number;
-  confidenceScore: number;
-  sourceTypes: number;
-  updatedAt: Date;
-}): {
-  score: number;
-  grade: string;
-  breakdown: Record<string, { label: string; value: number; max: number; score: number }>;
-} {
-  const { signals, feedback, meetings, competitors, confidenceScore, sourceTypes, updatedAt } = params;
+    const comments = await db.select().from(ideaCommentsTable)
+      .where(eq(ideaCommentsTable.ideaId, id))
+      .orderBy(desc(ideaCommentsTable.createdAt));
 
-  // Each dimension → normalized score
-  const customerDemand = Math.min(signals / 10, 1) * 25;
-  const stakeholderSupport = Math.min(feedback / 3, 1) * 20;
-  const meetingFrequency = Math.min(meetings / 2, 1) * 15;
-  const competitorContext = Math.min(competitors / 2, 1) * 15;
-  const aiConfidence = (confidenceScore ?? 0) * 15;
-  const evidenceQuality = Math.min(sourceTypes / 3, 1) * 10;
+    res.json(comments);
+  } catch (err) { next(err); }
+});
 
-  // Freshness: ideas not updated in 30+ days lose points
-  const daysSinceUpdate = (Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24);
-  const freshness = Math.max(0, 1 - daysSinceUpdate / 60) * 0; // 0 weight for now (no stale data yet)
+router.post(
+  "/product-ideas/:id/comments",
+  requireAuth,
+  validate(createCommentSchema),
+  async (req, res, next): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-  const score = Math.round(customerDemand + stakeholderSupport + meetingFrequency + competitorContext + aiConfidence + evidenceQuality + freshness);
+      const body = req.body as z.infer<typeof createCommentSchema>;
 
-  const grade = score >= 80 ? "A" : score >= 60 ? "B" : score >= 40 ? "C" : score >= 20 ? "D" : "F";
+      const [comment] = await db.insert(ideaCommentsTable).values({
+        ideaId: id,
+        content: body.content,
+        author: req.user?.firstName ?? body.author ?? "PM",
+      }).returning();
 
-  return {
-    score,
-    grade,
-    breakdown: {
-      customerDemand: { label: "Customer Demand", value: signals, max: 10, score: Math.round(customerDemand) },
-      stakeholderSupport: { label: "Stakeholder Support", value: feedback, max: 3, score: Math.round(stakeholderSupport) },
-      meetingFrequency: { label: "Meeting Evidence", value: meetings, max: 2, score: Math.round(meetingFrequency) },
-      competitorContext: { label: "Competitor Context", value: competitors, max: 2, score: Math.round(competitorContext) },
-      aiConfidence: { label: "AI Confidence", value: Math.round(confidenceScore * 100), max: 100, score: Math.round(aiConfidence) },
-      evidenceQuality: { label: "Source Diversity", value: sourceTypes, max: 3, score: Math.round(evidenceQuality) },
-    },
-  };
-}
+      await recordTimeline(id, "comment_added", `Comment added by ${comment!.author}`);
+
+      res.status(201).json(comment!);
+    } catch (err) { next(err); }
+  },
+);
+
+router.delete("/product-ideas/:id/comments/:commentId", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const commentId = parseInt(req.params.commentId, 10);
+    if (isNaN(id) || isNaN(commentId)) throw new AppError(400, "Invalid id");
+
+    const [deleted] = await db.delete(ideaCommentsTable)
+      .where(eq(ideaCommentsTable.id, commentId))
+      .returning();
+
+    if (!deleted) throw new NotFoundError("Comment");
+    res.sendStatus(204);
+  } catch (err) { next(err); }
+});
+
+// ─── Timeline ─────────────────────────────────────────────────────────────────
+
+router.get("/product-ideas/:id/timeline", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) throw new AppError(400, "Invalid id");
+
+    const events = await db.select().from(ideaTimelineTable)
+      .where(eq(ideaTimelineTable.ideaId, id))
+      .orderBy(desc(ideaTimelineTable.createdAt));
+
+    res.json(events);
+  } catch (err) { next(err); }
+});
+
+// ─── Health Score (uses Context Engine) ──────────────────────────────────────
+
+router.get("/product-ideas/:id/health", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) throw new AppError(400, "Invalid id");
+
+    const ctx = await buildProductContext(id);
+    res.json(ctx.health);
+  } catch (err) { next(err); }
+});
+
+// ─── Link / Unlink Meetings ───────────────────────────────────────────────────
+
+router.post("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const ideaId = parseInt(req.params.id, 10);
+    const meetingId = parseInt(req.params.meetingId, 10);
+    if (isNaN(ideaId) || isNaN(meetingId)) throw new AppError(400, "Invalid id");
+
+    const [meeting] = await db.select({ title: meetingsTable.title })
+      .from(meetingsTable).where(eq(meetingsTable.id, meetingId));
+    if (!meeting) throw new NotFoundError("Meeting");
+
+    // Upsert (ignore duplicate)
+    await db.insert(ideaMeetingsTable)
+      .values({ ideaId, meetingId })
+      .onConflictDoNothing();
+
+    await recordTimeline(ideaId, "meeting_linked", `Meeting linked: ${meeting.title}`, { meetingId });
+
+    res.json({ linked: true, meetingId, meetingTitle: meeting.title });
+  } catch (err) { next(err); }
+});
+
+router.delete("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const ideaId = parseInt(req.params.id, 10);
+    const meetingId = parseInt(req.params.meetingId, 10);
+    if (isNaN(ideaId) || isNaN(meetingId)) throw new AppError(400, "Invalid id");
+
+    await db.delete(ideaMeetingsTable)
+      .where(eq(ideaMeetingsTable.ideaId, ideaId));
+
+    res.json({ unlinked: true });
+  } catch (err) { next(err); }
+});
+
+// ─── Link / Unlink Competitors ────────────────────────────────────────────────
+
+router.post("/product-ideas/:id/link-competitor/:competitorId", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const ideaId = parseInt(req.params.id, 10);
+    const competitorId = parseInt(req.params.competitorId, 10);
+    if (isNaN(ideaId) || isNaN(competitorId)) throw new AppError(400, "Invalid id");
+
+    const [competitor] = await db.select({ name: competitorsTable.name })
+      .from(competitorsTable).where(eq(competitorsTable.id, competitorId));
+    if (!competitor) throw new NotFoundError("Competitor");
+
+    await db.insert(ideaCompetitorsTable)
+      .values({ ideaId, competitorId })
+      .onConflictDoNothing();
+
+    await recordTimeline(ideaId, "competitor_linked", `Competitor linked: ${competitor.name}`, { competitorId });
+
+    res.json({ linked: true, competitorId, competitorName: competitor.name });
+  } catch (err) { next(err); }
+});
+
+router.delete("/product-ideas/:id/link-competitor/:competitorId", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const ideaId = parseInt(req.params.id, 10);
+    const competitorId = parseInt(req.params.competitorId, 10);
+    if (isNaN(ideaId) || isNaN(competitorId)) throw new AppError(400, "Invalid id");
+
+    await db.delete(ideaCompetitorsTable)
+      .where(eq(ideaCompetitorsTable.ideaId, ideaId));
+
+    res.json({ unlinked: true });
+  } catch (err) { next(err); }
+});
+
+// ─── AI Duplicate Check (uses Context Engine for richer comparison) ────────────
+
+const duplicateCheckSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional().default(""),
+  ideaId: z.number().int().optional(),
+});
+
+router.post(
+  "/product-ideas/duplicate-check",
+  requireAuth,
+  validate(duplicateCheckSchema),
+  async (req, res, next): Promise<void> => {
+    try {
+      const body = req.body as z.infer<typeof duplicateCheckSchema>;
+      const existing = await db.select({
+        id: opportunitiesTable.id,
+        title: opportunitiesTable.title,
+        description: opportunitiesTable.description,
+        status: opportunitiesTable.status,
+        category: opportunitiesTable.category,
+      }).from(opportunitiesTable).orderBy(desc(opportunitiesTable.createdAt)).limit(30);
+
+      const candidates = existing.filter((o) => !body.ideaId || o.id !== body.ideaId);
+
+      if (candidates.length === 0) {
+        res.json({ duplicates: [] });
+        return;
+      }
+
+      const { openai } = await import("@workspace/integrations-openai-ai-server");
+
+      let duplicates: Array<{ id: number; title: string; similarity: number; reason: string }> = [];
+
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-5.6-luna",
+          max_completion_tokens: 800,
+          messages: [{
+            role: "user",
+            content: `Check for semantic duplicates. New idea:
+Title: "${body.title}"
+Description: "${body.description}"
+
+Existing ideas:
+${candidates.map((o, i) => `[${i}] ID:${o.id} "${o.title}": ${o.description?.substring(0, 100)}`).join("\n")}
+
+Return JSON array of duplicates (similarity >= 0.6):
+[{ "id": number, "title": string, "similarity": number (0-1), "reason": string }]
+Return [] if no duplicates. Return only valid JSON array.`,
+          }],
+        });
+
+        const raw = (response.choices[0]?.message?.content ?? "[]").replace(/```json\n?|\n?```/g, "").trim();
+        duplicates = JSON.parse(raw);
+      } catch {
+        // Return empty on AI failure
+      }
+
+      res.json({ duplicates: duplicates.filter((d) => d.similarity >= 0.6) });
+    } catch (err) { next(err); }
+  },
+);
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+
+router.get("/product-ideas/search", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const q = (req.query.q as string) ?? "";
+    if (!q.trim()) {
+      res.json({ ideas: [], meetings: [] });
+      return;
+    }
+
+    const [ideas, meetings] = await Promise.all([
+      db.select({
+        id: opportunitiesTable.id,
+        title: opportunitiesTable.title,
+        status: opportunitiesTable.status,
+        category: opportunitiesTable.category,
+        urgency: opportunitiesTable.urgency,
+      }).from(opportunitiesTable)
+        .where(or(
+          ilike(opportunitiesTable.title, `%${q}%`),
+          ilike(opportunitiesTable.description, `%${q}%`),
+          ilike(opportunitiesTable.aiSummary, `%${q}%`),
+        ))
+        .orderBy(desc(opportunitiesTable.createdAt))
+        .limit(20),
+
+      db.select({
+        id: meetingsTable.id,
+        title: meetingsTable.title,
+        meetingDate: meetingsTable.meetingDate,
+      }).from(meetingsTable)
+        .where(ilike(meetingsTable.title, `%${q}%`))
+        .orderBy(desc(meetingsTable.meetingDate))
+        .limit(10),
+    ]);
+
+    res.json({ ideas, meetings });
+  } catch (err) { next(err); }
+});
 
 export default router;

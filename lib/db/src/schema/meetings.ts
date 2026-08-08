@@ -1,6 +1,7 @@
 import { pgTable, text, serial, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { usersTable } from "./auth";
 
 export const meetingsTable = pgTable("meetings", {
   id: serial("id").primaryKey(),
@@ -12,6 +13,7 @@ export const meetingsTable = pgTable("meetings", {
   analyzed: boolean("analyzed").notNull().default(false),
   opportunitiesExtracted: text("opportunities_extracted").notNull().default("0"),
   extractedInsights: jsonb("extracted_insights"),
+  userId: text("user_id").references(() => usersTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

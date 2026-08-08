@@ -1,10 +1,12 @@
-import { pgTable, text, serial, timestamp, real, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, real, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { opportunitiesTable } from "./opportunities";
 
+// Fixed: opportunity_id was serial (auto-increment type) — now proper integer FK
 export const prioritizationScoresTable = pgTable("prioritization_scores", {
   id: serial("id").primaryKey(),
-  opportunityId: serial("opportunity_id").notNull(),
+  opportunityId: integer("opportunity_id").notNull().references(() => opportunitiesTable.id, { onDelete: "cascade" }),
   framework: text("framework").notNull(),
   riceReach: real("rice_reach"),
   riceImpact: real("rice_impact"),
