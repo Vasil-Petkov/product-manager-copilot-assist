@@ -2,10 +2,11 @@ import { Router, type IRouter } from "express";
 import { eq, and, SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { prioritizationScoresTable, opportunitiesTable } from "@workspace/db";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-router.get("/prioritization", async (req, res): Promise<void> => {
+router.get("/prioritization", requireAuth, async (req, res, next): Promise<void> => {
   const { framework } = req.query as Record<string, string>;
 
   const opps = await db.select().from(opportunitiesTable).orderBy(opportunitiesTable.createdAt);
@@ -55,7 +56,7 @@ router.get("/prioritization", async (req, res): Promise<void> => {
   res.json(results);
 });
 
-router.post("/prioritization/score", async (req, res): Promise<void> => {
+router.post("/prioritization/score", requireAuth, async (req, res, next): Promise<void> => {
   const { opportunityId, framework, riceReach, riceImpact, riceConfidence, riceEffort, iceImpact, iceConfidence, iceEase, moscowCategory, kanoCategory } = req.body;
 
   if (!opportunityId || !framework) {
@@ -97,7 +98,7 @@ router.post("/prioritization/score", async (req, res): Promise<void> => {
   res.status(201).json(score!);
 });
 
-router.patch("/prioritization/:id", async (req, res): Promise<void> => {
+router.patch("/prioritization/:id", requireAuth, async (req, res, next): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
@@ -126,7 +127,7 @@ router.patch("/prioritization/:id", async (req, res): Promise<void> => {
   res.json(updated);
 });
 
-router.post("/prioritization/ai-recommend", async (req, res): Promise<void> => {
+router.post("/prioritization/ai-recommend", requireAuth, async (req, res, next): Promise<void> => {
   const opps = await db.select().from(opportunitiesTable).orderBy(opportunitiesTable.createdAt).limit(20);
 
   const recommendations = opps.map((opp, i) => ({

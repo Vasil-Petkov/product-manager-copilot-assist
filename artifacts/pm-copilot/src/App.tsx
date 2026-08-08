@@ -4,11 +4,13 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { AppLayout } from './components/layout';
+import { useAuth } from '@workspace/replit-auth-web';
 
 import Home from './pages/home';
 import DiscoveryDashboard from './pages/discovery/dashboard';
 import OpportunitiesList from './pages/discovery/opportunities/list';
 import OpportunityDetail from './pages/discovery/opportunities/detail';
+import NewOpportunity from './pages/discovery/opportunities/new';
 import FeedbackSources from './pages/discovery/sources';
 import CompetitorsList from './pages/discovery/competitors/list';
 import CompetitorDetail from './pages/discovery/competitors/detail';
@@ -29,6 +31,43 @@ const queryClient = new QueryClient({
   },
 });
 
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isLoading, isAuthenticated, login } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="size-8 rounded-lg bg-primary mx-auto flex items-center justify-center font-bold text-xl text-primary-foreground">C</div>
+          <p className="text-muted-foreground text-sm">Loading&hellip;</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-6 max-w-sm px-6">
+          <div className="space-y-2">
+            <div className="size-12 rounded-xl bg-primary mx-auto flex items-center justify-center font-bold text-2xl text-primary-foreground">C</div>
+            <h1 className="text-2xl font-bold tracking-tight">Copilot Assist</h1>
+            <p className="text-muted-foreground text-sm">AI-powered product discovery for modern PMs.</p>
+          </div>
+          <button
+            onClick={login}
+            className="w-full bg-primary text-primary-foreground rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            Log in to continue
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function Router() {
   return (
     <AppLayout>
@@ -38,6 +77,7 @@ function Router() {
         {/* Discovery Routes */}
         <Route path="/discovery" component={DiscoveryDashboard} />
         <Route path="/discovery/opportunities" component={OpportunitiesList} />
+        <Route path="/discovery/opportunities/new" component={NewOpportunity} />
         <Route path="/discovery/opportunities/:id" component={OpportunityDetail} />
         <Route path="/discovery/sources" component={FeedbackSources} />
         <Route path="/discovery/competitors" component={CompetitorsList} />
@@ -69,7 +109,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
+          <AuthGate>
+            <Router />
+          </AuthGate>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

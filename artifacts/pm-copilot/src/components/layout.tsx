@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { type: "divider", label: "Product Discovery" },
   { href: "/discovery", label: "Discovery Dashboard", icon: Compass },
-  { href: "/discovery/opportunities", label: "Opportunities", icon: Lightbulb },
+  { href: "/discovery/opportunities", label: "Product Ideas", icon: Lightbulb },
   { href: "/discovery/sources", label: "Feedback Sources", icon: Database },
   { href: "/discovery/competitors", label: "Competitors", icon: Target },
   { href: "/discovery/meetings", label: "Meetings", icon: Video },

@@ -1,6 +1,7 @@
-import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { opportunitiesTable } from "./opportunities";
 
 export const feedbackTable = pgTable("stakeholder_feedback", {
   id: serial("id").primaryKey(),
@@ -10,7 +11,8 @@ export const feedbackTable = pgTable("stakeholder_feedback", {
   customerImpact: text("customer_impact"),
   businessContext: text("business_context"),
   urgency: text("urgency"),
-  opportunityId: text("opportunity_id"),
+  // Proper FK reference — was text before (data integrity fix)
+  opportunityId: integer("opportunity_id").references(() => opportunitiesTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -2,253 +2,266 @@ import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { meetingsTable, opportunitiesTable } from "@workspace/db";
+import { z } from "zod";
+import { requireAuth } from "../middlewares/requireAuth";
+import { validate } from "../middlewares/validate";
+import { AppError, NotFoundError } from "../middlewares/errorHandler";
+import { recordTimeline } from "./product-ideas";
+import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
 
 const router: IRouter = Router();
 
-router.get("/meetings", async (req, res): Promise<void> => {
-  const meetings = await db.select().from(meetingsTable).orderBy(desc(meetingsTable.meetingDate));
-  res.json(
-    meetings.map((m) => ({
+const createMeetingSchema = z.object({
+  title: z.string().min(1, "title is required"),
+  meetingDate: z.string().min(1, "meetingDate is required"),
+  attendees: z.array(z.string()).optional().default([]),
+  transcript: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+const updateMeetingSchema = createMeetingSchema.partial();
+
+// ─── List ────────────────────────────────────────────────────────────────────
+
+router.get("/meetings", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const { limit = "50", offset = "0" } = req.query as Record<string, string>;
+    const take = Math.min(parseInt(limit, 10) || 50, 200);
+    const skip = parseInt(offset, 10) || 0;
+
+    const meetings = await db.select().from(meetingsTable)
+      .orderBy(desc(meetingsTable.meetingDate)).limit(take).offset(skip);
+
+    res.json(meetings.map((m) => ({
       ...m,
       attendees: m.attendees ?? [],
       opportunitiesExtracted: parseInt(m.opportunitiesExtracted ?? "0", 10),
-    }))
-  );
+    })));
+  } catch (err) { next(err); }
 });
 
-router.post("/meetings", async (req, res): Promise<void> => {
-  const { title, meetingDate, attendees, transcript, notes } = req.body;
-  if (!title || !meetingDate) {
-    res.status(400).json({ error: "title and meetingDate are required" });
-    return;
-  }
+// ─── Create ──────────────────────────────────────────────────────────────────
 
-  const [meeting] = await db
-    .insert(meetingsTable)
-    .values({
-      title,
-      meetingDate: new Date(meetingDate),
-      attendees: Array.isArray(attendees) ? attendees : [],
-      transcript: transcript ?? null,
-      notes: notes ?? null,
-      analyzed: false,
-      opportunitiesExtracted: "0",
-    })
-    .returning();
+router.post(
+  "/meetings",
+  requireAuth,
+  validate(createMeetingSchema),
+  async (req, res, next): Promise<void> => {
+    try {
+      const body = req.body as z.infer<typeof createMeetingSchema>;
+      const [meeting] = await db.insert(meetingsTable).values({
+        title: body.title,
+        meetingDate: new Date(body.meetingDate),
+        attendees: body.attendees ?? [],
+        transcript: body.transcript ?? null,
+        notes: body.notes ?? null,
+        analyzed: false,
+        opportunitiesExtracted: "0",
+        userId: req.user!.id,
+      }).returning();
 
-  res.status(201).json({
-    ...meeting!,
-    attendees: meeting!.attendees ?? [],
-    opportunitiesExtracted: 0,
-  });
-});
+      res.status(201).json({
+        ...meeting!,
+        attendees: meeting!.attendees ?? [],
+        opportunitiesExtracted: 0,
+      });
+    } catch (err) { next(err); }
+  },
+);
 
-router.get("/meetings/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+// ─── Get One ─────────────────────────────────────────────────────────────────
 
-  const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, id));
-  if (!meeting) { res.status(404).json({ error: "Not found" }); return; }
-
-  res.json({
-    ...meeting,
-    attendees: meeting.attendees ?? [],
-    opportunitiesExtracted: parseInt(meeting.opportunitiesExtracted ?? "0", 10),
-    extractedInsights: meeting.extractedInsights ?? null,
-  });
-});
-
-router.patch("/meetings/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const updateData: Record<string, unknown> = {};
-  if (req.body.title !== undefined) updateData.title = req.body.title;
-  if (req.body.attendees !== undefined) updateData.attendees = req.body.attendees;
-  if (req.body.transcript !== undefined) updateData.transcript = req.body.transcript;
-  if (req.body.notes !== undefined) updateData.notes = req.body.notes;
-  if (req.body.meetingDate !== undefined) updateData.meetingDate = new Date(req.body.meetingDate);
-
-  if (Object.keys(updateData).length === 0) {
-    res.status(400).json({ error: "No fields to update" });
-    return;
-  }
-
-  const [updated] = await db
-    .update(meetingsTable)
-    .set(updateData as never)
-    .where(eq(meetingsTable.id, id))
-    .returning();
-
-  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
-  res.json({
-    ...updated,
-    attendees: updated.attendees ?? [],
-    opportunitiesExtracted: parseInt(updated.opportunitiesExtracted ?? "0", 10),
-  });
-});
-
-router.delete("/meetings/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [deleted] = await db.delete(meetingsTable).where(eq(meetingsTable.id, id)).returning();
-  if (!deleted) { res.status(404).json({ error: "Not found" }); return; }
-  res.sendStatus(204);
-});
-
-router.post("/meetings/:id/analyze", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, id));
-  if (!meeting) { res.status(404).json({ error: "Not found" }); return; }
-
-  const content = meeting.transcript ?? meeting.notes ?? "";
-  const insights = await extractInsightsFromText(content, meeting.title);
-
-  // Save opportunities from ALL insight categories
-  let opportunitiesCreated = 0;
-
-  // Pain points → opportunities (category: pain_point)
-  const painPoints: string[] = Array.isArray(insights.painPoints) ? insights.painPoints : [];
-  for (const pp of painPoints.slice(0, 3)) {
-    if (!pp || typeof pp !== "string") continue;
-    await db.insert(opportunitiesTable).values({
-      title: pp.substring(0, 200),
-      description: `Pain point extracted from meeting: "${meeting.title}"`,
-      sourceType: "meeting",
-      category: "pain_point",
-      customerProblem: pp,
-      status: "new",
-      tags: ["meeting-extracted", "pain-point"],
-    });
-    opportunitiesCreated++;
-  }
-
-  // Feature requests → opportunities (category: feature_request)
-  const featureRequests: string[] = Array.isArray(insights.featureRequests) ? insights.featureRequests : [];
-  for (const fr of featureRequests.slice(0, 3)) {
-    if (!fr || typeof fr !== "string") continue;
-    await db.insert(opportunitiesTable).values({
-      title: fr.substring(0, 200),
-      description: `Feature request extracted from meeting: "${meeting.title}"`,
-      sourceType: "meeting",
-      category: "feature_request",
-      suggestedSolution: fr,
-      status: "new",
-      tags: ["meeting-extracted", "feature-request"],
-    });
-    opportunitiesCreated++;
-  }
-
-  // Business opportunities → opportunities (category: market_opportunity)
-  const bizOpps: string[] = Array.isArray(insights.businessOpportunities) ? insights.businessOpportunities : [];
-  for (const bo of bizOpps.slice(0, 2)) {
-    if (!bo || typeof bo !== "string") continue;
-    await db.insert(opportunitiesTable).values({
-      title: bo.substring(0, 200),
-      description: `Business opportunity identified in meeting: "${meeting.title}"`,
-      sourceType: "meeting",
-      category: "market_opportunity",
-      businessValue: bo,
-      status: "new",
-      tags: ["meeting-extracted", "opportunity"],
-    });
-    opportunitiesCreated++;
-  }
-
-  const [updated] = await db
-    .update(meetingsTable)
-    .set({
-      analyzed: true,
-      opportunitiesExtracted: String(opportunitiesCreated),
-      extractedInsights: insights as never,
-    })
-    .where(eq(meetingsTable.id, id))
-    .returning();
-
-  res.json({
-    ...updated!,
-    attendees: updated!.attendees ?? [],
-    opportunitiesExtracted: opportunitiesCreated,
-    extractedInsights: insights,
-  });
-});
-
-async function extractInsightsFromText(text: string, meetingTitle: string) {
-  const empty = {
-    painPoints: [] as string[],
-    featureRequests: [] as string[],
-    risks: [] as string[],
-    actionItems: [] as string[],
-    businessOpportunities: [] as string[],
-    competitorMentions: [] as string[],
-    openQuestions: [] as string[],
-    summary: "",
-  };
-
-  if (!text || text.trim().length === 0) {
-    return {
-      ...empty,
-      painPoints: [`No transcript available for: ${meetingTitle}`],
-      summary: `Meeting "${meetingTitle}" has no transcript. Upload one to extract AI insights.`,
-    };
-  }
-
+router.get("/meetings/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) throw new AppError(400, "Invalid id");
+
+    const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, id));
+    if (!meeting) throw new NotFoundError("Meeting");
+
+    res.json({
+      ...meeting,
+      attendees: meeting.attendees ?? [],
+      opportunitiesExtracted: parseInt(meeting.opportunitiesExtracted ?? "0", 10),
+      extractedInsights: meeting.extractedInsights ?? null,
+    });
+  } catch (err) { next(err); }
+});
+
+// ─── Update ──────────────────────────────────────────────────────────────────
+
+router.patch(
+  "/meetings/:id",
+  requireAuth,
+  validate(updateMeetingSchema),
+  async (req, res, next): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) throw new AppError(400, "Invalid id");
+
+      const body = req.body as z.infer<typeof updateMeetingSchema>;
+      const updateData: Record<string, unknown> = {};
+      if (body.title !== undefined) updateData.title = body.title;
+      if (body.meetingDate !== undefined) updateData.meetingDate = new Date(body.meetingDate);
+      if (body.attendees !== undefined) updateData.attendees = body.attendees;
+      if (body.transcript !== undefined) updateData.transcript = body.transcript;
+      if (body.notes !== undefined) updateData.notes = body.notes;
+
+      const [updated] = await db.update(meetingsTable)
+        .set(updateData as never)
+        .where(eq(meetingsTable.id, id))
+        .returning();
+
+      if (!updated) throw new NotFoundError("Meeting");
+      res.json({
+        ...updated,
+        attendees: updated.attendees ?? [],
+        opportunitiesExtracted: parseInt(updated.opportunitiesExtracted ?? "0", 10),
+      });
+    } catch (err) { next(err); }
+  },
+);
+
+// ─── Delete ──────────────────────────────────────────────────────────────────
+
+router.delete("/meetings/:id", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) throw new AppError(400, "Invalid id");
+
+    const [deleted] = await db.delete(meetingsTable).where(eq(meetingsTable.id, id)).returning();
+    if (!deleted) throw new NotFoundError("Meeting");
+    res.sendStatus(204);
+  } catch (err) { next(err); }
+});
+
+// ─── AI Analyze (via Context Engine for each extracted idea) ──────────────────
+
+router.post("/meetings/:id/analyze", requireAuth, async (req, res, next): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) throw new AppError(400, "Invalid id");
+
+    const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, id));
+    if (!meeting) throw new NotFoundError("Meeting");
+
     const { openai } = await import("@workspace/integrations-openai-ai-server");
 
-    const prompt = `Analyze this meeting transcript and extract structured insights. Return a JSON object with exactly these fields (all arrays of concise strings):
-- painPoints: customer/user pain points and frustrations mentioned
-- featureRequests: specific features or capabilities requested
-- risks: risks, concerns, or blockers raised
-- actionItems: concrete next steps or action items
-- businessOpportunities: market or business opportunities identified
-- competitorMentions: any competitor products or alternatives mentioned
-- openQuestions: unresolved questions needing follow-up
-- summary: 2-3 sentence executive summary
+    let extractedInsights: Record<string, unknown> = {};
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-5.6-luna",
+        max_completion_tokens: 3000,
+        messages: [{
+          role: "user",
+          content: `You are an expert product manager analyzing a customer/team meeting transcript.
 
-Meeting: ${meetingTitle}
+Meeting: "${meeting.title}"
+Date: ${meeting.meetingDate.toISOString().split("T")[0]}
+Attendees: ${(meeting.attendees ?? []).join(", ") || "Unknown"}
+
 Transcript:
-${text.substring(0, 4000)}
+${meeting.transcript ?? meeting.notes ?? "No transcript provided"}
 
-Return only valid JSON, no markdown or code blocks.`;
+Extract the following from this meeting. Return valid JSON:
+{
+  "summary": "2-3 sentence meeting summary",
+  "keyThemes": ["theme1", "theme2"],
+  "actionItems": ["action1", "action2"],
+  "painPoints": [
+    { "title": "Pain point title", "description": "Description", "urgency": "high|medium|low", "customerSegment": "segment" }
+  ],
+  "featureRequests": [
+    { "title": "Feature title", "description": "Description", "businessValue": "Why this matters" }
+  ],
+  "businessOpportunities": [
+    { "title": "Opportunity title", "description": "Description", "marketSize": "Estimate" }
+  ],
+  "sentimentOverall": "positive|neutral|negative"
+}`,
+        }],
+      });
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5.6-luna",
-      max_completion_tokens: 2048,
-      messages: [{ role: "user", content: prompt }],
+      const raw = (response.choices[0]?.message?.content ?? "{}").replace(/```json\n?|\n?```/g, "").trim();
+      extractedInsights = JSON.parse(raw);
+    } catch {
+      extractedInsights = {
+        summary: `Meeting "${meeting.title}" analyzed. Review transcript for details.`,
+        keyThemes: [],
+        actionItems: [],
+        painPoints: [],
+        featureRequests: [],
+        businessOpportunities: [],
+        sentimentOverall: "neutral",
+      };
+    }
+
+    // Extract and create Product Ideas
+    const createdOpps: Array<typeof opportunitiesTable.$inferSelect> = [];
+    const allExtracted = [
+      ...((extractedInsights.painPoints as Array<Record<string, string>>) ?? []).map((p) => ({
+        title: p.title ?? "Pain Point",
+        description: p.description ?? "",
+        category: "pain_point" as const,
+        urgency: (p.urgency as "low" | "medium" | "high" | "critical") ?? "medium",
+        customerProblem: p.description,
+        customerSegment: p.customerSegment,
+      })),
+      ...((extractedInsights.featureRequests as Array<Record<string, string>>) ?? []).map((f) => ({
+        title: f.title ?? "Feature Request",
+        description: f.description ?? "",
+        category: "feature_request" as const,
+        urgency: "medium" as const,
+        businessValue: f.businessValue,
+      })),
+      ...((extractedInsights.businessOpportunities as Array<Record<string, string>>) ?? []).map((b) => ({
+        title: b.title ?? "Market Opportunity",
+        description: b.description ?? "",
+        category: "market_opportunity" as const,
+        urgency: "medium" as const,
+        businessValue: b.description,
+      })),
+    ];
+
+    for (const item of allExtracted) {
+      if (!item.title || !item.description) continue;
+      const [opp] = await db.insert(opportunitiesTable).values({
+        title: item.title,
+        description: item.description,
+        sourceType: "meeting",
+        category: item.category,
+        urgency: item.urgency,
+        customerProblem: "customerProblem" in item ? item.customerProblem : null,
+        businessValue: "businessValue" in item ? item.businessValue : null,
+        status: "new",
+        tags: [],
+        userId: req.user!.id,
+      }).returning();
+
+      if (opp) {
+        createdOpps.push(opp);
+        await recordTimeline(opp.id, "created", `Extracted from meeting: ${meeting.title}`);
+      }
+    }
+
+    // Update meeting as analyzed
+    const [updated] = await db
+      .update(meetingsTable)
+      .set({
+        analyzed: true,
+        opportunitiesExtracted: String(createdOpps.length),
+        extractedInsights,
+      })
+      .where(eq(meetingsTable.id, id))
+      .returning();
+
+    res.json({
+      meeting: { ...updated!, attendees: updated!.attendees ?? [], opportunitiesExtracted: createdOpps.length },
+      extractedInsights,
+      opportunitiesCreated: createdOpps.length,
+      opportunities: createdOpps.map((o) => ({ ...o, tags: o.tags ?? [] })),
     });
-
-    const raw = (response.choices[0]?.message?.content ?? "{}").replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(raw);
-
-    // Ensure all array fields are actually arrays
-    return {
-      painPoints: Array.isArray(parsed.painPoints) ? parsed.painPoints : [],
-      featureRequests: Array.isArray(parsed.featureRequests) ? parsed.featureRequests : [],
-      risks: Array.isArray(parsed.risks) ? parsed.risks : [],
-      actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
-      businessOpportunities: Array.isArray(parsed.businessOpportunities) ? parsed.businessOpportunities : [],
-      competitorMentions: Array.isArray(parsed.competitorMentions) ? parsed.competitorMentions : [],
-      openQuestions: Array.isArray(parsed.openQuestions) ? parsed.openQuestions : [],
-      summary: typeof parsed.summary === "string" ? parsed.summary : `Analysis of "${meetingTitle}" complete.`,
-    };
-  } catch {
-    // Keyword-based fallback
-    const sentences = text.split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length > 15);
-    return {
-      painPoints: sentences.filter((s) => /difficult|problem|issue|broken|frustrat|slow|hard to|can't|cannot|struggle/i.test(s)).slice(0, 5),
-      featureRequests: sentences.filter((s) => /would like|need|want|request|add|build|implement|could we|can we|feature|wish/i.test(s)).slice(0, 5),
-      risks: sentences.filter((s) => /risk|concern|worry|uncertain|might fail|danger|threat|blocker/i.test(s)).slice(0, 3),
-      actionItems: sentences.filter((s) => /will|should|need to|action|follow up|next step|by \w+day|todo/i.test(s)).slice(0, 5),
-      businessOpportunities: sentences.filter((s) => /opportunity|market|revenue|growth|expand|customer segment/i.test(s)).slice(0, 3),
-      competitorMentions: sentences.filter((s) => /competitor|alternative|instead|versus|vs\.|compared to/i.test(s)).slice(0, 3),
-      openQuestions: sentences.filter((s) => /\?/.test(s)).slice(0, 5),
-      summary: `Meeting "${meetingTitle}" analyzed using keyword extraction (AI fallback). ${sentences.length} sentences processed.`,
-    };
-  }
-}
+  } catch (err) { next(err); }
+});
 
 export default router;

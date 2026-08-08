@@ -8,10 +8,11 @@ import {
   aiInsightsTable,
 } from "@workspace/db";
 import { eq, count, desc } from "drizzle-orm";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-router.get("/dashboard/stats", async (req, res): Promise<void> => {
+router.get("/dashboard/stats", requireAuth, async (req, res, next): Promise<void> => {
   const [
     [oppStats],
     [newOpps],
@@ -91,7 +92,7 @@ router.get("/dashboard/stats", async (req, res): Promise<void> => {
   });
 });
 
-router.get("/dashboard/daily-summary", async (req, res): Promise<void> => {
+router.get("/dashboard/daily-summary", requireAuth, async (req, res, next): Promise<void> => {
   const [recentInsights, allOpps, urgentOpps, recentMeetings] = await Promise.all([
     db.select().from(aiInsightsTable).orderBy(desc(aiInsightsTable.createdAt)).limit(5),
     db.select({ total: count() }).from(opportunitiesTable),
