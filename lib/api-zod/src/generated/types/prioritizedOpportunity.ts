@@ -18,7 +18,14 @@ export interface PrioritizedOpportunity {
   /** @nullable */
   kanoCategory?: string | null;
   /** @nullable */
+  weightedScore?: number | null;
+  /** @nullable */
+  opportunityScore?: number | null;
+  /** @nullable */
+  vveQuadrant?: string | null;
+  /** @nullable */
   aiRecommendation?: string | null;
+  analyzed?: boolean;
   /** @nullable */
   overallRank?: number | null;
 }

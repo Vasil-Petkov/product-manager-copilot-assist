@@ -490,9 +490,85 @@ export interface PrioritizedOpportunity {
   /** @nullable */
   kanoCategory?: string | null;
   /** @nullable */
+  weightedScore?: number | null;
+  /** @nullable */
+  opportunityScore?: number | null;
+  /** @nullable */
+  vveQuadrant?: string | null;
+  /** @nullable */
   aiRecommendation?: string | null;
+  analyzed?: boolean;
   /** @nullable */
   overallRank?: number | null;
+}
+
+export interface PrioritizationAnalysis {
+  id?: number;
+  opportunityId?: number;
+  /** @nullable */
+  riceScore?: number | null;
+  /** @nullable */
+  iceScore?: number | null;
+  /** @nullable */
+  weightedScore?: number | null;
+  /** @nullable */
+  opportunityScore?: number | null;
+  /** @nullable */
+  moscowCategory?: string | null;
+  /** @nullable */
+  kanoCategory?: string | null;
+  /** @nullable */
+  vveQuadrant?: string | null;
+  /** RICE framework detail (JSONB) */
+  riceData?: unknown;
+  /** ICE framework detail (JSONB) */
+  iceData?: unknown;
+  /** MoSCoW classification detail (JSONB) */
+  moscowData?: unknown;
+  /** Weighted scoring detail (JSONB) */
+  weightedData?: unknown;
+  /** Value vs Effort detail (JSONB) */
+  vveData?: unknown;
+  /** Kano model detail (JSONB) */
+  kanoData?: unknown;
+  /** Opportunity scoring detail (JSONB) */
+  opportunityData?: unknown;
+  /** Engineering effort estimate (JSONB) */
+  engineeringData?: unknown;
+  /** Business context data (JSONB) */
+  businessContext?: unknown;
+  /** Executive recommendation data (JSONB) */
+  executiveData?: unknown;
+  /** @nullable */
+  analyzedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PrioritizationAnalysisEnvelope {
+  opportunity?: Opportunity;
+  analysis?: PrioritizationAnalysis;
+}
+
+export interface ExecutiveRecommendationResult {
+  /** Top ranked opportunity with analysis */
+  topRecommendation?: unknown;
+  allRanked?: unknown[];
+  totalAnalyzed?: number;
+}
+
+export interface FeatureCompareInput {
+  idA: number;
+  idB: number;
+}
+
+export interface FeatureComparisonResult {
+  opportunityA?: Opportunity;
+  opportunityB?: Opportunity;
+  analysisA?: PrioritizationAnalysis;
+  analysisB?: PrioritizationAnalysis;
+  /** AI comparison insight (JSONB) */
+  aiInsight?: unknown;
 }
 
 export type PrioritizationScoreFramework = typeof PrioritizationScoreFramework[keyof typeof PrioritizationScoreFramework];

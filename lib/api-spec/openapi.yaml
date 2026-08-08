@@ -863,6 +863,57 @@ paths:
                 items:
                   $ref: "#/components/schemas/AiPriorityRecommendation"
 
+  /prioritization/analyze/{opportunityId}:
+    post:
+      operationId: analyzePrioritization
+      tags: [prioritization]
+      summary: Run full AI analysis for one opportunity (all 7 frameworks)
+      parameters:
+        - name: opportunityId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Full analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrioritizationAnalysisEnvelope"
+
+  /prioritization/executive-recommendation:
+    get:
+      operationId: getExecutiveRecommendation
+      tags: [prioritization]
+      summary: Get executive recommendation across all analyzed opportunities
+      responses:
+        "200":
+          description: Executive recommendation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutiveRecommendationResult"
+
+  /prioritization/compare:
+    post:
+      operationId: compareFeatures
+      tags: [prioritization]
+      summary: Side-by-side AI comparison of two product ideas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureCompareInput"
+      responses:
+        "200":
+          description: Comparison result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureComparisonResult"
+
   /openai/conversations:
     get:
       operationId: listOpenaiConversations
@@ -1720,10 +1771,109 @@ components:
           type: ["string", "null"]
         kanoCategory:
           type: ["string", "null"]
+        weightedScore:
+          type: ["number", "null"]
+        opportunityScore:
+          type: ["number", "null"]
+        vveQuadrant:
+          type: ["string", "null"]
         aiRecommendation:
           type: ["string", "null"]
+        analyzed:
+          type: boolean
         overallRank:
           type: ["number", "null"]
+
+    PrioritizationAnalysis:
+      type: object
+      properties:
+        id:
+          type: number
+        opportunityId:
+          type: number
+        riceScore:
+          type: ["number", "null"]
+        iceScore:
+          type: ["number", "null"]
+        weightedScore:
+          type: ["number", "null"]
+        opportunityScore:
+          type: ["number", "null"]
+        moscowCategory:
+          type: ["string", "null"]
+        kanoCategory:
+          type: ["string", "null"]
+        vveQuadrant:
+          type: ["string", "null"]
+        riceData:
+          description: RICE framework detail (JSONB)
+        iceData:
+          description: ICE framework detail (JSONB)
+        moscowData:
+          description: MoSCoW classification detail (JSONB)
+        weightedData:
+          description: Weighted scoring detail (JSONB)
+        vveData:
+          description: Value vs Effort detail (JSONB)
+        kanoData:
+          description: Kano model detail (JSONB)
+        opportunityData:
+          description: Opportunity scoring detail (JSONB)
+        engineeringData:
+          description: Engineering effort estimate (JSONB)
+        businessContext:
+          description: Business context data (JSONB)
+        executiveData:
+          description: Executive recommendation data (JSONB)
+        analyzedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PrioritizationAnalysisEnvelope:
+      type: object
+      properties:
+        opportunity:
+          $ref: "#/components/schemas/Opportunity"
+        analysis:
+          $ref: "#/components/schemas/PrioritizationAnalysis"
+
+    ExecutiveRecommendationResult:
+      type: object
+      properties:
+        topRecommendation:
+          description: Top ranked opportunity with analysis
+        allRanked:
+          type: array
+          items:
+            description: Ranked opportunity entry
+        totalAnalyzed:
+          type: number
+
+    FeatureCompareInput:
+      type: object
+      required: [idA, idB]
+      properties:
+        idA:
+          type: number
+        idB:
+          type: number
+
+    FeatureComparisonResult:
+      type: object
+      properties:
+        opportunityA:
+          $ref: "#/components/schemas/Opportunity"
+        opportunityB:
+          $ref: "#/components/schemas/Opportunity"
+        analysisA:
+          $ref: "#/components/schemas/PrioritizationAnalysis"
+        analysisB:
+          $ref: "#/components/schemas/PrioritizationAnalysis"
+        aiInsight:
+          description: AI comparison insight (JSONB)
 
     RiceScore:
       type: object

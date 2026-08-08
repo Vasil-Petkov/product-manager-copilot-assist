@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Video, Calendar, Users, Plus, BrainCircuit, ExternalLink } from "lucide-react";
+import { HelpTooltip } from "@/components/help-tooltip";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -56,6 +57,15 @@ export default function MeetingsList() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Video className="size-8 text-primary" />
             Customer Meetings
+            <HelpTooltip
+              purpose="Capture customer and stakeholder conversations."
+              bullets={[
+                "Store meeting notes",
+                "Analyze discussions with AI",
+                "Generate opportunities",
+                "Link meetings to product ideas",
+              ]}
+            />
           </h1>
           <p className="text-muted-foreground mt-1">Upload call transcripts for AI to extract product opportunities.</p>
         </div>
