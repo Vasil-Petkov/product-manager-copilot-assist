@@ -58,3 +58,4 @@ pnpm --filter @workspace/api-spec run codegen
 - No new business features in Sprint 2.6 — architecture only.
 - Keep `userId` FK nullable on all entity tables.
 - When in doubt about API response shape changes, prefer backward-compatible flat arrays over wrapped objects so generated hooks keep working.
+- **Prioritization module**: all changes must be committed and pushed to the `feature/prioritization` GitHub branch only. Never push Prioritization work directly to `main`.
