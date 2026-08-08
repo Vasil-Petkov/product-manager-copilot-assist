@@ -18,7 +18,7 @@ import MeetingsList from './pages/discovery/meetings/list';
 import MeetingDetail from './pages/discovery/meetings/detail';
 import StakeholderFeedback from './pages/discovery/feedback';
 import AiInsights from './pages/discovery/insights';
-import Prioritization from './pages/prioritization';
+import Prioritization from './pages/prioritization/index';
 import Settings from './pages/settings';
 import ComingSoon from './pages/coming-soon';
 

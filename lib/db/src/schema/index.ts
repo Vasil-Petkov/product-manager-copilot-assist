@@ -6,6 +6,7 @@ export * from "./meetings";
 export * from "./feedback";
 export * from "./insights";
 export * from "./prioritization";
+export * from "./prioritization-analysis";
 export * from "./conversations";
 export * from "./messages";
 export * from "./idea-comments";

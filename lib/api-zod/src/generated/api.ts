@@ -1018,7 +1018,11 @@ export const ListPrioritizationResponseItem = zod.object({
 }).optional(),
   "moscowCategory": zod.string().nullish(),
   "kanoCategory": zod.string().nullish(),
+  "weightedScore": zod.number().nullish(),
+  "opportunityScore": zod.number().nullish(),
+  "vveQuadrant": zod.string().nullish(),
   "aiRecommendation": zod.string().nullish(),
+  "analyzed": zod.boolean().optional(),
   "overallRank": zod.number().nullish()
 })
 export const ListPrioritizationResponse = zod.array(ListPrioritizationResponseItem)
@@ -1118,6 +1122,172 @@ export const AiRecommendPrioritizationResponseItem = zod.object({
   "suggestedReleaseWindow": zod.string().nullish()
 })
 export const AiRecommendPrioritizationResponse = zod.array(AiRecommendPrioritizationResponseItem)
+
+
+/**
+ * @summary Run full AI analysis for one opportunity (all 7 frameworks)
+ */
+export const AnalyzePrioritizationParams = zod.object({
+  "opportunityId": zod.coerce.number()
+})
+
+export const AnalyzePrioritizationResponse = zod.object({
+  "opportunity": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "aiSummary": zod.string().nullish(),
+  "customerProblem": zod.string().nullish(),
+  "suggestedSolution": zod.string().nullish(),
+  "businessValue": zod.string().nullish(),
+  "estimatedCustomerImpact": zod.string().nullish(),
+  "estimatedBusinessImpact": zod.string().nullish(),
+  "urgency": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "sentiment": zod.string().nullish(),
+  "tags": zod.array(zod.string()).optional(),
+  "status": zod.enum(['new', 'under_review', 'ready_for_prioritization', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional(),
+  "analysis": zod.object({
+  "id": zod.number().optional(),
+  "opportunityId": zod.number().optional(),
+  "riceScore": zod.number().nullish(),
+  "iceScore": zod.number().nullish(),
+  "weightedScore": zod.number().nullish(),
+  "opportunityScore": zod.number().nullish(),
+  "moscowCategory": zod.string().nullish(),
+  "kanoCategory": zod.string().nullish(),
+  "vveQuadrant": zod.string().nullish(),
+  "riceData": zod.unknown().optional().describe('RICE framework detail (JSONB)'),
+  "iceData": zod.unknown().optional().describe('ICE framework detail (JSONB)'),
+  "moscowData": zod.unknown().optional().describe('MoSCoW classification detail (JSONB)'),
+  "weightedData": zod.unknown().optional().describe('Weighted scoring detail (JSONB)'),
+  "vveData": zod.unknown().optional().describe('Value vs Effort detail (JSONB)'),
+  "kanoData": zod.unknown().optional().describe('Kano model detail (JSONB)'),
+  "opportunityData": zod.unknown().optional().describe('Opportunity scoring detail (JSONB)'),
+  "engineeringData": zod.unknown().optional().describe('Engineering effort estimate (JSONB)'),
+  "businessContext": zod.unknown().optional().describe('Business context data (JSONB)'),
+  "executiveData": zod.unknown().optional().describe('Executive recommendation data (JSONB)'),
+  "analyzedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+}).optional()
+})
+
+
+/**
+ * @summary Get executive recommendation across all analyzed opportunities
+ */
+export const GetExecutiveRecommendationResponse = zod.object({
+  "topRecommendation": zod.unknown().optional().describe('Top ranked opportunity with analysis'),
+  "allRanked": zod.array(zod.unknown().describe('Ranked opportunity entry')).optional(),
+  "totalAnalyzed": zod.number().optional()
+})
+
+
+/**
+ * @summary Side-by-side AI comparison of two product ideas
+ */
+export const CompareFeaturesBody = zod.object({
+  "idA": zod.number(),
+  "idB": zod.number()
+})
+
+export const CompareFeaturesResponse = zod.object({
+  "opportunityA": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "aiSummary": zod.string().nullish(),
+  "customerProblem": zod.string().nullish(),
+  "suggestedSolution": zod.string().nullish(),
+  "businessValue": zod.string().nullish(),
+  "estimatedCustomerImpact": zod.string().nullish(),
+  "estimatedBusinessImpact": zod.string().nullish(),
+  "urgency": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "sentiment": zod.string().nullish(),
+  "tags": zod.array(zod.string()).optional(),
+  "status": zod.enum(['new', 'under_review', 'ready_for_prioritization', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional(),
+  "opportunityB": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "aiSummary": zod.string().nullish(),
+  "customerProblem": zod.string().nullish(),
+  "suggestedSolution": zod.string().nullish(),
+  "businessValue": zod.string().nullish(),
+  "estimatedCustomerImpact": zod.string().nullish(),
+  "estimatedBusinessImpact": zod.string().nullish(),
+  "urgency": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "sentiment": zod.string().nullish(),
+  "tags": zod.array(zod.string()).optional(),
+  "status": zod.enum(['new', 'under_review', 'ready_for_prioritization', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional(),
+  "analysisA": zod.object({
+  "id": zod.number().optional(),
+  "opportunityId": zod.number().optional(),
+  "riceScore": zod.number().nullish(),
+  "iceScore": zod.number().nullish(),
+  "weightedScore": zod.number().nullish(),
+  "opportunityScore": zod.number().nullish(),
+  "moscowCategory": zod.string().nullish(),
+  "kanoCategory": zod.string().nullish(),
+  "vveQuadrant": zod.string().nullish(),
+  "riceData": zod.unknown().optional().describe('RICE framework detail (JSONB)'),
+  "iceData": zod.unknown().optional().describe('ICE framework detail (JSONB)'),
+  "moscowData": zod.unknown().optional().describe('MoSCoW classification detail (JSONB)'),
+  "weightedData": zod.unknown().optional().describe('Weighted scoring detail (JSONB)'),
+  "vveData": zod.unknown().optional().describe('Value vs Effort detail (JSONB)'),
+  "kanoData": zod.unknown().optional().describe('Kano model detail (JSONB)'),
+  "opportunityData": zod.unknown().optional().describe('Opportunity scoring detail (JSONB)'),
+  "engineeringData": zod.unknown().optional().describe('Engineering effort estimate (JSONB)'),
+  "businessContext": zod.unknown().optional().describe('Business context data (JSONB)'),
+  "executiveData": zod.unknown().optional().describe('Executive recommendation data (JSONB)'),
+  "analyzedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+}).optional(),
+  "analysisB": zod.object({
+  "id": zod.number().optional(),
+  "opportunityId": zod.number().optional(),
+  "riceScore": zod.number().nullish(),
+  "iceScore": zod.number().nullish(),
+  "weightedScore": zod.number().nullish(),
+  "opportunityScore": zod.number().nullish(),
+  "moscowCategory": zod.string().nullish(),
+  "kanoCategory": zod.string().nullish(),
+  "vveQuadrant": zod.string().nullish(),
+  "riceData": zod.unknown().optional().describe('RICE framework detail (JSONB)'),
+  "iceData": zod.unknown().optional().describe('ICE framework detail (JSONB)'),
+  "moscowData": zod.unknown().optional().describe('MoSCoW classification detail (JSONB)'),
+  "weightedData": zod.unknown().optional().describe('Weighted scoring detail (JSONB)'),
+  "vveData": zod.unknown().optional().describe('Value vs Effort detail (JSONB)'),
+  "kanoData": zod.unknown().optional().describe('Kano model detail (JSONB)'),
+  "opportunityData": zod.unknown().optional().describe('Opportunity scoring detail (JSONB)'),
+  "engineeringData": zod.unknown().optional().describe('Engineering effort estimate (JSONB)'),
+  "businessContext": zod.unknown().optional().describe('Business context data (JSONB)'),
+  "executiveData": zod.unknown().optional().describe('Executive recommendation data (JSONB)'),
+  "analyzedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+}).optional(),
+  "aiInsight": zod.unknown().optional().describe('AI comparison insight (JSONB)')
+})
 
 
 /**

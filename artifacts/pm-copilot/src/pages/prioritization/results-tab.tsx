@@ -1,0 +1,229 @@
+import { useState } from "react";
+import { useListPrioritization } from "@workspace/api-client-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Info } from "lucide-react";
+
+// ─── Framework display config ────────────────────────────────────────────────
+
+const MOSCOW_COLORS: Record<string, string> = {
+  must_have:   "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+  should_have: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  could_have:  "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  wont_have:   "bg-slate-500/10 text-slate-600 border-slate-500/20",
+};
+const MOSCOW_LABELS: Record<string, string> = {
+  must_have: "Must Have", should_have: "Should Have",
+  could_have: "Could Have", wont_have: "Won't Have",
+};
+const KANO_COLORS: Record<string, string> = {
+  basic:       "bg-slate-500/10 text-slate-600 border-slate-500/20",
+  performance: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  excitement:  "bg-purple-500/10 text-purple-700 border-purple-500/20",
+  indifferent: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+  reverse:     "bg-red-500/10 text-red-700 border-red-500/20",
+};
+const QUADRANT_META: Record<string, { label: string; color: string }> = {
+  high_value_low_effort:  { label: "Quick Win 🚀",  color: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" },
+  high_value_high_effort: { label: "Strategic 🎯",  color: "bg-blue-500/10 text-blue-700 border-blue-500/20" },
+  low_value_low_effort:   { label: "Fill-in 📦",    color: "bg-amber-500/10 text-amber-700 border-amber-500/20" },
+  low_value_high_effort:  { label: "Avoid ❌",       color: "bg-red-500/10 text-red-700 border-red-500/20" },
+};
+
+type Framework = "rice" | "ice" | "weighted" | "moscow" | "vve" | "kano" | "opportunity";
+const FRAMEWORKS: { id: Framework; label: string }[] = [
+  { id: "rice",        label: "RICE" },
+  { id: "ice",         label: "ICE" },
+  { id: "weighted",    label: "Weighted Score" },
+  { id: "moscow",      label: "MoSCoW" },
+  { id: "vve",         label: "Value vs Effort" },
+  { id: "kano",        label: "Kano Model" },
+  { id: "opportunity", label: "Opportunity Score" },
+];
+
+function ScoreBar({ value, max }: { value: number; max: number }) {
+  const pct = Math.min(Math.max((value / max) * 100, 2), 100);
+  return (
+    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+      <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+function ExplanationRow({ text }: { text?: string }) {
+  if (!text) return null;
+  return (
+    <div className="px-6 pb-3 flex items-start gap-2 text-xs text-muted-foreground">
+      <Info className="size-3 mt-0.5 shrink-0 text-ai" />
+      <span>{text}</span>
+    </div>
+  );
+}
+
+export default function ResultsTab() {
+  const [fw, setFw] = useState<Framework>("rice");
+  const { data: items, isLoading } = useListPrioritization({});
+
+  const analyzed = items?.filter(i => i.analyzed) ?? [];
+
+  return (
+    <div className="space-y-4">
+      <Tabs value={fw} onValueChange={(v) => setFw(v as Framework)}>
+        <TabsList className="bg-muted p-1 flex-wrap h-auto gap-1">
+          {FRAMEWORKS.map(f => (
+            <TabsTrigger key={f.id} value={f.id} className="data-[state=active]:bg-card text-xs px-3">
+              {f.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {/* Framework info card */}
+      <Card className="bg-muted/30 border-dashed">
+        <CardContent className="p-4 text-sm text-muted-foreground">
+          {fw === "rice"        && <><strong>RICE</strong> = (Reach × Impact × Confidence%) / Effort (Story Points). Higher is better.</>}
+          {fw === "ice"         && <><strong>ICE</strong> = Impact (1–10) × Confidence (1–10) × Ease (1–10). Higher is better.</>}
+          {fw === "weighted"    && <><strong>Weighted Score</strong> = CustomerValue×25% + RevenueImpact×20% + StrategicAlignment×20% + TechnicalComplexity×15% + CompetitiveAdvantage×10% + Risk×10%. Each criterion 1–10.</>}
+          {fw === "moscow"      && <><strong>MoSCoW</strong> — AI classifies each idea as Must Have, Should Have, Could Have, or Won't Have.</>}
+          {fw === "vve"         && <><strong>Value vs Effort</strong> — 2×2 matrix: Business Value (1–10) vs Engineering Effort (1–10). Quick wins are high value, low effort.</>}
+          {fw === "kano"        && <><strong>Kano Model</strong> — AI classifies ideas as Basic, Performance, Excitement, Indifferent, or Reverse.</>}
+          {fw === "opportunity" && <><strong>Opportunity Score</strong> = Importance + (Importance − Satisfaction). Captures underserved demand.</>}
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b">
+              <tr>
+                <th className="px-6 py-4 w-10 text-center">#</th>
+                <th className="px-6 py-4">Product Idea</th>
+                {fw === "rice"        && <><th className="px-6 py-4 text-center">Reach</th><th className="px-6 py-4 text-center">Impact</th><th className="px-6 py-4 text-center">Confidence</th><th className="px-6 py-4 text-center">Effort SP</th><th className="px-6 py-4 text-center text-primary">RICE Score</th></>}
+                {fw === "ice"         && <><th className="px-6 py-4 text-center">Impact</th><th className="px-6 py-4 text-center">Confidence</th><th className="px-6 py-4 text-center">Ease</th><th className="px-6 py-4 text-center text-primary">ICE Score</th></>}
+                {fw === "weighted"    && <><th className="px-6 py-4 text-center">Cust. Value</th><th className="px-6 py-4 text-center">Revenue</th><th className="px-6 py-4 text-center">Strategic</th><th className="px-6 py-4 text-center">Complexity</th><th className="px-6 py-4 text-center text-primary">Score</th></>}
+                {fw === "moscow"      && <th className="px-6 py-4">Classification</th>}
+                {fw === "vve"         && <><th className="px-6 py-4 text-center">Business Value</th><th className="px-6 py-4 text-center">Eng. Effort</th><th className="px-6 py-4">Quadrant</th></>}
+                {fw === "kano"        && <th className="px-6 py-4">Category</th>}
+                {fw === "opportunity" && <><th className="px-6 py-4 text-center">Importance</th><th className="px-6 py-4 text-center">Satisfaction</th><th className="px-6 py-4 text-center text-primary">Opp. Score</th></>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {isLoading ? Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}><td colSpan={8} className="px-6 py-4"><Skeleton className="h-4 w-full" /></td></tr>
+              )) : !analyzed.length ? (
+                <tr><td colSpan={8} className="px-6 py-12 text-center text-muted-foreground text-sm">
+                  No analyzed ideas yet. Go to the <strong>Product Ideas</strong> tab and click "Analyze with AI".
+                </td></tr>
+              ) : analyzed.map((item, idx) => {
+                const rice = item.riceData as Record<string, any> | null;
+                const ice  = item.iceScore as Record<string, any> | null;
+                const wd   = (item as any).weightedData as Record<string, any> | null;
+                const vve  = (item as any).vveData as Record<string, any> | null;
+                const opp  = (item as any).opportunityData as Record<string, any> | null;
+                const riceData = rice ?? (item.riceScore as any);
+                const vveQ = item.vveQuadrant as string | null;
+                const quadrant = vveQ ? QUADRANT_META[vveQ] : null;
+
+                return [
+                  <tr key={`row-${item.opportunity.id}`} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4 text-center">
+                      <div className="size-7 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground mx-auto">{idx + 1}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-medium">{item.opportunity.title}</span>
+                    </td>
+
+                    {fw === "rice" && (<>
+                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.reach ?? "—"}</td>
+                      <td className="px-6 py-4 text-center text-sm">{riceData?.impactLabel ?? "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.confidence != null ? `${riceData.confidence}%` : "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.effortPoints ?? "—"}</td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <ScoreBar value={riceData?.score ?? 0} max={500} />
+                          <span className="font-bold text-primary font-mono">{riceData?.score?.toFixed(1) ?? "—"}</span>
+                        </div>
+                      </td>
+                    </>)}
+
+                    {fw === "ice" && (<>
+                      <td className="px-6 py-4 text-center font-mono">{(ice as any)?.impact ?? "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono">{(ice as any)?.confidence ?? "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono">{(ice as any)?.ease ?? "—"}</td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <ScoreBar value={(ice as any)?.score ?? 0} max={1000} />
+                          <span className="font-bold text-primary font-mono">{(ice as any)?.score?.toFixed(0) ?? "—"}</span>
+                        </div>
+                      </td>
+                    </>)}
+
+                    {fw === "weighted" && (<>
+                      <td className="px-6 py-4 text-center font-mono">{wd?.customerValue ?? "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono">{wd?.revenueImpact ?? "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono">{wd?.strategicAlignment ?? "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono">{wd?.technicalComplexity ?? "—"}</td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <ScoreBar value={item.weightedScore ?? 0} max={10} />
+                          <span className="font-bold text-primary font-mono">{item.weightedScore?.toFixed(1) ?? "—"}</span>
+                        </div>
+                      </td>
+                    </>)}
+
+                    {fw === "moscow" && (
+                      <td className="px-6 py-4">
+                        {item.moscowCategory
+                          ? <Badge variant="outline" className={MOSCOW_COLORS[item.moscowCategory] ?? ""}>{MOSCOW_LABELS[item.moscowCategory] ?? item.moscowCategory}</Badge>
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                    )}
+
+                    {fw === "vve" && (<>
+                      <td className="px-6 py-4 text-center font-mono">{vve?.businessValue ?? "—"} / 10</td>
+                      <td className="px-6 py-4 text-center font-mono">{vve?.engineeringEffort ?? "—"} / 10</td>
+                      <td className="px-6 py-4">
+                        {quadrant
+                          ? <Badge variant="outline" className={quadrant.color}>{quadrant.label}</Badge>
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                    </>)}
+
+                    {fw === "kano" && (
+                      <td className="px-6 py-4">
+                        {item.kanoCategory
+                          ? <Badge variant="outline" className={KANO_COLORS[item.kanoCategory] ?? ""}>{item.kanoCategory.charAt(0).toUpperCase() + item.kanoCategory.slice(1)}</Badge>
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                    )}
+
+                    {fw === "opportunity" && (<>
+                      <td className="px-6 py-4 text-center font-mono">{opp?.importance ?? "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono">{opp?.satisfaction ?? "—"}</td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <ScoreBar value={item.opportunityScore ?? 0} max={20} />
+                          <span className="font-bold text-primary font-mono">{item.opportunityScore?.toFixed(1) ?? "—"}</span>
+                        </div>
+                      </td>
+                    </>)}
+                  </tr>,
+                  // AI explanation row
+                  fw === "rice"        && (riceData as any)?.explanation  && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={8}><ExplanationRow text={(riceData as any).explanation} /></td></tr>,
+                  fw === "ice"         && (ice as any)?.explanation       && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={6}><ExplanationRow text={(ice as any).explanation} /></td></tr>,
+                  fw === "weighted"    && wd?.explanation                  && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={7}><ExplanationRow text={wd.explanation} /></td></tr>,
+                  fw === "moscow"      && (item as any).moscowData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={4}><ExplanationRow text={(item as any).moscowData.explanation} /></td></tr>,
+                  fw === "vve"         && vve?.explanation                 && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={5}><ExplanationRow text={vve.explanation} /></td></tr>,
+                  fw === "kano"        && (item as any).kanoData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={4}><ExplanationRow text={(item as any).kanoData.explanation} /></td></tr>,
+                  fw === "opportunity" && opp?.explanation                 && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={6}><ExplanationRow text={opp.explanation} /></td></tr>,
+                ].filter(Boolean);
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}

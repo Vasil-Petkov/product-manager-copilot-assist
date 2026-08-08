@@ -34,6 +34,9 @@ import type {
   DashboardStats,
   DeleteOpenaiConversation404,
   ErrorEnvelope,
+  ExecutiveRecommendationResult,
+  FeatureCompareInput,
+  FeatureComparisonResult,
   FeedbackInput,
   FeedbackPatch,
   GetOpenaiConversation404,
@@ -60,6 +63,7 @@ import type {
   OpportunityDetail,
   OpportunityInput,
   OpportunityPatch,
+  PrioritizationAnalysisEnvelope,
   PrioritizationInput,
   PrioritizationPatch,
   PrioritizationScore,
@@ -3394,6 +3398,225 @@ export const useAiRecommendPrioritization = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAiRecommendPrioritizationMutationOptions(options));
+    }
+
+export const getAnalyzePrioritizationUrl = (opportunityId: number,) => {
+
+
+
+
+  return `/api/prioritization/analyze/${opportunityId}`
+}
+
+/**
+ * @summary Run full AI analysis for one opportunity (all 7 frameworks)
+ */
+export const analyzePrioritization = async (opportunityId: number, options?: Parameters<typeof customFetch>[1]): Promise<PrioritizationAnalysisEnvelope> => {
+
+  return customFetch<PrioritizationAnalysisEnvelope>(getAnalyzePrioritizationUrl(opportunityId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAnalyzePrioritizationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzePrioritization>>, TError,{opportunityId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzePrioritization>>, TError,{opportunityId: number}, TContext> => {
+
+const mutationKey = ['analyzePrioritization'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzePrioritization>>, {opportunityId: number}> = (props) => {
+          const {opportunityId} = props ?? {};
+
+          return  analyzePrioritization(opportunityId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzePrioritizationMutationResult = NonNullable<Awaited<ReturnType<typeof analyzePrioritization>>>
+
+    export type AnalyzePrioritizationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Run full AI analysis for one opportunity (all 7 frameworks)
+ */
+export const useAnalyzePrioritization = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzePrioritization>>, TError,{opportunityId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyzePrioritization>>,
+        TError,
+        {opportunityId: number},
+        TContext
+      > => {
+      return useMutation(getAnalyzePrioritizationMutationOptions(options));
+    }
+
+export const getGetExecutiveRecommendationUrl = () => {
+
+
+
+
+  return `/api/prioritization/executive-recommendation`
+}
+
+/**
+ * @summary Get executive recommendation across all analyzed opportunities
+ */
+export const getExecutiveRecommendation = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExecutiveRecommendationResult> => {
+
+  return customFetch<ExecutiveRecommendationResult>(getGetExecutiveRecommendationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExecutiveRecommendationQueryKey = () => {
+    return [
+    `/api/prioritization/executive-recommendation`
+    ] as const;
+    }
+
+
+export const getGetExecutiveRecommendationQueryOptions = <TData = Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExecutiveRecommendationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExecutiveRecommendation>>> = ({ signal }) => getExecutiveRecommendation({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExecutiveRecommendationQueryResult = NonNullable<Awaited<ReturnType<typeof getExecutiveRecommendation>>>
+export type GetExecutiveRecommendationQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get executive recommendation across all analyzed opportunities
+ */
+
+export function useGetExecutiveRecommendation<TData = Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExecutiveRecommendationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCompareFeaturesUrl = () => {
+
+
+
+
+  return `/api/prioritization/compare`
+}
+
+/**
+ * @summary Side-by-side AI comparison of two product ideas
+ */
+export const compareFeatures = async (featureCompareInput: FeatureCompareInput, options?: Parameters<typeof customFetch>[1]): Promise<FeatureComparisonResult> => {
+
+  return customFetch<FeatureComparisonResult>(getCompareFeaturesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(featureCompareInput)
+  }
+);}
+
+
+
+
+
+export const getCompareFeaturesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compareFeatures>>, TError,{data: BodyType<FeatureCompareInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof compareFeatures>>, TError,{data: BodyType<FeatureCompareInput>}, TContext> => {
+
+const mutationKey = ['compareFeatures'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof compareFeatures>>, {data: BodyType<FeatureCompareInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  compareFeatures(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompareFeaturesMutationResult = NonNullable<Awaited<ReturnType<typeof compareFeatures>>>
+    export type CompareFeaturesMutationBody = BodyType<FeatureCompareInput>
+    export type CompareFeaturesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Side-by-side AI comparison of two product ideas
+ */
+export const useCompareFeatures = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compareFeatures>>, TError,{data: BodyType<FeatureCompareInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof compareFeatures>>,
+        TError,
+        {data: BodyType<FeatureCompareInput>},
+        TContext
+      > => {
+      return useMutation(getCompareFeaturesMutationOptions(options));
     }
 
 export const getListOpenaiConversationsUrl = () => {
