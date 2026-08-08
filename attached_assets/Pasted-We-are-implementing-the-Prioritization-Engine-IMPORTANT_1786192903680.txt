@@ -1,0 +1,295 @@
+We are implementing the Prioritization Engine.
+
+IMPORTANT
+
+These definitions are the official specification for the application.
+
+Do NOT invent alternative formulas.
+
+Do NOT modify the calculations.
+
+Every prioritization framework must follow the specification below.
+
+==================================================
+1. RICE
+==================================================
+
+Formula
+
+RICE = (Reach × Impact × Confidence) / Effort
+
+Definitions
+
+Reach
+Number of customers expected to benefit within the selected period.
+
+Impact
+
+Massive = 3
+High = 2
+Medium = 1
+Low = 0.5
+Minimal = 0.25
+
+Confidence
+
+0–100%
+
+Effort
+
+Engineering effort measured in Story Points.
+
+Display
+
+• Individual values
+• Final RICE Score
+• AI explanation
+
+==================================================
+2. ICE
+==================================================
+
+Formula
+
+ICE = Impact × Confidence × Ease
+
+Definitions
+
+Impact
+
+1–10
+
+Confidence
+
+1–10
+
+Ease
+
+1–10
+
+Display
+
+• ICE Score
+• AI explanation
+
+==================================================
+3. MoSCoW
+==================================================
+
+No mathematical formula.
+
+Every Product Idea must be classified as
+
+• Must Have
+• Should Have
+• Could Have
+• Won't Have
+
+AI should explain why the feature belongs in this category.
+
+==================================================
+4. Weighted Scoring
+==================================================
+
+Formula
+
+Weighted Score =
+(Customer Value × 0.25)
++
+(Revenue Impact × 0.20)
++
+(Strategic Alignment × 0.20)
++
+(Technical Complexity × 0.15)
++
+(Competitive Advantage × 0.10)
++
+(Risk × 0.10)
+
+Each criterion is scored from 1–10.
+
+The weights must be configurable by administrators in the future.
+
+Display
+
+• Individual criterion scores
+• Final Weighted Score
+• AI explanation
+
+==================================================
+5. Value vs Effort
+==================================================
+
+This framework has no mathematical formula.
+
+Business Value
+
+1–10
+
+Engineering Effort
+
+1–10
+
+Display the Product Idea on a 2x2 matrix:
+
+• High Value / Low Effort
+• High Value / High Effort
+• Low Value / Low Effort
+• Low Value / High Effort
+
+AI should explain the recommendation.
+
+==================================================
+6. Kano Model
+==================================================
+
+Classify every Product Idea as
+
+• Basic
+• Performance
+• Excitement
+• Indifferent
+• Reverse
+
+AI should explain why.
+
+==================================================
+7. Opportunity Scoring
+==================================================
+
+Formula
+
+Opportunity Score =
+Importance + (Importance − Satisfaction)
+
+Definitions
+
+Importance
+
+1–10
+
+Satisfaction
+
+1–10
+
+Display
+
+• Opportunity Score
+• AI explanation
+
+==================================================
+8. Engineering Effort
+==================================================
+
+Estimate implementation effort separately for
+
+• Frontend
+• Backend
+• Database
+• API
+• AI
+• QA / Testing
+
+Display
+
+• Story Points
+• Estimated Days
+• Estimated Sprint Count
+• Complexity
+• Confidence
+
+==================================================
+9. AI Consolidated Recommendation
+==================================================
+
+This is the most important result.
+
+The AI should NOT simply average the framework scores.
+
+Instead, it should evaluate
+
+• RICE
+• ICE
+• MoSCoW
+• Weighted Score
+• Value vs Effort
+• Kano
+• Opportunity Score
+
+combined with
+
+• Customer Impact
+• Enterprise Customer Requests
+• ARR / ARPU Impact
+• Strategic Alignment
+• Revenue Opportunity
+• Customer Reach
+• Engineering Effort
+• Risks
+• Competitive Advantage
+
+The AI should then generate one Executive Recommendation.
+
+Display
+
+• Overall AI Priority Score (0–100)
+• AI Confidence
+• Why this feature should be built next
+• Business Impact
+• Customer Impact
+• Engineering Investment
+• Risks
+• Expected ROI
+
+==================================================
+10. Feature Comparison
+==================================================
+
+Allow Product Managers to compare two Product Ideas.
+
+Compare
+
+Business
+
+• Revenue Impact
+• Customer Reach
+• ARR / ARPU
+• Customer Retention
+• Strategic Importance
+
+Prioritization
+
+• RICE
+• ICE
+• MoSCoW
+• Weighted Score
+• Value vs Effort
+• Kano
+• Opportunity Score
+
+Engineering
+
+• Frontend
+• Backend
+• Database
+• QA
+• Story Points
+• Sprint Count
+
+At the end generate an AI comparison explaining
+
+• Which feature should be prioritized
+• Why
+• Risks
+• Trade-offs
+• Final Recommendation
+
+==================================================
+IMPORTANT
+==================================================
+
+These definitions are the official prioritization framework specification for this application.
+
+Reuse these formulas throughout the application.
+
+Do not invent alternative implementations.
