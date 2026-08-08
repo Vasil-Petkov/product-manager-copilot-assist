@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Database, MessageSquare, Twitter, Users, UploadCloud, RotateCcw, AlertCircle, Video } from "lucide-react";
 import { format } from "date-fns";
+import MeetingsTab from "./sources/meetings-tab";
+import StakeholdersTab from "./sources/stakeholders-tab";
+import RetrospectivesTab from "./sources/retrospectives-tab";
 
 export default function FeedbackSources() {
   const { toast } = useToast();
@@ -74,7 +77,6 @@ export default function FeedbackSources() {
     e.preventDefault();
     if (!bulkCsv) return;
     
-    // Simple naive CSV parser for demo purposes
     const lines = bulkCsv.split("\n").filter(l => l.trim().length > 0);
     const inputs = lines.map(line => ({
       content: line,
@@ -107,12 +109,24 @@ export default function FeedbackSources() {
 
       <Tabs defaultValue="social" className="w-full">
         <TabsList className="bg-muted p-1 mb-6 flex-wrap h-auto gap-1">
-          <TabsTrigger value="social" className="flex items-center gap-2 data-[state=active]:bg-card"><Twitter className="size-4"/> Social & Web</TabsTrigger>
-          <TabsTrigger value="portal" className="flex items-center gap-2 data-[state=active]:bg-card"><MessageSquare className="size-4"/> Idea Portal</TabsTrigger>
-          <TabsTrigger value="bulk" className="flex items-center gap-2 data-[state=active]:bg-card"><UploadCloud className="size-4"/> Bulk Import</TabsTrigger>
-          <TabsTrigger value="meetings" disabled className="flex items-center gap-2 opacity-50"><Video className="size-4"/> Meetings</TabsTrigger>
-          <TabsTrigger value="stakeholder" disabled className="flex items-center gap-2 opacity-50"><Users className="size-4"/> Stakeholder</TabsTrigger>
-          <TabsTrigger value="retrospective" disabled className="flex items-center gap-2 opacity-50"><RotateCcw className="size-4"/> Retrospectives</TabsTrigger>
+          <TabsTrigger value="social" className="flex items-center gap-2 data-[state=active]:bg-card">
+            <Twitter className="size-4"/> Social & Web
+          </TabsTrigger>
+          <TabsTrigger value="portal" className="flex items-center gap-2 data-[state=active]:bg-card">
+            <MessageSquare className="size-4"/> Idea Portal
+          </TabsTrigger>
+          <TabsTrigger value="bulk" className="flex items-center gap-2 data-[state=active]:bg-card">
+            <UploadCloud className="size-4"/> Bulk Import
+          </TabsTrigger>
+          <TabsTrigger value="meetings" className="flex items-center gap-2 data-[state=active]:bg-card">
+            <Video className="size-4"/> Meetings
+          </TabsTrigger>
+          <TabsTrigger value="stakeholder" className="flex items-center gap-2 data-[state=active]:bg-card">
+            <Users className="size-4"/> Stakeholder
+          </TabsTrigger>
+          <TabsTrigger value="retrospective" className="flex items-center gap-2 data-[state=active]:bg-card">
+            <RotateCcw className="size-4"/> Retrospectives
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="social">
@@ -192,6 +206,18 @@ export default function FeedbackSources() {
               </form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="meetings">
+          <MeetingsTab />
+        </TabsContent>
+
+        <TabsContent value="stakeholder">
+          <StakeholdersTab />
+        </TabsContent>
+
+        <TabsContent value="retrospective">
+          <RetrospectivesTab />
         </TabsContent>
       </Tabs>
 
