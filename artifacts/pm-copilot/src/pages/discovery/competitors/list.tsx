@@ -115,42 +115,11 @@ export default function CompetitorsList() {
               <CardHeader className="p-5 pb-3">
                 <div className="flex justify-between items-start mb-2">
                   <Badge variant="outline" className="text-xs bg-muted/50">{comp.industry || "Uncategorized"}</Badge>
-                  <div className="flex items-center gap-1.5">
-                    {comp.threatLevel && (
-                      <Badge variant="outline" className={THREAT_COLORS[comp.threatLevel.toLowerCase() as keyof typeof THREAT_COLORS] || ""}>
-                        {comp.threatLevel} Threat
-                      </Badge>
-                    )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete this competitor?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            <strong>{comp.name}</strong> and all its intelligence data will be permanently removed.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={() => deleteCompetitor.mutate({ id: comp.id }, {
-                              onSuccess: () => {
-                                toast({ title: "Competitor deleted." });
-                                queryClient.invalidateQueries({ queryKey: getListCompetitorsQueryKey() });
-                              }
-                            })}
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+                  {comp.threatLevel && (
+                    <Badge variant="outline" className={THREAT_COLORS[comp.threatLevel.toLowerCase() as keyof typeof THREAT_COLORS] || ""}>
+                      {comp.threatLevel} Threat
+                    </Badge>
+                  )}
                 </div>
                 <CardTitle className="text-xl flex items-center gap-2">
                   {comp.name}
@@ -181,11 +150,42 @@ export default function CompetitorsList() {
                 <span className="text-xs text-muted-foreground">
                   {comp.lastAnalyzedAt ? `Analyzed ${format(new Date(comp.lastAnalyzedAt), 'MMM d')}` : "Not analyzed yet"}
                 </span>
-                <Button variant="ghost" size="sm" asChild className="hover:text-primary">
-                  <Link href={`/discovery/competitors/${comp.id}`}>
-                    Deep Dive <ExternalLink className="size-3 ml-1.5" />
-                  </Link>
-                </Button>
+                <div className="flex items-center gap-1">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this competitor?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          <strong>{comp.name}</strong> and all its intelligence data will be permanently removed.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => deleteCompetitor.mutate({ id: comp.id }, {
+                            onSuccess: () => {
+                              toast({ title: "Competitor deleted." });
+                              queryClient.invalidateQueries({ queryKey: getListCompetitorsQueryKey() });
+                            }
+                          })}
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Button variant="ghost" size="sm" asChild className="hover:text-primary">
+                    <Link href={`/discovery/competitors/${comp.id}`}>
+                      Deep Dive <ExternalLink className="size-3 ml-1.5" />
+                    </Link>
+                  </Button>
+                </div>
               </CardFooter>
             </Card>
           ))}
