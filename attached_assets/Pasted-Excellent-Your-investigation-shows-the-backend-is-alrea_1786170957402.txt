@@ -1,0 +1,139 @@
+Excellent. Your investigation shows the backend is already complete.
+
+Do NOT create any new backend routes, database tables, schemas, migrations or API endpoints.
+
+Instead, complete the unfinished frontend implementation for the Feedback Sources page.
+
+Current situation:
+
+✔ /api/meetings already exists
+✔ meetings database schema already exists
+✔ API client hooks already exist
+✔ The missing work is entirely inside sources.tsx and related frontend components.
+
+Tasks:
+
+1. Remove the placeholder implementation.
+
+Specifically remove:
+
+- disabled
+- opacity-50
+
+from the following TabsTrigger components:
+
+- Meetings
+- Stakeholders
+- Retrospectives
+
+2. Implement a complete TabsContent section for each tab.
+
+Use the existing design language already used for:
+
+- Social & Web
+- Idea Portal
+- Bulk Import
+
+The new tabs must feel like native parts of the application.
+
+3. Meetings
+
+Reuse the existing Meetings API.
+
+If React Query hooks already exist (for example useListMeetings() or equivalent), use them instead of creating new hooks.
+
+Implement:
+
+- meeting list
+- search
+- filtering
+- meeting detail
+- create meeting
+- edit meeting
+- delete meeting
+- AI summary display
+- extracted opportunities
+- extracted insights
+- links to Product Ideas where available
+
+4. Stakeholders
+
+First inspect the existing backend.
+
+If stakeholder endpoints already exist, use them.
+
+If they do not exist, explain why before writing any backend code.
+
+Build a frontend that includes:
+
+- stakeholder list
+- create
+- edit
+- delete
+- company
+- role
+- influence
+- notes
+- linked ideas
+- linked meetings
+
+Reuse existing UI components.
+
+5. Retrospectives
+
+Inspect the backend.
+
+If retrospective endpoints already exist, connect to them.
+
+If they do not exist, explain exactly what is missing before adding anything.
+
+Implement:
+
+- retrospective list
+- create
+- edit
+- delete
+- action items
+- owners
+- due dates
+- completion status
+
+6. Before writing any new code:
+
+Search the workspace for:
+
+useListMeetings
+useListStakeholders
+useListRetrospectives
+
+and reuse every existing hook that already exists.
+
+Also inspect:
+
+lib/api-client-react
+lib/api-zod
+lib/db
+
+Do not duplicate functionality already implemented.
+
+7. Follow existing project architecture.
+
+No duplicate code.
+
+No duplicate APIs.
+
+No duplicate database tables.
+
+No duplicate schemas.
+
+No duplicate business logic.
+
+8. Keep the UI consistent with the rest of Product Discovery.
+
+9. When finished, provide a report including:
+
+- every file modified
+- every component added
+- every existing hook reused
+- every backend endpoint connected
+- confirmation that all four Feedback Sources tabs are fully operational.
