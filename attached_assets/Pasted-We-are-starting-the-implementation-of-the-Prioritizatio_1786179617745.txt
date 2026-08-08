@@ -1,0 +1,202 @@
+We are starting the implementation of the Prioritization module.
+
+IMPORTANT
+
+Before writing any code:
+
+- Reuse the existing project architecture.
+- Reuse existing UI components.
+- Reuse existing APIs.
+- Reuse existing database patterns.
+- Reuse existing design system.
+- Do NOT refactor unrelated code.
+- Do NOT modify Product Discovery.
+- Do NOT change routing outside this module.
+- Do NOT add unnecessary dependencies.
+- Commit only to the GitHub branch feature/prioritization.
+
+--------------------------------------------------------
+
+MODULE PURPOSE
+
+The Prioritization module helps Product Managers decide WHAT SHOULD BE BUILT NEXT.
+
+It automatically evaluates every Product Idea collected from the Product Discovery module using multiple prioritization techniques and combines the results into one AI recommendation.
+
+The user should never enter the same data twice.
+
+All Product Ideas must automatically come from Product Discovery.
+
+--------------------------------------------------------
+
+INPUT
+
+Use existing Product Ideas generated from:
+
+• Customer Feedback
+• Meetings
+• Stakeholders
+• Competitor Analysis
+• Social & Web
+• AI Insights
+
+--------------------------------------------------------
+
+PRIORITIZATION METHODS
+
+Evaluate every Product Idea using:
+
+• RICE
+• ICE
+• MoSCoW
+• Weighted Scoring
+• Value vs Effort
+• Kano Model
+• Opportunity Scoring
+
+Each method should display:
+
+• Score
+• Short explanation
+• Advantages
+• Disadvantages
+
+--------------------------------------------------------
+
+BUSINESS CONTEXT
+
+For every Product Idea also display:
+
+• Number of customers requesting it
+• Enterprise customers
+• SMB customers
+• Strategic customers
+• ARR / ARPU impact
+• Revenue opportunity
+• Customer retention impact
+• Customer reach
+• Strategic alignment
+• Competitive advantage
+• AI confidence
+
+--------------------------------------------------------
+
+ENGINEERING ESTIMATION
+
+Estimate implementation effort separately for:
+
+• Frontend
+• Backend
+• Database
+• API Integration
+• AI Components
+• QA / Testing
+
+Display:
+
+• Total Engineering Effort
+• Estimated Story Points
+• Estimated Sprint Count
+• Complexity (Low / Medium / High)
+• AI Confidence
+
+--------------------------------------------------------
+
+FEATURE COMPARISON
+
+Allow selecting two Product Ideas and compare them side-by-side.
+
+Compare:
+
+Business Value
+
+• Revenue impact
+• Customer impact
+• ARR impact
+• Customer reach
+• Strategic importance
+• Competitive advantage
+
+Prioritization
+
+• RICE
+• ICE
+• MoSCoW
+• Weighted Score
+• Value vs Effort
+• Kano
+• Opportunity Score
+
+Engineering
+
+• Frontend effort
+• Backend effort
+• Database effort
+• QA effort
+• Total effort
+• Complexity
+
+At the bottom generate AI insights explaining:
+
+• Which feature should be prioritized
+• Why
+• Risks
+• Trade-offs
+
+--------------------------------------------------------
+
+EXECUTIVE RECOMMENDATION
+
+This is the most important page.
+
+Instead of asking Product Managers to interpret all prioritization techniques, generate ONE consolidated recommendation.
+
+The recommendation must combine:
+
+• All prioritization methods
+• Business value
+• Customer value
+• Strategic importance
+• Customer reach
+• Revenue impact
+• Engineering effort
+• Risks
+• AI confidence
+
+Display:
+
+• Recommended Feature
+• AI Priority Score (0-100)
+• AI Confidence
+• Business Summary
+• Customer Impact
+• Engineering Investment
+• Risks
+• Why this feature should be built next
+
+--------------------------------------------------------
+
+USER INTERFACE
+
+Create the following pages:
+
+1. Prioritization Dashboard
+2. Product Ideas
+3. Prioritization Results
+4. Feature Comparison
+5. Executive Recommendation
+
+Use the same design language as Product Discovery.
+
+--------------------------------------------------------
+
+IMPORTANT
+
+Before implementing anything, provide a short implementation plan explaining:
+
+1. Which existing APIs will be reused.
+2. Which existing database tables will be reused.
+3. Which new components will be created.
+4. Which new database objects (if any) are required.
+
+Do not start coding until this implementation plan is complete.
