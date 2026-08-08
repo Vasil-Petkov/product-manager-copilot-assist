@@ -1,0 +1,250 @@
+Sprint 2.6 – Architecture Stabilization & Production Readiness
+
+You are continuing development of Product Manager Copilot Assist.
+
+The Product Discovery module is now functionally complete.
+
+Do NOT build any new business features.
+
+Do NOT implement Prioritization, Validation, Roadmap, Documentation, Analytics or AI Advisor.
+
+The goal of this sprint is to stabilize the architecture, improve code quality, strengthen the database, and prepare the application for future development.
+
+Objective
+
+This sprint focuses entirely on technical quality.
+
+Improve the existing implementation without changing the user experience.
+
+The application should become a stable foundation for all future modules.
+
+1. Authentication
+
+This is the highest priority.
+
+Implement authentication before any additional modules.
+
+Requirements:
+
+Integrate Replit Authentication.
+Protect all API endpoints.
+Every request should have an authenticated user.
+Associate Product Ideas, Meetings, Competitors and Feedback with the authenticated user.
+Prepare the architecture for future team workspaces.
+Do not redesign the UI.
+Add a login/logout experience.
+
+Authentication should be implemented in a modular way so it can later be replaced with Clerk or Auth0 if required.
+
+2. Database Integrity
+
+Review the complete database schema.
+
+Correct every relationship that does not use proper foreign keys.
+
+Replace text-based references with real relational references.
+
+Examples include:
+
+Product Ideas
+Competitors
+Prioritization Scores
+Signals
+Stakeholder Feedback
+
+Every relationship should use proper foreign key constraints.
+
+Normalize the schema where appropriate.
+
+Avoid duplicated data.
+
+3. Request Validation
+
+Every POST, PATCH and PUT endpoint must validate incoming data.
+
+Requirements:
+
+Use existing Zod schemas
+Return structured validation errors
+Never allow invalid data into the database
+Standardize validation across all endpoints
+4. Centralized Error Handling
+
+Implement a global error handling strategy.
+
+Requirements:
+
+Consistent JSON error responses
+Proper HTTP status codes
+Structured logging
+Friendly frontend error messages
+No duplicated try/catch logic where centralized middleware can be used
+5. Unify Product Idea API
+
+Currently Product Ideas are exposed through multiple API structures.
+
+Refactor the API so Product Ideas become the single source of truth.
+
+Requirements:
+
+Consistent naming
+Consistent routing
+Consistent response models
+Extend the OpenAPI specification
+Regenerate client code
+Remove duplicated API logic
+
+Future modules should consume the same Product Idea API.
+
+6. Pagination
+
+Implement server-side pagination.
+
+Support:
+
+limit
+offset
+
+Prepare for future cursor-based pagination.
+
+Apply pagination to:
+
+Product Ideas
+Meetings
+Competitors
+Signals
+Feedback
+7. Context Engine (NEW CORE ARCHITECTURE)
+
+Introduce a new backend service called Product Context Engine.
+
+This service will become the intelligence layer of the application.
+
+Its purpose is to automatically collect every piece of relevant information related to a Product Idea before any AI analysis is executed.
+
+The Context Engine must not change the UI.
+
+It is an internal architectural component.
+
+Context Engine Responsibilities
+
+Given a Product Idea, automatically gather:
+
+Related meetings
+Meeting transcripts
+Competitor reports
+Stakeholder feedback
+Customer requests
+Social media signals
+Support tickets
+Existing AI analysis
+Timeline history
+Comments
+Related Product Ideas
+Duplicate detection results
+
+Return one unified Product Context object.
+
+AI Integration
+
+Every future AI request should first retrieve the Product Context.
+
+Never analyze isolated information if additional context exists.
+
+Future modules such as:
+
+Prioritization
+Validation
+Documentation
+Roadmap
+Analytics
+
+must consume Product Context instead of querying multiple services independently.
+
+The Context Engine should become the single source of context for AI.
+
+8. AI Service Refactoring
+
+Refactor AI services.
+
+Current AI routes should call the Context Engine first.
+
+Example:
+
+Meeting Analysis
+
+↓
+
+Product Context
+
+↓
+
+OpenAI
+
+↓
+
+Updated Product Idea
+
+Future AI endpoints should follow the same architecture.
+
+9. Performance
+
+Review performance.
+
+Requirements:
+
+Remove duplicated database queries
+Optimize joins
+Cache expensive calculations where appropriate
+Avoid unnecessary AI requests
+Keep the architecture modular
+10. Documentation
+
+Generate developer documentation.
+
+Include:
+
+Updated architecture diagram
+Entity relationship diagram
+Product Context architecture
+API documentation
+Authentication flow
+Folder structure
+Sequence diagrams for AI processing
+11. Code Quality
+
+Review the entire project.
+
+Improve:
+
+Naming consistency
+Folder organization
+Service separation
+Repository pattern
+Type safety
+Reusable utilities
+Dead code removal
+
+Do not change working functionality.
+
+Final Goal
+
+At the end of this sprint the application should feel like a professional SaaS foundation rather than a prototype.
+
+No new Product Management functionality should be added.
+
+Instead, improve stability, maintainability, scalability and future extensibility.
+
+The application should be fully prepared for the implementation of Module 2 – Prioritization.
+
+Additional Architectural Requirement
+
+The Product Context Engine is now a core architectural component.
+
+Every future module must enrich the same Product Idea through the Context Engine.
+
+Never duplicate Product Idea data.
+
+Never allow AI services to analyze isolated objects when related context already exists.
+
+The Product Context Engine will become the intelligence backbone of the entire Product Manager Copilot Assist platform.

@@ -1,0 +1,506 @@
+I want you to create a web site/app that help product managers called Product Manager Copilot Assist which help the product managers to be more effective and to save time on repetitive tasks.
+Module 1 is product discovery where you support inputs from social media, internal idea portals, competitor intelligence, meeting transcripts, stakeholder feedback, and prepare for future sources like support desks, CRMs, app reviews, NPS, and analytics. Every input should go through an AI pipeline that cleans, deduplicates, clusters, detects sentiment, estimates impact and urgency, and produces a structured discovery opportunity. Each opportunity must include an evidence panel showing source counts and examples. Module 2 is prioritisation. Every discovery opportunity flows into prioritisation frameworks: Rice, Ice, Moscow, Kano, etcetera. Allow manual adjustments, but generate AI insights that explain rankings, key assumptions, missing data, risks, dependencies, and suggested release windows. The end-to-end workflow is Signals, AI normalisation, discovery opportunities, evidence panel, prioritisation, AI recommendations, roadmap candidates, and later PRD generation and Jira export. Non-functional use a modern SaaS UI with a clean architecture, extensible integration layer, and strong type safety.
+Product Discovery Module (MVP)
+Role
+You are a Senior Staff Software Engineer, AI Architect, and UX Designer.
+Build the Product Discovery Module for an AI-powered SaaS application called Product Manager Copilot Assist.
+The goal of this module is to become the single source of truth for Product Discovery by collecting product opportunities from multiple sources, organizing them automatically using AI, and presenting Product Managers with actionable insights.
+The module should be production-ready, modular, scalable, and easy to extend with additional integrations.
+________________________________________
+Objective
+Product Managers receive ideas, complaints, feature requests, and market information from many different places.
+Instead of checking multiple systems every day, they should have one centralized Product Discovery workspace where all product opportunities are collected, analyzed, and prepared for prioritization.
+The Product Discovery module does not prioritize ideas. Its responsibility ends with discovering, organizing, and enriching opportunities. Prioritization will be handled by a separate module.
+________________________________________
+Main Navigation
+Create a new navigation item:
+Product Discovery
+Inside this module create the following sections:
+•	Discovery Dashboard 
+•	Feedback Sources 
+•	Opportunities 
+•	Competitors 
+•	Meetings 
+•	AI Insights 
+________________________________________
+Discovery Dashboard
+This should become the Product Manager's daily homepage.
+Display:
+•	Total new opportunities 
+•	Opportunities waiting for prioritization 
+•	Top trending customer requests 
+•	Top competitor changes 
+•	Latest meeting insights 
+•	Most requested features 
+•	Top customer pain points 
+•	AI-generated daily summary 
+________________________________________
+Discovery Sources
+The application should collect information from multiple sources.
+Each source should be implemented as a separate connector so additional connectors can be added later.
+________________________________________
+Source 1 – Social Media
+Purpose:
+Collect customer opinions, complaints, feature requests and discussions.
+Future supported platforms:
+•	Facebook 
+•	Instagram 
+•	X (Twitter) 
+•	TikTok 
+•	LinkedIn 
+•	Reddit 
+•	YouTube 
+For the MVP, allow manual import of posts or comments (copy/paste or CSV). Design the connector architecture so API integrations can be added later.
+For every imported post:
+Extract:
+•	Feature requests 
+•	Customer pain points 
+•	Complaints 
+•	Positive feedback 
+•	Competitor mentions 
+•	Product mentions 
+Run:
+•	Sentiment Analysis 
+•	Topic Classification 
+•	Duplicate Detection 
+________________________________________
+Source 2 – Internal Idea Portal
+Example:
+RingCentral IDEA Portal
+Allow importing ideas from internal platforms.
+Each idea may contain:
+•	Title 
+•	Description 
+•	Votes 
+•	Comments 
+•	Customer 
+•	Created Date 
+AI should automatically identify:
+•	Similar ideas 
+•	Duplicate requests 
+•	Business problems 
+•	Product opportunities 
+________________________________________
+Source 3 – Competitor Intelligence
+Allow Product Managers to create competitor profiles.
+Each competitor contains:
+•	Name 
+•	Website 
+•	Description 
+•	Industry 
+•	Notes 
+The application should analyze competitor information and detect:
+•	New features 
+•	Pricing changes 
+•	Promotions 
+•	New AI functionality 
+•	New integrations 
+•	Product announcements 
+•	UI changes 
+•	Release notes 
+•	Blog announcements 
+Each detected change should become a Product Opportunity.
+Generate:
+•	Summary 
+•	Business Impact 
+•	Possible Threat 
+•	Possible Opportunity 
+•	Recommendation 
+Store historical competitor reports.
+________________________________________
+Source 4 – Meetings
+Allow Product Managers to upload:
+•	Meeting transcript 
+•	Meeting summary 
+•	Meeting notes 
+Supported formats:
+•	TXT 
+•	DOCX 
+•	PDF 
+•	Copy/Paste 
+AI should extract:
+•	Customer pain points 
+•	Feature requests 
+•	Risks 
+•	Action items 
+•	Business opportunities 
+•	Competitor mentions 
+•	Open questions 
+________________________________________
+Source 5 – Stakeholder Feedback
+Allow manual feedback from:
+•	Sales 
+•	Customer Success 
+•	Support 
+•	Marketing 
+•	Executives 
+•	Engineering 
+Each feedback item should include:
+•	Source 
+•	Stakeholder 
+•	Description 
+•	Customer Impact 
+•	Business Context 
+________________________________________
+Source 6 – Sprint Retrospectives
+Allow importing Sprint Retrospective notes.
+AI should detect:
+•	Recurring problems 
+•	Process improvements 
+•	Technical debt 
+•	Product risks 
+•	Delivery blockers 
+________________________________________
+AI Opportunity Engine
+Every imported item from every source should pass through the same AI pipeline.
+The pipeline should:
+Normalize data
+↓
+Detect language
+↓
+Summarize
+↓
+Extract feature requests
+↓
+Extract customer pain points
+↓
+Cluster similar requests
+↓
+Remove duplicates
+↓
+Identify sentiment
+↓
+Estimate urgency
+↓
+Estimate business impact
+↓
+Generate AI summary
+↓
+Create Product Opportunity
+________________________________________
+Product Opportunity
+Every discovered opportunity should become a structured record.
+Fields:
+•	Title 
+•	Description 
+•	Category 
+•	Source 
+•	Source Type 
+•	Original Content 
+•	AI Summary 
+•	Customer Problem 
+•	Suggested Solution 
+•	Business Value 
+•	Estimated Customer Impact 
+•	Estimated Business Impact 
+•	Urgency 
+•	Confidence Score 
+•	Sentiment 
+•	Tags 
+•	Date Created 
+•	Status 
+Statuses:
+•	New 
+•	Under Review 
+•	Ready for Prioritization 
+•	Archived 
+________________________________________
+Evidence Panel
+Every opportunity should contain an Evidence Panel.
+Display:
+Number of customer requests
+Number of stakeholders mentioning it
+Number of meetings mentioning it
+Competitor references
+Social media mentions
+Example customer quotes
+Source links
+The Product Manager should immediately understand why this opportunity exists.
+________________________________________
+AI Insights
+Create an AI-generated insights page.
+Generate:
+Top trending customer problems
+Emerging feature requests
+Most requested improvements
+Fastest growing themes
+Competitor trends
+Stakeholder concerns
+Potential innovation opportunities
+Market opportunities
+Generate one Daily Discovery Summary that can be reviewed in less than five minutes.
+________________________________________
+Search & Filters
+Allow searching and filtering by:
+•	Source 
+•	Category 
+•	Competitor 
+•	Sentiment 
+•	Date 
+•	Status 
+•	Industry 
+•	Tags 
+•	Customer Segment 
+________________________________________
+Future Integrations (Architecture Only)
+Design the connector architecture so future integrations can be added without changing the core module.
+Future integrations include:
+•	Jira 
+•	Confluence 
+•	Slack 
+•	Microsoft Teams 
+•	Google Meet 
+•	Zoom 
+•	Salesforce 
+•	HubSpot 
+•	Zendesk 
+•	Intercom 
+•	Google Play 
+•	Apple App Store 
+•	G2 
+•	Capterra 
+•	Product Hunt 
+•	Google Analytics 
+•	Mixpanel 
+•	Amplitude 
+Do not implement these integrations yet.
+________________________________________
+Technical Requirements
+•	Use reusable React components. 
+•	Follow Clean Architecture principles. 
+•	Separate connectors from business logic. 
+•	Build an extensible AI processing pipeline. 
+•	Ensure the module is responsive and optimized for desktop use. 
+•	Prepare the data model so the Prioritization module can consume Product Opportunities directly. 
+________________________________________
+Final instruction
+This module is the foundation of the entire application. Every idea, request, complaint, competitor change, meeting insight, or stakeholder suggestion should ultimately become a standardized Product Opportunity. Design the architecture around this concept, because all future modules—including Prioritization, Roadmap, PRD Generator, and AI Advisor—will consume Product Opportunities as their primary input.
+
+Here is the information about all modules for the application:
+Product Manager Copilot Assist
+Module 1 – Product Discovery
+Purpose
+Centralize, collect, and organize all product opportunities from internal and external sources into one intelligent workspace.
+Key Features
+•	Social media monitoring (Facebook, Instagram, X, TikTok, LinkedIn, Reddit, YouTube) 
+•	Internal idea portals (e.g., RingCentral IDEA) 
+•	Competitor intelligence 
+•	Customer feedback collection 
+•	Stakeholder feedback 
+•	Sprint retrospective insights 
+•	Meeting transcript analysis 
+•	Sales feedback 
+•	Customer Success feedback 
+•	Support ticket analysis 
+•	AI clustering of similar requests 
+•	Duplicate detection 
+•	Sentiment analysis 
+•	Customer pain point identification 
+•	Opportunity generation 
+•	Evidence panel for every opportunity 
+•	AI-generated daily discovery summary 
+Output
+A standardized list of Product Opportunities ready for prioritization.
+________________________________________
+Module 2 – Prioritization
+Purpose
+Help Product Managers prioritize discovered opportunities using AI and industry-standard prioritization frameworks.
+Key Features
+•	RICE 
+•	ICE 
+•	MoSCoW 
+•	Kano Model 
+•	Opportunity Scoring 
+•	Value vs. Effort Matrix 
+•	Business objective alignment 
+•	Strategic fit analysis 
+•	AI priority recommendations 
+•	AI explanation of prioritization 
+•	Dependency analysis 
+•	Risk analysis 
+•	Effort estimation 
+•	Business impact estimation 
+•	Customer impact estimation 
+Output
+A ranked backlog of validated product opportunities.
+________________________________________
+Module 3 – Product Validation
+Purpose
+Help Product Managers validate ideas, assumptions, and proposed solutions before investing development effort.
+Key Features
+•	Experiment Builder 
+•	A/B Testing guidance 
+•	Multivariate Testing 
+•	Feature Flag experiments 
+•	Fake Door Tests 
+•	Smoke Tests 
+•	Concierge MVP 
+•	Wizard of Oz experiments 
+•	MVP validation 
+•	Landing Page validation 
+•	Pricing experiments 
+•	Beta testing planning 
+•	Hypothesis generator 
+•	Experiment planning 
+•	Success criteria definition 
+•	Failure criteria definition 
+•	Experiment dashboard 
+•	Validation frameworks (Lean Startup, Continuous Discovery, JTBD, Opportunity Solution Tree) 
+•	AI Validation Advisor 
+•	AI interpretation of experiment results 
+•	Validation Knowledge Base 
+•	Lessons learned repository 
+Output
+Validated or invalidated product opportunities with evidence-based recommendations.
+________________________________________
+Module 4 – Roadmap Builder
+Purpose
+Convert validated and prioritized opportunities into strategic product roadmaps.
+Key Features
+•	Monthly roadmap 
+•	Quarterly roadmap 
+•	Annual roadmap 
+•	Timeline visualization 
+•	Milestones 
+•	Dependencies 
+•	Release planning 
+•	Capacity planning 
+•	AI roadmap recommendations 
+•	Scenario planning 
+•	Resource planning 
+•	Delivery risk identification 
+Output
+A strategic, explainable product roadmap.
+________________________________________
+Module 5 – Product Documentation
+Purpose
+Generate and maintain complete product documentation with AI assistance.
+Key Features
+•	AI PRD Generator 
+•	BRD Generator 
+•	Functional Requirements 
+•	Non-functional Requirements 
+•	User Story Generator 
+•	Acceptance Criteria Generator 
+•	Epics 
+•	Features 
+•	Technical Requirements 
+•	Release Notes 
+•	Stakeholder Updates 
+•	AI Documentation Reviewer 
+•	Gap analysis 
+•	Edge case detection 
+•	Requirement quality scoring 
+•	Version history 
+Output
+Complete, high-quality product documentation ready for engineering.
+________________________________________
+Module 6 – Meeting Intelligence
+Purpose
+Prepare Product Managers for meetings and automatically extract valuable insights afterward.
+Key Features
+•	Meeting preparation 
+•	Customer research 
+•	Company research 
+•	Stakeholder research 
+•	Suggested agenda 
+•	Suggested questions 
+•	Value proposition preparation 
+•	Transcript upload 
+•	AI meeting summaries 
+•	Action items 
+•	Decision tracking 
+•	Feature request extraction 
+•	Customer pain point extraction 
+•	Competitor mentions 
+•	Follow-up email generation 
+Output
+Meeting insights automatically linked to Product Discovery.
+________________________________________
+Module 7 – Product Analytics
+Purpose
+Provide a unified dashboard with the most important business, customer, and product metrics.
+Key Features
+•	Business metrics 
+o	MRR 
+o	ARR 
+o	CLV 
+o	ARPU 
+•	Customer metrics 
+o	NPS 
+o	CSAT 
+o	Churn Rate 
+o	Conversion Rate 
+•	Engagement metrics 
+o	DAU 
+o	MAU 
+o	Session Duration 
+•	AARRR Framework 
+•	HEART Framework 
+•	North Star Metrics 
+•	Custom KPI dashboard 
+•	Trend analysis 
+•	AI anomaly detection 
+•	Root cause analysis 
+•	AI-generated recommendations 
+Output
+A centralized Product Health Dashboard with actionable insights.
+________________________________________
+Module 8 – AI Product Advisor
+Purpose
+Act as an AI Product Coach and strategic decision-support assistant throughout the entire product lifecycle.
+Key Features
+•	AI Chat 
+•	Product Memory 
+•	Context-aware conversations 
+•	Product strategy recommendations 
+•	Feature brainstorming 
+•	Decision support 
+•	Opportunity analysis 
+•	Risk identification 
+•	Executive summaries 
+•	AI coaching 
+•	Product management best practices 
+•	AI explanations 
+•	"What should I do next?" recommendations 
+Output
+An AI teammate that understands the product, remembers context, and supports Product Managers in making better decisions.
+________________________________________
+Module 9 – Settings & Integrations
+Purpose
+Configure the application and connect external systems into one Product Management ecosystem.
+Key Features
+•	User profile 
+•	Workspace settings 
+•	AI provider configuration 
+•	OpenAI API key 
+•	Future support for multiple AI providers (Claude, Gemini, etc.) 
+•	Notification preferences 
+•	Connector management 
+Future Integrations
+•	Jira 
+•	Confluence 
+•	Notion 
+•	Slack 
+•	Microsoft Teams 
+•	Zoom 
+•	Google Meet 
+•	Figma 
+•	GitHub 
+•	Azure DevOps 
+•	Salesforce 
+•	HubSpot 
+•	Zendesk 
+•	Intercom 
+•	Productboard 
+•	Google Analytics 
+•	Mixpanel 
+•	Amplitude 
+•	Google Play 
+•	Apple App Store 
+•	G2 
+•	Capterra 
+Output
+A fully connected Product Management ecosystem.
+
+

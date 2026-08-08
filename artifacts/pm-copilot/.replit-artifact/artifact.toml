@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Product Manager Copilot Assist"
+description = "An AI-powered SaaS platform for product managers. Centralizes product discovery from multiple sources (social media, idea portals, competitor intelligence, meetings, stakeholder feedback), runs an AI pipeline to cluster, deduplicate, and score opportunities, and provides prioritization frameworks (RICE, ICE, MoSCoW, Kano) with AI recommendations. Includes 9 modules: Discovery, Prioritization, Validation, Roadmap, Documentation, Meeting Intelligence, Analytics, AI Advisor, and Settings."
+version = "1.0.0"
+id = "artifacts/pm-copilot"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23446
+
+[services.development]
+run = "pnpm --filter @workspace/pm-copilot run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pm-copilot", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/pm-copilot/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23446"
+BASE_PATH = "/"

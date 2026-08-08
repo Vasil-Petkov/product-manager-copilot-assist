@@ -1,0 +1,2 @@
+- [PM Copilot import fixes](pm-copilot-import-fixes.md) — design subagent tends to import from non-exported subpaths and use missing react-icons; fix patterns documented.
+- [Sprint 2.6 arch decisions](sprint-2-6-arch.md) — auth, Context Engine, zod/codegen quirks, FK migration, and response shape rules.

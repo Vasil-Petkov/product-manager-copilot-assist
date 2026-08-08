@@ -1,0 +1,1934 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Product Manager Copilot Assist API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: Auth
+    description: Browser and mobile authentication endpoints.
+  - name: health
+    description: Health operations
+  - name: dashboard
+    description: Dashboard operations
+  - name: opportunities
+    description: Product opportunity operations
+  - name: signals
+    description: Raw signal/input operations
+  - name: competitors
+    description: Competitor intelligence operations
+  - name: meetings
+    description: Meeting transcript operations
+  - name: feedback
+    description: Stakeholder feedback operations
+  - name: insights
+    description: AI insight operations
+  - name: prioritization
+    description: Prioritization framework operations
+  - name: openai
+    description: OpenAI AI chat, image, and audio operations
+
+paths:
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          description: Relative path to redirect to after login (must start with `/`). Defaults to `/`.
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the OIDC authorization endpoint.
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: iss
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the returnTo path on success or /api/login on failure.
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+            default: /
+      responses:
+        '302':
+          description: Redirect to the OIDC provider logout URL.
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile OIDC code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileTokenExchangeRequest'
+      responses:
+        '200':
+          description: Session created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileTokenExchangeSuccess'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Token did not contain usable claims.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Token exchange failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      responses:
+        '200':
+          description: Logout processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutSuccess'
+
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # --- Dashboard ---
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/daily-summary:
+    get:
+      operationId: getDailySummary
+      tags: [dashboard]
+      summary: Get AI-generated daily discovery summary
+      responses:
+        "200":
+          description: Daily summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailySummary"
+
+  # --- Opportunities ---
+  /opportunities:
+    get:
+      operationId: listOpportunities
+      tags: [opportunities]
+      summary: List product opportunities
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: source_type
+          in: query
+          schema:
+            type: string
+        - name: sentiment
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of opportunities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Opportunity"
+    post:
+      operationId: createOpportunity
+      tags: [opportunities]
+      summary: Create a product opportunity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opportunity"
+
+  /opportunities/{id}:
+    get:
+      operationId: getOpportunity
+      tags: [opportunities]
+      summary: Get a product opportunity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateOpportunity
+      tags: [opportunities]
+      summary: Update a product opportunity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityPatch"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opportunity"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteOpportunity
+      tags: [opportunities]
+      summary: Delete a product opportunity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /opportunities/{id}/analyze:
+    post:
+      operationId: analyzeOpportunity
+      tags: [opportunities]
+      summary: Run AI analysis on an opportunity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Updated opportunity with AI analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opportunity"
+
+  # --- Signals (raw inputs) ---
+  /signals:
+    get:
+      operationId: listSignals
+      tags: [signals]
+      summary: List raw signals
+      parameters:
+        - name: source_type
+          in: query
+          schema:
+            type: string
+        - name: processed
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of signals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Signal"
+    post:
+      operationId: createSignal
+      tags: [signals]
+      summary: Import a raw signal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalInput"
+      responses:
+        "201":
+          description: Created signal and generated opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignalProcessResult"
+
+  /signals/{id}:
+    delete:
+      operationId: deleteSignal
+      tags: [signals]
+      summary: Delete a raw signal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /signals/bulk:
+    post:
+      operationId: bulkImportSignals
+      tags: [signals]
+      summary: Bulk import signals (CSV or multiple items)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkSignalInput"
+      responses:
+        "201":
+          description: Imported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkImportResult"
+
+  # --- Competitors ---
+  /competitors:
+    get:
+      operationId: listCompetitors
+      tags: [competitors]
+      summary: List competitors
+      responses:
+        "200":
+          description: List of competitors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Competitor"
+    post:
+      operationId: createCompetitor
+      tags: [competitors]
+      summary: Create a competitor profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompetitorInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competitor"
+
+  /competitors/{id}:
+    get:
+      operationId: getCompetitor
+      tags: [competitors]
+      summary: Get a competitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Competitor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competitor"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateCompetitor
+      tags: [competitors]
+      summary: Update a competitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompetitorPatch"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competitor"
+    delete:
+      operationId: deleteCompetitor
+      tags: [competitors]
+      summary: Delete a competitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /competitors/{id}/analyze:
+    post:
+      operationId: analyzeCompetitor
+      tags: [competitors]
+      summary: Run AI analysis on competitor data
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Competitor with analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competitor"
+
+  /competitors/{id}/reports:
+    get:
+      operationId: listCompetitorReports
+      tags: [competitors]
+      summary: List historical competitor reports
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CompetitorReport"
+
+  # --- Meetings ---
+  /meetings:
+    get:
+      operationId: listMeetings
+      tags: [meetings]
+      summary: List meetings
+      responses:
+        "200":
+          description: List of meetings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Meeting"
+    post:
+      operationId: createMeeting
+      tags: [meetings]
+      summary: Create a meeting and upload transcript
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+
+  /meetings/{id}:
+    get:
+      operationId: getMeeting
+      tags: [meetings]
+      summary: Get a meeting with extracted insights
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Meeting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateMeeting
+      tags: [meetings]
+      summary: Update a meeting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingPatch"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+    delete:
+      operationId: deleteMeeting
+      tags: [meetings]
+      summary: Delete a meeting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /meetings/{id}/analyze:
+    post:
+      operationId: analyzeMeeting
+      tags: [meetings]
+      summary: Run AI extraction on meeting transcript
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Meeting with AI-extracted insights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDetail"
+
+  # --- Stakeholder Feedback ---
+  /feedback:
+    get:
+      operationId: listFeedback
+      tags: [feedback]
+      summary: List stakeholder feedback
+      parameters:
+        - name: department
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of feedback
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StakeholderFeedback"
+    post:
+      operationId: createFeedback
+      tags: [feedback]
+      summary: Create stakeholder feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StakeholderFeedback"
+
+  /feedback/{id}:
+    get:
+      operationId: getFeedback
+      tags: [feedback]
+      summary: Get stakeholder feedback
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StakeholderFeedback"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateFeedback
+      tags: [feedback]
+      summary: Update feedback
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackPatch"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StakeholderFeedback"
+    delete:
+      operationId: deleteFeedback
+      tags: [feedback]
+      summary: Delete feedback
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  # --- AI Insights ---
+  /insights:
+    get:
+      operationId: listInsights
+      tags: [insights]
+      summary: List AI-generated insights
+      responses:
+        "200":
+          description: List of insights
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiInsight"
+
+  /insights/trending:
+    get:
+      operationId: getTrendingInsights
+      tags: [insights]
+      summary: Get trending topics and themes
+      responses:
+        "200":
+          description: Trending insights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrendingInsights"
+
+  /insights/generate:
+    post:
+      operationId: generateInsights
+      tags: [insights]
+      summary: Trigger AI insight generation
+      responses:
+        "200":
+          description: Generated insights
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiInsight"
+
+  # --- Prioritization ---
+  /prioritization:
+    get:
+      operationId: listPrioritization
+      tags: [prioritization]
+      summary: List prioritized opportunities with scores
+      parameters:
+        - name: framework
+          in: query
+          schema:
+            type: string
+            enum: [rice, ice, moscow, kano]
+      responses:
+        "200":
+          description: Prioritized opportunities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PrioritizedOpportunity"
+
+  /prioritization/score:
+    post:
+      operationId: scoreOpportunity
+      tags: [prioritization]
+      summary: Score an opportunity using a framework
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrioritizationInput"
+      responses:
+        "201":
+          description: Score created/updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrioritizationScore"
+
+  /prioritization/{id}:
+    patch:
+      operationId: updatePrioritization
+      tags: [prioritization]
+      summary: Update prioritization scores manually
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrioritizationPatch"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrioritizationScore"
+
+  /prioritization/ai-recommend:
+    post:
+      operationId: aiRecommendPrioritization
+      tags: [prioritization]
+      summary: Get AI priority recommendations for all opportunities
+      responses:
+        "200":
+          description: AI recommendations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiPriorityRecommendation"
+
+  /openai/conversations:
+    get:
+      operationId: listOpenaiConversations
+      tags: [openai]
+      summary: List all conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiConversation"
+    post:
+      operationId: createOpenaiConversation
+      tags: [openai]
+      summary: Create a new conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiConversationInput"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversation"
+  /openai/conversations/{id}:
+    get:
+      operationId: getOpenaiConversation
+      tags: [openai]
+      summary: Get conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversationWithMessages"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+    delete:
+      operationId: deleteOpenaiConversation
+      tags: [openai]
+      summary: Delete a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+  /openai/conversations/{id}/messages:
+    get:
+      operationId: listOpenaiMessages
+      tags: [openai]
+      summary: List messages in a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiMessage"
+    post:
+      operationId: sendOpenaiMessage
+      tags: [openai]
+      summary: Send a text message and receive a streaming text response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiMessageInput"
+      responses:
+        "200":
+          description: SSE stream of assistant text chunks
+          content:
+            text/event-stream: {}
+
+components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      description: Opaque session token — `Bearer <sid>`.
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      description: Browser session cookie.
+      schema:
+        type: string
+
+  schemas:
+    OpenaiConversation:
+      type: object
+      required: [id, title, createdAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    OpenaiConversationInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+    OpenaiConversationWithMessages:
+      type: object
+      required: [id, title, createdAt, messages]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpenaiMessage"
+    OpenaiMessage:
+      type: object
+      required: [id, conversationId, role, content, createdAt]
+      properties:
+        id:
+          type: number
+        conversationId:
+          type: number
+        role:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    OpenaiMessageInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    # --- Dashboard ---
+    DashboardStats:
+      type: object
+      required: [totalOpportunities, newOpportunities, waitingForPrioritization, topRequests, topPainPoints, sourceBreakdown, sentimentBreakdown]
+      properties:
+        totalOpportunities:
+          type: number
+        newOpportunities:
+          type: number
+        waitingForPrioritization:
+          type: number
+        totalSignals:
+          type: number
+        totalCompetitors:
+          type: number
+        totalMeetings:
+          type: number
+        topRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopItem"
+        topPainPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopItem"
+        topCompetitorChanges:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopItem"
+        latestMeetingInsights:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopItem"
+        sourceBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceCount"
+        sentimentBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SentimentCount"
+
+    TopItem:
+      type: object
+      required: [label, count]
+      properties:
+        label:
+          type: string
+        count:
+          type: number
+        trend:
+          type: ["string", "null"]
+
+    SourceCount:
+      type: object
+      required: [sourceType, count]
+      properties:
+        sourceType:
+          type: string
+        count:
+          type: number
+
+    SentimentCount:
+      type: object
+      required: [sentiment, count]
+      properties:
+        sentiment:
+          type: string
+        count:
+          type: number
+
+    DailySummary:
+      type: object
+      required: [summary, generatedAt]
+      properties:
+        summary:
+          type: string
+        keyThemes:
+          type: array
+          items:
+            type: string
+        urgentItems:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        generatedAt:
+          type: string
+          format: date-time
+
+    # --- Opportunity ---
+    Opportunity:
+      type: object
+      required: [id, title, description, status, sourceType, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: ["string", "null"]
+        sourceType:
+          type: string
+        aiSummary:
+          type: ["string", "null"]
+        customerProblem:
+          type: ["string", "null"]
+        suggestedSolution:
+          type: ["string", "null"]
+        businessValue:
+          type: ["string", "null"]
+        estimatedCustomerImpact:
+          type: ["string", "null"]
+        estimatedBusinessImpact:
+          type: ["string", "null"]
+        urgency:
+          type: ["string", "null"]
+        confidenceScore:
+          type: ["number", "null"]
+        sentiment:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [new, under_review, ready_for_prioritization, archived]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    OpportunityDetail:
+      allOf:
+        - $ref: "#/components/schemas/Opportunity"
+        - type: object
+          properties:
+            evidence:
+              $ref: "#/components/schemas/EvidencePanel"
+            relatedSignals:
+              type: array
+              items:
+                $ref: "#/components/schemas/Signal"
+
+    EvidencePanel:
+      type: object
+      properties:
+        customerRequestCount:
+          type: number
+        stakeholderMentions:
+          type: number
+        meetingMentions:
+          type: number
+        competitorReferences:
+          type: number
+        socialMentions:
+          type: number
+        exampleQuotes:
+          type: array
+          items:
+            type: string
+        sourceLinks:
+          type: array
+          items:
+            type: string
+
+    OpportunityInput:
+      type: object
+      required: [title, description, sourceType]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        category:
+          type: string
+        sourceType:
+          type: string
+        originalContent:
+          type: string
+        customerProblem:
+          type: string
+        suggestedSolution:
+          type: string
+        businessValue:
+          type: string
+        urgency:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [new, under_review, ready_for_prioritization, archived]
+
+    OpportunityPatch:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        sourceType:
+          type: string
+        customerProblem:
+          type: string
+        suggestedSolution:
+          type: string
+        businessValue:
+          type: string
+        urgency:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [new, under_review, ready_for_prioritization, archived]
+
+    # --- Signal ---
+    Signal:
+      type: object
+      required: [id, content, sourceType, processed, createdAt]
+      properties:
+        id:
+          type: number
+        content:
+          type: string
+        sourceType:
+          type: string
+        sourcePlatform:
+          type: ["string", "null"]
+        author:
+          type: ["string", "null"]
+        sentiment:
+          type: ["string", "null"]
+        processed:
+          type: boolean
+        opportunityId:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    SignalInput:
+      type: object
+      required: [content, sourceType]
+      properties:
+        content:
+          type: string
+          minLength: 1
+        sourceType:
+          type: string
+          enum: [social_media, idea_portal, stakeholder, retrospective, other]
+        sourcePlatform:
+          type: string
+        author:
+          type: string
+        sourceUrl:
+          type: string
+        votes:
+          type: number
+        customerId:
+          type: string
+
+    BulkSignalInput:
+      type: object
+      required: [signals, sourceType]
+      properties:
+        signals:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignalInput"
+        sourceType:
+          type: string
+
+    SignalProcessResult:
+      type: object
+      required: [signal]
+      properties:
+        signal:
+          $ref: "#/components/schemas/Signal"
+        opportunity:
+          $ref: "#/components/schemas/Opportunity"
+
+    BulkImportResult:
+      type: object
+      required: [imported, opportunitiesCreated]
+      properties:
+        imported:
+          type: number
+        opportunitiesCreated:
+          type: number
+        signals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Signal"
+
+    # --- Competitor ---
+    Competitor:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        website:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        lastAnalyzedAt:
+          type: ["string", "null"]
+        latestAnalysis:
+          type: ["string", "null"]
+        threatLevel:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CompetitorInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        website:
+          type: string
+        description:
+          type: string
+        industry:
+          type: string
+        notes:
+          type: string
+
+    CompetitorPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        website:
+          type: string
+        description:
+          type: string
+        industry:
+          type: string
+        notes:
+          type: string
+
+    CompetitorReport:
+      type: object
+      required: [id, competitorId, summary, createdAt]
+      properties:
+        id:
+          type: number
+        competitorId:
+          type: number
+        summary:
+          type: string
+        newFeatures:
+          type: array
+          items:
+            type: string
+        pricingChanges:
+          type: ["string", "null"]
+        businessImpact:
+          type: ["string", "null"]
+        possibleThreat:
+          type: ["string", "null"]
+        possibleOpportunity:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    # --- Meeting ---
+    Meeting:
+      type: object
+      required: [id, title, meetingDate, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        meetingDate:
+          type: string
+          format: date-time
+        attendees:
+          type: array
+          items:
+            type: string
+        transcript:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        analyzed:
+          type: boolean
+        opportunitiesExtracted:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MeetingDetail:
+      allOf:
+        - $ref: "#/components/schemas/Meeting"
+        - type: object
+          properties:
+            extractedInsights:
+              $ref: "#/components/schemas/MeetingInsights"
+
+    MeetingInsights:
+      type: object
+      properties:
+        painPoints:
+          type: array
+          items:
+            type: string
+        featureRequests:
+          type: array
+          items:
+            type: string
+        risks:
+          type: array
+          items:
+            type: string
+        actionItems:
+          type: array
+          items:
+            type: string
+        businessOpportunities:
+          type: array
+          items:
+            type: string
+        competitorMentions:
+          type: array
+          items:
+            type: string
+        openQuestions:
+          type: array
+          items:
+            type: string
+        summary:
+          type: ["string", "null"]
+
+    MeetingInput:
+      type: object
+      required: [title, meetingDate]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        meetingDate:
+          type: string
+          format: date-time
+        attendees:
+          type: array
+          items:
+            type: string
+        transcript:
+          type: string
+        notes:
+          type: string
+
+    MeetingPatch:
+      type: object
+      properties:
+        title:
+          type: string
+        meetingDate:
+          type: string
+          format: date-time
+        attendees:
+          type: array
+          items:
+            type: string
+        transcript:
+          type: string
+        notes:
+          type: string
+
+    # --- Stakeholder Feedback ---
+    StakeholderFeedback:
+      type: object
+      required: [id, department, stakeholderName, description, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        department:
+          type: string
+          enum: [sales, customer_success, support, marketing, executives, engineering, other]
+        stakeholderName:
+          type: string
+        description:
+          type: string
+        customerImpact:
+          type: ["string", "null"]
+        businessContext:
+          type: ["string", "null"]
+        urgency:
+          type: ["string", "null"]
+        opportunityId:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FeedbackInput:
+      type: object
+      required: [department, stakeholderName, description]
+      properties:
+        department:
+          type: string
+          enum: [sales, customer_success, support, marketing, executives, engineering, other]
+        stakeholderName:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        customerImpact:
+          type: string
+        businessContext:
+          type: string
+        urgency:
+          type: string
+
+    FeedbackPatch:
+      type: object
+      properties:
+        department:
+          type: string
+          enum: [sales, customer_success, support, marketing, executives, engineering, other]
+        stakeholderName:
+          type: string
+        description:
+          type: string
+        customerImpact:
+          type: string
+        businessContext:
+          type: string
+        urgency:
+          type: string
+
+    # --- AI Insights ---
+    AiInsight:
+      type: object
+      required: [id, type, title, content, createdAt]
+      properties:
+        id:
+          type: number
+        type:
+          type: string
+          enum: [trending_problem, emerging_request, competitor_trend, market_opportunity, innovation, stakeholder_concern]
+        title:
+          type: string
+        content:
+          type: string
+        relatedOpportunityIds:
+          type: array
+          items:
+            type: number
+        confidence:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    TrendingInsights:
+      type: object
+      required: [topProblems, emergingRequests, fastestGrowingThemes, competitorTrends, marketOpportunities]
+      properties:
+        topProblems:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendItem"
+        emergingRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendItem"
+        fastestGrowingThemes:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendItem"
+        competitorTrends:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendItem"
+        marketOpportunities:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendItem"
+        stakeholderConcerns:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendItem"
+
+    TrendItem:
+      type: object
+      required: [label, score]
+      properties:
+        label:
+          type: string
+        score:
+          type: number
+        description:
+          type: ["string", "null"]
+        trend:
+          type: ["string", "null"]
+
+    # --- Prioritization ---
+    PrioritizedOpportunity:
+      type: object
+      required: [opportunity]
+      properties:
+        opportunity:
+          $ref: "#/components/schemas/Opportunity"
+        riceScore:
+          $ref: "#/components/schemas/RiceScore"
+        iceScore:
+          $ref: "#/components/schemas/IceScore"
+        moscowCategory:
+          type: ["string", "null"]
+        kanoCategory:
+          type: ["string", "null"]
+        aiRecommendation:
+          type: ["string", "null"]
+        overallRank:
+          type: ["number", "null"]
+
+    RiceScore:
+      type: object
+      properties:
+        reach:
+          type: ["number", "null"]
+        impact:
+          type: ["number", "null"]
+        confidence:
+          type: ["number", "null"]
+        effort:
+          type: ["number", "null"]
+        score:
+          type: ["number", "null"]
+
+    IceScore:
+      type: object
+      properties:
+        impact:
+          type: ["number", "null"]
+        confidence:
+          type: ["number", "null"]
+        ease:
+          type: ["number", "null"]
+        score:
+          type: ["number", "null"]
+
+    PrioritizationScore:
+      type: object
+      required: [id, opportunityId, framework, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        opportunityId:
+          type: number
+        framework:
+          type: string
+          enum: [rice, ice, moscow, kano]
+        riceReach:
+          type: ["number", "null"]
+        riceImpact:
+          type: ["number", "null"]
+        riceConfidence:
+          type: ["number", "null"]
+        riceEffort:
+          type: ["number", "null"]
+        riceScore:
+          type: ["number", "null"]
+        iceImpact:
+          type: ["number", "null"]
+        iceConfidence:
+          type: ["number", "null"]
+        iceEase:
+          type: ["number", "null"]
+        iceScore:
+          type: ["number", "null"]
+        moscowCategory:
+          type: ["string", "null"]
+        kanoCategory:
+          type: ["string", "null"]
+        aiReasoning:
+          type: ["string", "null"]
+        manualOverride:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PrioritizationInput:
+      type: object
+      required: [opportunityId, framework]
+      properties:
+        opportunityId:
+          type: number
+        framework:
+          type: string
+          enum: [rice, ice, moscow, kano]
+        riceReach:
+          type: number
+        riceImpact:
+          type: number
+        riceConfidence:
+          type: number
+        riceEffort:
+          type: number
+        iceImpact:
+          type: number
+        iceConfidence:
+          type: number
+        iceEase:
+          type: number
+        moscowCategory:
+          type: string
+          enum: [must_have, should_have, could_have, wont_have]
+        kanoCategory:
+          type: string
+          enum: [basic, performance, excitement, indifferent, reverse]
+
+    PrioritizationPatch:
+      type: object
+      properties:
+        riceReach:
+          type: number
+        riceImpact:
+          type: number
+        riceConfidence:
+          type: number
+        riceEffort:
+          type: number
+        iceImpact:
+          type: number
+        iceConfidence:
+          type: number
+        iceEase:
+          type: number
+        moscowCategory:
+          type: string
+        kanoCategory:
+          type: string
+        manualOverride:
+          type: boolean
+
+    AiPriorityRecommendation:
+      type: object
+      required: [opportunityId, rank, reasoning]
+      properties:
+        opportunityId:
+          type: number
+        rank:
+          type: number
+        suggestedFramework:
+          type: string
+        reasoning:
+          type: string
+        assumptions:
+          type: array
+          items:
+            type: string
+        risks:
+          type: array
+          items:
+            type: string
+        suggestedReleaseWindow:
+          type: ["string", "null"]
+
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: [string, 'null']
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: 'null'
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        code_verifier:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          minLength: 1
+        state:
+          type: string
+          minLength: 1
+        nonce:
+          type: string
+          minLength: 1
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
