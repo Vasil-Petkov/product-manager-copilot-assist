@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Brain, TrendingUp, AlertTriangle, Target, Lightbulb, Activity, ArrowRight, ShieldAlert } from "lucide-react";
+import { HelpTooltip } from "@/components/help-tooltip";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,6 +44,15 @@ export default function AiInsights() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Brain className="size-8 text-ai" />
             AI Intelligence
+            <HelpTooltip
+              purpose="Review AI-generated recommendations across your workspace."
+              bullets={[
+                "Discover patterns",
+                "Identify trends",
+                "Review AI recommendations",
+                "Prioritize opportunities",
+              ]}
+            />
           </h1>
           <p className="text-muted-foreground mt-1">Cross-signal synthesis and emerging trends.</p>
         </div>

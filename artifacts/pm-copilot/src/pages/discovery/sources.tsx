@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Database, MessageSquare, Twitter, Users, UploadCloud, RotateCcw, AlertCircle, Video } from "lucide-react";
+import { HelpTooltip } from "@/components/help-tooltip";
 import { format } from "date-fns";
 import MeetingsTab from "./sources/meetings-tab";
 import StakeholdersTab from "./sources/stakeholders-tab";
@@ -103,6 +104,15 @@ export default function FeedbackSources() {
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <Database className="size-8 text-primary" />
           Feedback Sources
+          <HelpTooltip
+            purpose="Collect qualitative product feedback from multiple channels."
+            bullets={[
+              "Import customer feedback",
+              "Capture meeting notes",
+              "Record stakeholder input",
+              "Process signals into product ideas",
+            ]}
+          />
         </h1>
         <p className="text-muted-foreground mt-1">Connect and import qualitative data from across your organization.</p>
       </header>
