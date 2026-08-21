@@ -34,15 +34,22 @@ import type {
   DashboardStats,
   DeleteOpenaiConversation404,
   ErrorEnvelope,
+  ExecutiveRecommendationResult,
+  FeatureCompareInput,
+  FeatureComparisonResult,
   FeedbackInput,
   FeedbackPatch,
   GetOpenaiConversation404,
   HandleBrowserLoginCallbackParams,
   HealthStatus,
+  HypothesisAiInput,
+  HypothesisAiSuggestion,
   ListFeedbackParams,
   ListOpportunitiesParams,
   ListPrioritizationParams,
   ListSignalsParams,
+  ListValidationExperimentsParams,
+  ListValidationHypothesesParams,
   LogoutBrowserSessionParams,
   LogoutSuccess,
   Meeting,
@@ -60,6 +67,7 @@ import type {
   OpportunityDetail,
   OpportunityInput,
   OpportunityPatch,
+  PrioritizationAnalysisEnvelope,
   PrioritizationInput,
   PrioritizationPatch,
   PrioritizationScore,
@@ -68,7 +76,19 @@ import type {
   SignalInput,
   SignalProcessResult,
   StakeholderFeedback,
-  TrendingInsights
+  TrendingInsights,
+  ValidationExperiment,
+  ValidationExperimentAssistInput,
+  ValidationExperimentAssistResponse,
+  ValidationExperimentInput,
+  ValidationExperimentUpdate,
+  ValidationHypothesis,
+  ValidationHypothesisInput,
+  ValidationHypothesisUpdate,
+  ValidationMethod,
+  ValidationProductIdea,
+  ValidationResultAnalysis,
+  ValidationSummary
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3394,6 +3414,1490 @@ export const useAiRecommendPrioritization = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAiRecommendPrioritizationMutationOptions(options));
+    }
+
+export const getAnalyzePrioritizationUrl = (opportunityId: number,) => {
+
+
+
+
+  return `/api/prioritization/analyze/${opportunityId}`
+}
+
+/**
+ * @summary Run full AI analysis for one opportunity (all 7 frameworks)
+ */
+export const analyzePrioritization = async (opportunityId: number, options?: Parameters<typeof customFetch>[1]): Promise<PrioritizationAnalysisEnvelope> => {
+
+  return customFetch<PrioritizationAnalysisEnvelope>(getAnalyzePrioritizationUrl(opportunityId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAnalyzePrioritizationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzePrioritization>>, TError,{opportunityId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzePrioritization>>, TError,{opportunityId: number}, TContext> => {
+
+const mutationKey = ['analyzePrioritization'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzePrioritization>>, {opportunityId: number}> = (props) => {
+          const {opportunityId} = props ?? {};
+
+          return  analyzePrioritization(opportunityId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzePrioritizationMutationResult = NonNullable<Awaited<ReturnType<typeof analyzePrioritization>>>
+
+    export type AnalyzePrioritizationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Run full AI analysis for one opportunity (all 7 frameworks)
+ */
+export const useAnalyzePrioritization = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzePrioritization>>, TError,{opportunityId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyzePrioritization>>,
+        TError,
+        {opportunityId: number},
+        TContext
+      > => {
+      return useMutation(getAnalyzePrioritizationMutationOptions(options));
+    }
+
+export const getGetExecutiveRecommendationUrl = () => {
+
+
+
+
+  return `/api/prioritization/executive-recommendation`
+}
+
+/**
+ * @summary Get executive recommendation across all analyzed opportunities
+ */
+export const getExecutiveRecommendation = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExecutiveRecommendationResult> => {
+
+  return customFetch<ExecutiveRecommendationResult>(getGetExecutiveRecommendationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExecutiveRecommendationQueryKey = () => {
+    return [
+    `/api/prioritization/executive-recommendation`
+    ] as const;
+    }
+
+
+export const getGetExecutiveRecommendationQueryOptions = <TData = Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExecutiveRecommendationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExecutiveRecommendation>>> = ({ signal }) => getExecutiveRecommendation({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExecutiveRecommendationQueryResult = NonNullable<Awaited<ReturnType<typeof getExecutiveRecommendation>>>
+export type GetExecutiveRecommendationQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get executive recommendation across all analyzed opportunities
+ */
+
+export function useGetExecutiveRecommendation<TData = Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExecutiveRecommendation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExecutiveRecommendationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCompareFeaturesUrl = () => {
+
+
+
+
+  return `/api/prioritization/compare`
+}
+
+/**
+ * @summary Side-by-side AI comparison of two product ideas
+ */
+export const compareFeatures = async (featureCompareInput: FeatureCompareInput, options?: Parameters<typeof customFetch>[1]): Promise<FeatureComparisonResult> => {
+
+  return customFetch<FeatureComparisonResult>(getCompareFeaturesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(featureCompareInput)
+  }
+);}
+
+
+
+
+
+export const getCompareFeaturesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compareFeatures>>, TError,{data: BodyType<FeatureCompareInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof compareFeatures>>, TError,{data: BodyType<FeatureCompareInput>}, TContext> => {
+
+const mutationKey = ['compareFeatures'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof compareFeatures>>, {data: BodyType<FeatureCompareInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  compareFeatures(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompareFeaturesMutationResult = NonNullable<Awaited<ReturnType<typeof compareFeatures>>>
+    export type CompareFeaturesMutationBody = BodyType<FeatureCompareInput>
+    export type CompareFeaturesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Side-by-side AI comparison of two product ideas
+ */
+export const useCompareFeatures = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compareFeatures>>, TError,{data: BodyType<FeatureCompareInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof compareFeatures>>,
+        TError,
+        {data: BodyType<FeatureCompareInput>},
+        TContext
+      > => {
+      return useMutation(getCompareFeaturesMutationOptions(options));
+    }
+
+export const getGetValidationSummaryUrl = () => {
+
+
+
+
+  return `/api/validation/summary`
+}
+
+/**
+ * @summary Get validation module counts
+ */
+export const getValidationSummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<ValidationSummary> => {
+
+  return customFetch<ValidationSummary>(getGetValidationSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetValidationSummaryQueryKey = () => {
+    return [
+    `/api/validation/summary`
+    ] as const;
+    }
+
+
+export const getGetValidationSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getValidationSummary>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getValidationSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetValidationSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getValidationSummary>>> = ({ signal }) => getValidationSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getValidationSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetValidationSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getValidationSummary>>>
+export type GetValidationSummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get validation module counts
+ */
+
+export function useGetValidationSummary<TData = Awaited<ReturnType<typeof getValidationSummary>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getValidationSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetValidationSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListValidationProductIdeasUrl = () => {
+
+
+
+
+  return `/api/validation/product-ideas`
+}
+
+/**
+ * @summary List the authenticated user's Product Ideas with validation context
+ */
+export const listValidationProductIdeas = async ( options?: Parameters<typeof customFetch>[1]): Promise<ValidationProductIdea[]> => {
+
+  return customFetch<ValidationProductIdea[]>(getListValidationProductIdeasUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListValidationProductIdeasQueryKey = () => {
+    return [
+    `/api/validation/product-ideas`
+    ] as const;
+    }
+
+
+export const getListValidationProductIdeasQueryOptions = <TData = Awaited<ReturnType<typeof listValidationProductIdeas>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listValidationProductIdeas>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListValidationProductIdeasQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listValidationProductIdeas>>> = ({ signal }) => listValidationProductIdeas({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listValidationProductIdeas>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListValidationProductIdeasQueryResult = NonNullable<Awaited<ReturnType<typeof listValidationProductIdeas>>>
+export type ListValidationProductIdeasQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the authenticated user's Product Ideas with validation context
+ */
+
+export function useListValidationProductIdeas<TData = Awaited<ReturnType<typeof listValidationProductIdeas>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listValidationProductIdeas>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListValidationProductIdeasQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListValidationMethodsUrl = () => {
+
+
+
+
+  return `/api/validation/methods`
+}
+
+/**
+ * @summary List reusable validation methods
+ */
+export const listValidationMethods = async ( options?: Parameters<typeof customFetch>[1]): Promise<ValidationMethod[]> => {
+
+  return customFetch<ValidationMethod[]>(getListValidationMethodsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListValidationMethodsQueryKey = () => {
+    return [
+    `/api/validation/methods`
+    ] as const;
+    }
+
+
+export const getListValidationMethodsQueryOptions = <TData = Awaited<ReturnType<typeof listValidationMethods>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listValidationMethods>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListValidationMethodsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listValidationMethods>>> = ({ signal }) => listValidationMethods({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listValidationMethods>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListValidationMethodsQueryResult = NonNullable<Awaited<ReturnType<typeof listValidationMethods>>>
+export type ListValidationMethodsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List reusable validation methods
+ */
+
+export function useListValidationMethods<TData = Awaited<ReturnType<typeof listValidationMethods>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listValidationMethods>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListValidationMethodsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListValidationHypothesesUrl = (params?: ListValidationHypothesesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/validation/hypotheses?${stringifiedParams}` : `/api/validation/hypotheses`
+}
+
+/**
+ * @summary List the authenticated user's hypotheses
+ */
+export const listValidationHypotheses = async (params?: ListValidationHypothesesParams, options?: Parameters<typeof customFetch>[1]): Promise<ValidationHypothesis[]> => {
+
+  return customFetch<ValidationHypothesis[]>(getListValidationHypothesesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListValidationHypothesesQueryKey = (params?: ListValidationHypothesesParams,) => {
+    return [
+    `/api/validation/hypotheses`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListValidationHypothesesQueryOptions = <TData = Awaited<ReturnType<typeof listValidationHypotheses>>, TError = ErrorType<unknown>>(params?: ListValidationHypothesesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listValidationHypotheses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListValidationHypothesesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listValidationHypotheses>>> = ({ signal }) => listValidationHypotheses(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listValidationHypotheses>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListValidationHypothesesQueryResult = NonNullable<Awaited<ReturnType<typeof listValidationHypotheses>>>
+export type ListValidationHypothesesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the authenticated user's hypotheses
+ */
+
+export function useListValidationHypotheses<TData = Awaited<ReturnType<typeof listValidationHypotheses>>, TError = ErrorType<unknown>>(
+ params?: ListValidationHypothesesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listValidationHypotheses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListValidationHypothesesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateValidationHypothesisUrl = () => {
+
+
+
+
+  return `/api/validation/hypotheses`
+}
+
+/**
+ * @summary Create a hypothesis for an existing Product Idea
+ */
+export const createValidationHypothesis = async (validationHypothesisInput: ValidationHypothesisInput, options?: Parameters<typeof customFetch>[1]): Promise<ValidationHypothesis> => {
+
+  return customFetch<ValidationHypothesis>(getCreateValidationHypothesisUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(validationHypothesisInput)
+  }
+);}
+
+
+
+
+
+export const getCreateValidationHypothesisMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createValidationHypothesis>>, TError,{data: BodyType<ValidationHypothesisInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createValidationHypothesis>>, TError,{data: BodyType<ValidationHypothesisInput>}, TContext> => {
+
+const mutationKey = ['createValidationHypothesis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createValidationHypothesis>>, {data: BodyType<ValidationHypothesisInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createValidationHypothesis(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateValidationHypothesisMutationResult = NonNullable<Awaited<ReturnType<typeof createValidationHypothesis>>>
+    export type CreateValidationHypothesisMutationBody = BodyType<ValidationHypothesisInput>
+    export type CreateValidationHypothesisMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a hypothesis for an existing Product Idea
+ */
+export const useCreateValidationHypothesis = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createValidationHypothesis>>, TError,{data: BodyType<ValidationHypothesisInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createValidationHypothesis>>,
+        TError,
+        {data: BodyType<ValidationHypothesisInput>},
+        TContext
+      > => {
+      return useMutation(getCreateValidationHypothesisMutationOptions(options));
+    }
+
+export const getImproveHypothesisWithAiUrl = () => {
+
+
+
+
+  return `/api/validation/hypotheses/improve`
+}
+
+/**
+ * @summary Suggest a clearer and more testable hypothesis
+ */
+export const improveHypothesisWithAi = async (hypothesisAiInput: HypothesisAiInput, options?: Parameters<typeof customFetch>[1]): Promise<HypothesisAiSuggestion> => {
+
+  return customFetch<HypothesisAiSuggestion>(getImproveHypothesisWithAiUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(hypothesisAiInput)
+  }
+);}
+
+
+
+
+
+export const getImproveHypothesisWithAiMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof improveHypothesisWithAi>>, TError,{data: BodyType<HypothesisAiInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof improveHypothesisWithAi>>, TError,{data: BodyType<HypothesisAiInput>}, TContext> => {
+
+const mutationKey = ['improveHypothesisWithAi'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof improveHypothesisWithAi>>, {data: BodyType<HypothesisAiInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  improveHypothesisWithAi(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImproveHypothesisWithAiMutationResult = NonNullable<Awaited<ReturnType<typeof improveHypothesisWithAi>>>
+    export type ImproveHypothesisWithAiMutationBody = BodyType<HypothesisAiInput>
+    export type ImproveHypothesisWithAiMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Suggest a clearer and more testable hypothesis
+ */
+export const useImproveHypothesisWithAi = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof improveHypothesisWithAi>>, TError,{data: BodyType<HypothesisAiInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof improveHypothesisWithAi>>,
+        TError,
+        {data: BodyType<HypothesisAiInput>},
+        TContext
+      > => {
+      return useMutation(getImproveHypothesisWithAiMutationOptions(options));
+    }
+
+export const getGetValidationHypothesisUrl = (id: number,) => {
+
+
+
+
+  return `/api/validation/hypotheses/${id}`
+}
+
+/**
+ * @summary Get one owned hypothesis
+ */
+export const getValidationHypothesis = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ValidationHypothesis> => {
+
+  return customFetch<ValidationHypothesis>(getGetValidationHypothesisUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetValidationHypothesisQueryKey = (id: number,) => {
+    return [
+    `/api/validation/hypotheses/${id}`
+    ] as const;
+    }
+
+
+export const getGetValidationHypothesisQueryOptions = <TData = Awaited<ReturnType<typeof getValidationHypothesis>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getValidationHypothesis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetValidationHypothesisQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getValidationHypothesis>>> = ({ signal }) => getValidationHypothesis(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getValidationHypothesis>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetValidationHypothesisQueryResult = NonNullable<Awaited<ReturnType<typeof getValidationHypothesis>>>
+export type GetValidationHypothesisQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get one owned hypothesis
+ */
+
+export function useGetValidationHypothesis<TData = Awaited<ReturnType<typeof getValidationHypothesis>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getValidationHypothesis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetValidationHypothesisQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateValidationHypothesisUrl = (id: number,) => {
+
+
+
+
+  return `/api/validation/hypotheses/${id}`
+}
+
+/**
+ * @summary Update one owned hypothesis
+ */
+export const updateValidationHypothesis = async (id: number,
+    validationHypothesisUpdate: ValidationHypothesisUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ValidationHypothesis> => {
+
+  return customFetch<ValidationHypothesis>(getUpdateValidationHypothesisUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(validationHypothesisUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateValidationHypothesisMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateValidationHypothesis>>, TError,{id: number;data: BodyType<ValidationHypothesisUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateValidationHypothesis>>, TError,{id: number;data: BodyType<ValidationHypothesisUpdate>}, TContext> => {
+
+const mutationKey = ['updateValidationHypothesis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateValidationHypothesis>>, {id: number;data: BodyType<ValidationHypothesisUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateValidationHypothesis(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateValidationHypothesisMutationResult = NonNullable<Awaited<ReturnType<typeof updateValidationHypothesis>>>
+    export type UpdateValidationHypothesisMutationBody = BodyType<ValidationHypothesisUpdate>
+    export type UpdateValidationHypothesisMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update one owned hypothesis
+ */
+export const useUpdateValidationHypothesis = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateValidationHypothesis>>, TError,{id: number;data: BodyType<ValidationHypothesisUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateValidationHypothesis>>,
+        TError,
+        {id: number;data: BodyType<ValidationHypothesisUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateValidationHypothesisMutationOptions(options));
+    }
+
+export const getDuplicateValidationHypothesisUrl = (id: number,) => {
+
+
+
+
+  return `/api/validation/hypotheses/${id}/duplicate`
+}
+
+/**
+ * @summary Duplicate one owned hypothesis as a draft
+ */
+export const duplicateValidationHypothesis = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ValidationHypothesis> => {
+
+  return customFetch<ValidationHypothesis>(getDuplicateValidationHypothesisUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getDuplicateValidationHypothesisMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof duplicateValidationHypothesis>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof duplicateValidationHypothesis>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['duplicateValidationHypothesis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof duplicateValidationHypothesis>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  duplicateValidationHypothesis(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DuplicateValidationHypothesisMutationResult = NonNullable<Awaited<ReturnType<typeof duplicateValidationHypothesis>>>
+
+    export type DuplicateValidationHypothesisMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Duplicate one owned hypothesis as a draft
+ */
+export const useDuplicateValidationHypothesis = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof duplicateValidationHypothesis>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof duplicateValidationHypothesis>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDuplicateValidationHypothesisMutationOptions(options));
+    }
+
+export const getArchiveValidationHypothesisUrl = (id: number,) => {
+
+
+
+
+  return `/api/validation/hypotheses/${id}/archive`
+}
+
+/**
+ * @summary Soft-archive one owned hypothesis
+ */
+export const archiveValidationHypothesis = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ValidationHypothesis> => {
+
+  return customFetch<ValidationHypothesis>(getArchiveValidationHypothesisUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getArchiveValidationHypothesisMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveValidationHypothesis>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveValidationHypothesis>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['archiveValidationHypothesis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveValidationHypothesis>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  archiveValidationHypothesis(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveValidationHypothesisMutationResult = NonNullable<Awaited<ReturnType<typeof archiveValidationHypothesis>>>
+
+    export type ArchiveValidationHypothesisMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Soft-archive one owned hypothesis
+ */
+export const useArchiveValidationHypothesis = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveValidationHypothesis>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveValidationHypothesis>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getArchiveValidationHypothesisMutationOptions(options));
+    }
+
+export const getListValidationExperimentsUrl = (params?: ListValidationExperimentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/validation/experiments?${stringifiedParams}` : `/api/validation/experiments`
+}
+
+/**
+ * @summary List the authenticated user's experiments
+ */
+export const listValidationExperiments = async (params?: ListValidationExperimentsParams, options?: Parameters<typeof customFetch>[1]): Promise<ValidationExperiment[]> => {
+
+  return customFetch<ValidationExperiment[]>(getListValidationExperimentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListValidationExperimentsQueryKey = (params?: ListValidationExperimentsParams,) => {
+    return [
+    `/api/validation/experiments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListValidationExperimentsQueryOptions = <TData = Awaited<ReturnType<typeof listValidationExperiments>>, TError = ErrorType<unknown>>(params?: ListValidationExperimentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listValidationExperiments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListValidationExperimentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listValidationExperiments>>> = ({ signal }) => listValidationExperiments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listValidationExperiments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListValidationExperimentsQueryResult = NonNullable<Awaited<ReturnType<typeof listValidationExperiments>>>
+export type ListValidationExperimentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the authenticated user's experiments
+ */
+
+export function useListValidationExperiments<TData = Awaited<ReturnType<typeof listValidationExperiments>>, TError = ErrorType<unknown>>(
+ params?: ListValidationExperimentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listValidationExperiments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListValidationExperimentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateValidationExperimentUrl = () => {
+
+
+
+
+  return `/api/validation/experiments`
+}
+
+/**
+ * @summary Create an experiment linked to an owned hypothesis
+ */
+export const createValidationExperiment = async (validationExperimentInput: ValidationExperimentInput, options?: Parameters<typeof customFetch>[1]): Promise<ValidationExperiment> => {
+
+  return customFetch<ValidationExperiment>(getCreateValidationExperimentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(validationExperimentInput)
+  }
+);}
+
+
+
+
+
+export const getCreateValidationExperimentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createValidationExperiment>>, TError,{data: BodyType<ValidationExperimentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createValidationExperiment>>, TError,{data: BodyType<ValidationExperimentInput>}, TContext> => {
+
+const mutationKey = ['createValidationExperiment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createValidationExperiment>>, {data: BodyType<ValidationExperimentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createValidationExperiment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateValidationExperimentMutationResult = NonNullable<Awaited<ReturnType<typeof createValidationExperiment>>>
+    export type CreateValidationExperimentMutationBody = BodyType<ValidationExperimentInput>
+    export type CreateValidationExperimentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create an experiment linked to an owned hypothesis
+ */
+export const useCreateValidationExperiment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createValidationExperiment>>, TError,{data: BodyType<ValidationExperimentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createValidationExperiment>>,
+        TError,
+        {data: BodyType<ValidationExperimentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateValidationExperimentMutationOptions(options));
+    }
+
+export const getGetValidationExperimentUrl = (id: number,) => {
+
+
+
+
+  return `/api/validation/experiments/${id}`
+}
+
+/**
+ * @summary Get one owned experiment, including archived history
+ */
+export const getValidationExperiment = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ValidationExperiment> => {
+
+  return customFetch<ValidationExperiment>(getGetValidationExperimentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetValidationExperimentQueryKey = (id: number,) => {
+    return [
+    `/api/validation/experiments/${id}`
+    ] as const;
+    }
+
+
+export const getGetValidationExperimentQueryOptions = <TData = Awaited<ReturnType<typeof getValidationExperiment>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getValidationExperiment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetValidationExperimentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getValidationExperiment>>> = ({ signal }) => getValidationExperiment(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getValidationExperiment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetValidationExperimentQueryResult = NonNullable<Awaited<ReturnType<typeof getValidationExperiment>>>
+export type GetValidationExperimentQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get one owned experiment, including archived history
+ */
+
+export function useGetValidationExperiment<TData = Awaited<ReturnType<typeof getValidationExperiment>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getValidationExperiment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetValidationExperimentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateValidationExperimentUrl = (id: number,) => {
+
+
+
+
+  return `/api/validation/experiments/${id}`
+}
+
+/**
+ * @summary Update an owned experiment and its execution status
+ */
+export const updateValidationExperiment = async (id: number,
+    validationExperimentUpdate: ValidationExperimentUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ValidationExperiment> => {
+
+  return customFetch<ValidationExperiment>(getUpdateValidationExperimentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(validationExperimentUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateValidationExperimentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateValidationExperiment>>, TError,{id: number;data: BodyType<ValidationExperimentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateValidationExperiment>>, TError,{id: number;data: BodyType<ValidationExperimentUpdate>}, TContext> => {
+
+const mutationKey = ['updateValidationExperiment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateValidationExperiment>>, {id: number;data: BodyType<ValidationExperimentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateValidationExperiment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateValidationExperimentMutationResult = NonNullable<Awaited<ReturnType<typeof updateValidationExperiment>>>
+    export type UpdateValidationExperimentMutationBody = BodyType<ValidationExperimentUpdate>
+    export type UpdateValidationExperimentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update an owned experiment and its execution status
+ */
+export const useUpdateValidationExperiment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateValidationExperiment>>, TError,{id: number;data: BodyType<ValidationExperimentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateValidationExperiment>>,
+        TError,
+        {id: number;data: BodyType<ValidationExperimentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateValidationExperimentMutationOptions(options));
+    }
+
+export const getArchiveValidationExperimentUrl = (id: number,) => {
+
+
+
+
+  return `/api/validation/experiments/${id}/archive`
+}
+
+/**
+ * @summary Soft-archive one owned experiment
+ */
+export const archiveValidationExperiment = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ValidationExperiment> => {
+
+  return customFetch<ValidationExperiment>(getArchiveValidationExperimentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getArchiveValidationExperimentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveValidationExperiment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveValidationExperiment>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['archiveValidationExperiment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveValidationExperiment>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  archiveValidationExperiment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveValidationExperimentMutationResult = NonNullable<Awaited<ReturnType<typeof archiveValidationExperiment>>>
+
+    export type ArchiveValidationExperimentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Soft-archive one owned experiment
+ */
+export const useArchiveValidationExperiment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveValidationExperiment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveValidationExperiment>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getArchiveValidationExperimentMutationOptions(options));
+    }
+
+export const getAnalyzeValidationExperimentResultUrl = (id: number,) => {
+
+
+
+
+  return `/api/validation/experiments/${id}/analyze-result`
+}
+
+/**
+ * @summary Analyze an entered experiment result against its success criteria
+ */
+export const analyzeValidationExperimentResult = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ValidationResultAnalysis> => {
+
+  return customFetch<ValidationResultAnalysis>(getAnalyzeValidationExperimentResultUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAnalyzeValidationExperimentResultMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeValidationExperimentResult>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzeValidationExperimentResult>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['analyzeValidationExperimentResult'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzeValidationExperimentResult>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  analyzeValidationExperimentResult(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzeValidationExperimentResultMutationResult = NonNullable<Awaited<ReturnType<typeof analyzeValidationExperimentResult>>>
+
+    export type AnalyzeValidationExperimentResultMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Analyze an entered experiment result against its success criteria
+ */
+export const useAnalyzeValidationExperimentResult = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeValidationExperimentResult>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyzeValidationExperimentResult>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAnalyzeValidationExperimentResultMutationOptions(options));
+    }
+
+export const getAssistValidationExperimentContentUrl = () => {
+
+
+
+
+  return `/api/validation/experiments/assist`
+}
+
+/**
+ * @summary Draft or improve experiment setup or success measures with AI
+ */
+export const assistValidationExperimentContent = async (validationExperimentAssistInput: ValidationExperimentAssistInput, options?: Parameters<typeof customFetch>[1]): Promise<ValidationExperimentAssistResponse> => {
+
+  return customFetch<ValidationExperimentAssistResponse>(getAssistValidationExperimentContentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(validationExperimentAssistInput)
+  }
+);}
+
+
+
+
+
+export const getAssistValidationExperimentContentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assistValidationExperimentContent>>, TError,{data: BodyType<ValidationExperimentAssistInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assistValidationExperimentContent>>, TError,{data: BodyType<ValidationExperimentAssistInput>}, TContext> => {
+
+const mutationKey = ['assistValidationExperimentContent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assistValidationExperimentContent>>, {data: BodyType<ValidationExperimentAssistInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  assistValidationExperimentContent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssistValidationExperimentContentMutationResult = NonNullable<Awaited<ReturnType<typeof assistValidationExperimentContent>>>
+    export type AssistValidationExperimentContentMutationBody = BodyType<ValidationExperimentAssistInput>
+    export type AssistValidationExperimentContentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Draft or improve experiment setup or success measures with AI
+ */
+export const useAssistValidationExperimentContent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assistValidationExperimentContent>>, TError,{data: BodyType<ValidationExperimentAssistInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assistValidationExperimentContent>>,
+        TError,
+        {data: BodyType<ValidationExperimentAssistInput>},
+        TContext
+      > => {
+      return useMutation(getAssistValidationExperimentContentMutationOptions(options));
     }
 
 export const getListOpenaiConversationsUrl = () => {

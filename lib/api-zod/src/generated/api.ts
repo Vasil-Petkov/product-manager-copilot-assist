@@ -163,12 +163,20 @@ export const GetDailySummaryResponse = zod.object({
 /**
  * @summary List product opportunities
  */
+export const listOpportunitiesQueryLimitMax = 200;
+
+export const listOpportunitiesQueryOffsetMin = 0;
+
+
+
 export const ListOpportunitiesQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "category": zod.coerce.string().optional(),
   "source_type": zod.coerce.string().optional(),
   "sentiment": zod.coerce.string().optional(),
-  "search": zod.coerce.string().optional()
+  "search": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().int().min(1).max(listOpportunitiesQueryLimitMax).optional().describe('Maximum number of Product Ideas to return (up to 200).'),
+  "offset": zod.coerce.number().int().min(listOpportunitiesQueryOffsetMin).optional().describe('Number of Product Ideas to skip for pagination.')
 })
 
 export const ListOpportunitiesResponseItem = zod.object({
@@ -1018,7 +1026,11 @@ export const ListPrioritizationResponseItem = zod.object({
 }).optional(),
   "moscowCategory": zod.string().nullish(),
   "kanoCategory": zod.string().nullish(),
+  "weightedScore": zod.number().nullish(),
+  "opportunityScore": zod.number().nullish(),
+  "vveQuadrant": zod.string().nullish(),
   "aiRecommendation": zod.string().nullish(),
+  "analyzed": zod.boolean().optional(),
   "overallRank": zod.number().nullish()
 })
 export const ListPrioritizationResponse = zod.array(ListPrioritizationResponseItem)
@@ -1118,6 +1130,1291 @@ export const AiRecommendPrioritizationResponseItem = zod.object({
   "suggestedReleaseWindow": zod.string().nullish()
 })
 export const AiRecommendPrioritizationResponse = zod.array(AiRecommendPrioritizationResponseItem)
+
+
+/**
+ * @summary Run full AI analysis for one opportunity (all 7 frameworks)
+ */
+export const AnalyzePrioritizationParams = zod.object({
+  "opportunityId": zod.coerce.number()
+})
+
+export const AnalyzePrioritizationResponse = zod.object({
+  "opportunity": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "aiSummary": zod.string().nullish(),
+  "customerProblem": zod.string().nullish(),
+  "suggestedSolution": zod.string().nullish(),
+  "businessValue": zod.string().nullish(),
+  "estimatedCustomerImpact": zod.string().nullish(),
+  "estimatedBusinessImpact": zod.string().nullish(),
+  "urgency": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "sentiment": zod.string().nullish(),
+  "tags": zod.array(zod.string()).optional(),
+  "status": zod.enum(['new', 'under_review', 'ready_for_prioritization', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional(),
+  "analysis": zod.object({
+  "id": zod.number().optional(),
+  "opportunityId": zod.number().optional(),
+  "riceScore": zod.number().nullish(),
+  "iceScore": zod.number().nullish(),
+  "weightedScore": zod.number().nullish(),
+  "opportunityScore": zod.number().nullish(),
+  "moscowCategory": zod.string().nullish(),
+  "kanoCategory": zod.string().nullish(),
+  "vveQuadrant": zod.string().nullish(),
+  "riceData": zod.unknown().optional().describe('RICE framework detail (JSONB)'),
+  "iceData": zod.unknown().optional().describe('ICE framework detail (JSONB)'),
+  "moscowData": zod.unknown().optional().describe('MoSCoW classification detail (JSONB)'),
+  "weightedData": zod.unknown().optional().describe('Weighted scoring detail (JSONB)'),
+  "vveData": zod.unknown().optional().describe('Value vs Effort detail (JSONB)'),
+  "kanoData": zod.unknown().optional().describe('Kano model detail (JSONB)'),
+  "opportunityData": zod.unknown().optional().describe('Opportunity scoring detail (JSONB)'),
+  "engineeringData": zod.unknown().optional().describe('Engineering effort estimate (JSONB)'),
+  "businessContext": zod.unknown().optional().describe('Business context data (JSONB)'),
+  "executiveData": zod.unknown().optional().describe('Executive recommendation data (JSONB)'),
+  "analyzedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+}).optional()
+})
+
+
+/**
+ * @summary Get executive recommendation across all analyzed opportunities
+ */
+export const GetExecutiveRecommendationResponse = zod.object({
+  "topRecommendation": zod.unknown().optional().describe('Top ranked opportunity with analysis'),
+  "allRanked": zod.array(zod.unknown().describe('Ranked opportunity entry')).optional(),
+  "totalAnalyzed": zod.number().optional()
+})
+
+
+/**
+ * @summary Side-by-side AI comparison of two product ideas
+ */
+export const CompareFeaturesBody = zod.object({
+  "idA": zod.number(),
+  "idB": zod.number()
+})
+
+export const CompareFeaturesResponse = zod.object({
+  "opportunityA": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "aiSummary": zod.string().nullish(),
+  "customerProblem": zod.string().nullish(),
+  "suggestedSolution": zod.string().nullish(),
+  "businessValue": zod.string().nullish(),
+  "estimatedCustomerImpact": zod.string().nullish(),
+  "estimatedBusinessImpact": zod.string().nullish(),
+  "urgency": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "sentiment": zod.string().nullish(),
+  "tags": zod.array(zod.string()).optional(),
+  "status": zod.enum(['new', 'under_review', 'ready_for_prioritization', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional(),
+  "opportunityB": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "aiSummary": zod.string().nullish(),
+  "customerProblem": zod.string().nullish(),
+  "suggestedSolution": zod.string().nullish(),
+  "businessValue": zod.string().nullish(),
+  "estimatedCustomerImpact": zod.string().nullish(),
+  "estimatedBusinessImpact": zod.string().nullish(),
+  "urgency": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "sentiment": zod.string().nullish(),
+  "tags": zod.array(zod.string()).optional(),
+  "status": zod.enum(['new', 'under_review', 'ready_for_prioritization', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional(),
+  "analysisA": zod.object({
+  "id": zod.number().optional(),
+  "opportunityId": zod.number().optional(),
+  "riceScore": zod.number().nullish(),
+  "iceScore": zod.number().nullish(),
+  "weightedScore": zod.number().nullish(),
+  "opportunityScore": zod.number().nullish(),
+  "moscowCategory": zod.string().nullish(),
+  "kanoCategory": zod.string().nullish(),
+  "vveQuadrant": zod.string().nullish(),
+  "riceData": zod.unknown().optional().describe('RICE framework detail (JSONB)'),
+  "iceData": zod.unknown().optional().describe('ICE framework detail (JSONB)'),
+  "moscowData": zod.unknown().optional().describe('MoSCoW classification detail (JSONB)'),
+  "weightedData": zod.unknown().optional().describe('Weighted scoring detail (JSONB)'),
+  "vveData": zod.unknown().optional().describe('Value vs Effort detail (JSONB)'),
+  "kanoData": zod.unknown().optional().describe('Kano model detail (JSONB)'),
+  "opportunityData": zod.unknown().optional().describe('Opportunity scoring detail (JSONB)'),
+  "engineeringData": zod.unknown().optional().describe('Engineering effort estimate (JSONB)'),
+  "businessContext": zod.unknown().optional().describe('Business context data (JSONB)'),
+  "executiveData": zod.unknown().optional().describe('Executive recommendation data (JSONB)'),
+  "analyzedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+}).optional(),
+  "analysisB": zod.object({
+  "id": zod.number().optional(),
+  "opportunityId": zod.number().optional(),
+  "riceScore": zod.number().nullish(),
+  "iceScore": zod.number().nullish(),
+  "weightedScore": zod.number().nullish(),
+  "opportunityScore": zod.number().nullish(),
+  "moscowCategory": zod.string().nullish(),
+  "kanoCategory": zod.string().nullish(),
+  "vveQuadrant": zod.string().nullish(),
+  "riceData": zod.unknown().optional().describe('RICE framework detail (JSONB)'),
+  "iceData": zod.unknown().optional().describe('ICE framework detail (JSONB)'),
+  "moscowData": zod.unknown().optional().describe('MoSCoW classification detail (JSONB)'),
+  "weightedData": zod.unknown().optional().describe('Weighted scoring detail (JSONB)'),
+  "vveData": zod.unknown().optional().describe('Value vs Effort detail (JSONB)'),
+  "kanoData": zod.unknown().optional().describe('Kano model detail (JSONB)'),
+  "opportunityData": zod.unknown().optional().describe('Opportunity scoring detail (JSONB)'),
+  "engineeringData": zod.unknown().optional().describe('Engineering effort estimate (JSONB)'),
+  "businessContext": zod.unknown().optional().describe('Business context data (JSONB)'),
+  "executiveData": zod.unknown().optional().describe('Executive recommendation data (JSONB)'),
+  "analyzedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+}).optional(),
+  "aiInsight": zod.unknown().optional().describe('AI comparison insight (JSONB)')
+})
+
+
+/**
+ * @summary Get validation module counts
+ */
+export const GetValidationSummaryResponse = zod.object({
+  "hypotheses": zod.number(),
+  "experiments": zod.number(),
+  "evidence": zod.number(),
+  "results": zod.number()
+})
+
+
+/**
+ * @summary List the authenticated user's Product Ideas with validation context
+ */
+export const ListValidationProductIdeasResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+export const ListValidationProductIdeasResponse = zod.array(ListValidationProductIdeasResponseItem)
+
+
+/**
+ * @summary List reusable validation methods
+ */
+export const ListValidationMethodsResponseItem = zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['generative', 'evaluative', 'quantitative', 'smoke_test']),
+  "summary": zod.string(),
+  "bestFor": zod.string(),
+  "effort": zod.string(),
+  "evidenceStrength": zod.string(),
+  "defaultDurationDays": zod.number()
+})
+export const ListValidationMethodsResponse = zod.array(ListValidationMethodsResponseItem)
+
+
+/**
+ * @summary List the authenticated user's hypotheses
+ */
+export const listValidationHypothesesQueryIncludeArchivedDefault = false;
+
+export const ListValidationHypothesesQueryParams = zod.object({
+  "includeArchived": zod.coerce.boolean().default(listValidationHypothesesQueryIncludeArchivedDefault),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']).optional(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']).optional(),
+  "search": zod.coerce.string().optional()
+})
+
+export const ListValidationHypothesesResponseItem = zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+export const ListValidationHypothesesResponse = zod.array(ListValidationHypothesesResponseItem)
+
+
+/**
+ * @summary Create a hypothesis for an existing Product Idea
+ */
+export const createValidationHypothesisBodyStatementMax = 5000;
+
+export const createValidationHypothesisBodyAssumptionMax = 5000;
+
+export const createValidationHypothesisBodySuccessCriteriaMax = 5000;
+
+export const createValidationHypothesisBodyNotesMax = 10000;
+
+export const createValidationHypothesisBodyAiSuggestionMax = 5000;
+
+
+
+export const CreateValidationHypothesisBody = zod.object({
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string().min(1).max(createValidationHypothesisBodyStatementMax),
+  "assumption": zod.string().max(createValidationHypothesisBodyAssumptionMax).nullish(),
+  "successCriteria": zod.string().max(createValidationHypothesisBodySuccessCriteriaMax).nullish(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().max(createValidationHypothesisBodyNotesMax).nullish(),
+  "aiSuggestion": zod.string().max(createValidationHypothesisBodyAiSuggestionMax).nullish()
+})
+
+export const CreateValidationHypothesisResponse = zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+
+
+/**
+ * @summary Suggest a clearer and more testable hypothesis
+ */
+export const improveHypothesisWithAiBodyStatementMax = 5000;
+
+export const improveHypothesisWithAiBodyAssumptionMax = 5000;
+
+export const improveHypothesisWithAiBodySuccessCriteriaMax = 5000;
+
+
+
+export const ImproveHypothesisWithAiBody = zod.object({
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string().min(1).max(improveHypothesisWithAiBodyStatementMax),
+  "assumption": zod.string().max(improveHypothesisWithAiBodyAssumptionMax).nullish(),
+  "successCriteria": zod.string().max(improveHypothesisWithAiBodySuccessCriteriaMax).nullish()
+})
+
+export const ImproveHypothesisWithAiResponse = zod.object({
+  "originalStatement": zod.string(),
+  "suggestedStatement": zod.string(),
+  "suggestedAssumption": zod.string().nullable(),
+  "suggestedSuccessCriteria": zod.string().nullable(),
+  "assumptionLabels": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Get one owned hypothesis
+ */
+export const GetValidationHypothesisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetValidationHypothesisResponse = zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+
+
+/**
+ * @summary Update one owned hypothesis
+ */
+export const UpdateValidationHypothesisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateValidationHypothesisBodyStatementMax = 5000;
+
+export const updateValidationHypothesisBodyAssumptionMax = 5000;
+
+export const updateValidationHypothesisBodySuccessCriteriaMax = 5000;
+
+export const updateValidationHypothesisBodyNotesMax = 10000;
+
+export const updateValidationHypothesisBodyAiSuggestionMax = 5000;
+
+
+
+export const UpdateValidationHypothesisBody = zod.object({
+  "opportunityId": zod.number().optional(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']).optional(),
+  "statement": zod.string().min(1).max(updateValidationHypothesisBodyStatementMax).optional(),
+  "assumption": zod.string().max(updateValidationHypothesisBodyAssumptionMax).nullish(),
+  "successCriteria": zod.string().max(updateValidationHypothesisBodySuccessCriteriaMax).nullish(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']).optional(),
+  "notes": zod.string().max(updateValidationHypothesisBodyNotesMax).nullish(),
+  "aiSuggestion": zod.string().max(updateValidationHypothesisBodyAiSuggestionMax).nullish()
+})
+
+export const UpdateValidationHypothesisResponse = zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+
+
+/**
+ * @summary Duplicate one owned hypothesis as a draft
+ */
+export const DuplicateValidationHypothesisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DuplicateValidationHypothesisResponse = zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+
+
+/**
+ * @summary Soft-archive one owned hypothesis
+ */
+export const ArchiveValidationHypothesisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveValidationHypothesisResponse = zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+
+
+/**
+ * @summary List the authenticated user's experiments
+ */
+export const listValidationExperimentsQueryIncludeArchivedDefault = false;
+
+export const ListValidationExperimentsQueryParams = zod.object({
+  "hypothesisId": zod.coerce.number().optional(),
+  "status": zod.enum(['draft', 'planned', 'running', 'completed', 'cancelled']).optional(),
+  "includeArchived": zod.coerce.boolean().default(listValidationExperimentsQueryIncludeArchivedDefault)
+})
+
+export const ListValidationExperimentsResponseItem = zod.object({
+  "id": zod.number(),
+  "hypothesisId": zod.number(),
+  "name": zod.string(),
+  "methodKey": zod.string(),
+  "method": zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['generative', 'evaluative', 'quantitative', 'smoke_test']),
+  "summary": zod.string(),
+  "bestFor": zod.string(),
+  "effort": zod.string(),
+  "evidenceStrength": zod.string(),
+  "defaultDurationDays": zod.number()
+}),
+  "setup": zod.string().nullable(),
+  "targetAudience": zod.string().nullable(),
+  "successMeasures": zod.string().nullable(),
+  "actualResult": zod.string().nullable(),
+  "outcome": zod.union([zod.literal('validated'),zod.literal('invalidated'),zod.literal('inconclusive'),zod.literal('new_insight'),zod.literal(null)]).nullable(),
+  "pmDecision": zod.union([zod.literal('proceed'),zod.literal('iterate'),zod.literal('collect_more_evidence'),zod.literal('stop'),zod.literal(null)]).nullable(),
+  "pmNotes": zod.string().nullable(),
+  "resultEnteredAt": zod.coerce.date().nullable(),
+  "status": zod.enum(['draft', 'planned', 'running', 'completed', 'cancelled']),
+  "owner": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullable()
+}),
+  "plannedStartDate": zod.string().nullable(),
+  "plannedEndDate": zod.string().nullable(),
+  "startedAt": zod.coerce.date().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "hypothesis": zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+})
+export const ListValidationExperimentsResponse = zod.array(ListValidationExperimentsResponseItem)
+
+
+/**
+ * @summary Create an experiment linked to an owned hypothesis
+ */
+export const createValidationExperimentBodyNameMax = 300;
+
+export const createValidationExperimentBodyMethodKeyMax = 64;
+
+export const createValidationExperimentBodySetupMax = 10000;
+
+export const createValidationExperimentBodyTargetAudienceMax = 5000;
+
+export const createValidationExperimentBodySuccessMeasuresMax = 10000;
+
+export const createValidationExperimentBodyPlannedStartDateMax = 10;
+
+export const createValidationExperimentBodyPlannedEndDateMax = 10;
+
+
+
+export const CreateValidationExperimentBody = zod.object({
+  "hypothesisId": zod.number(),
+  "name": zod.string().min(1).max(createValidationExperimentBodyNameMax),
+  "methodKey": zod.string().min(1).max(createValidationExperimentBodyMethodKeyMax),
+  "setup": zod.string().max(createValidationExperimentBodySetupMax).nullish(),
+  "targetAudience": zod.string().max(createValidationExperimentBodyTargetAudienceMax).nullish(),
+  "successMeasures": zod.string().max(createValidationExperimentBodySuccessMeasuresMax).nullish(),
+  "status": zod.enum(['draft', 'planned']),
+  "plannedStartDate": zod.string().max(createValidationExperimentBodyPlannedStartDateMax).nullish(),
+  "plannedEndDate": zod.string().max(createValidationExperimentBodyPlannedEndDateMax).nullish()
+})
+
+export const CreateValidationExperimentResponse = zod.object({
+  "id": zod.number(),
+  "hypothesisId": zod.number(),
+  "name": zod.string(),
+  "methodKey": zod.string(),
+  "method": zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['generative', 'evaluative', 'quantitative', 'smoke_test']),
+  "summary": zod.string(),
+  "bestFor": zod.string(),
+  "effort": zod.string(),
+  "evidenceStrength": zod.string(),
+  "defaultDurationDays": zod.number()
+}),
+  "setup": zod.string().nullable(),
+  "targetAudience": zod.string().nullable(),
+  "successMeasures": zod.string().nullable(),
+  "actualResult": zod.string().nullable(),
+  "outcome": zod.union([zod.literal('validated'),zod.literal('invalidated'),zod.literal('inconclusive'),zod.literal('new_insight'),zod.literal(null)]).nullable(),
+  "pmDecision": zod.union([zod.literal('proceed'),zod.literal('iterate'),zod.literal('collect_more_evidence'),zod.literal('stop'),zod.literal(null)]).nullable(),
+  "pmNotes": zod.string().nullable(),
+  "resultEnteredAt": zod.coerce.date().nullable(),
+  "status": zod.enum(['draft', 'planned', 'running', 'completed', 'cancelled']),
+  "owner": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullable()
+}),
+  "plannedStartDate": zod.string().nullable(),
+  "plannedEndDate": zod.string().nullable(),
+  "startedAt": zod.coerce.date().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "hypothesis": zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+})
+
+
+/**
+ * @summary Get one owned experiment, including archived history
+ */
+export const GetValidationExperimentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetValidationExperimentResponse = zod.object({
+  "id": zod.number(),
+  "hypothesisId": zod.number(),
+  "name": zod.string(),
+  "methodKey": zod.string(),
+  "method": zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['generative', 'evaluative', 'quantitative', 'smoke_test']),
+  "summary": zod.string(),
+  "bestFor": zod.string(),
+  "effort": zod.string(),
+  "evidenceStrength": zod.string(),
+  "defaultDurationDays": zod.number()
+}),
+  "setup": zod.string().nullable(),
+  "targetAudience": zod.string().nullable(),
+  "successMeasures": zod.string().nullable(),
+  "actualResult": zod.string().nullable(),
+  "outcome": zod.union([zod.literal('validated'),zod.literal('invalidated'),zod.literal('inconclusive'),zod.literal('new_insight'),zod.literal(null)]).nullable(),
+  "pmDecision": zod.union([zod.literal('proceed'),zod.literal('iterate'),zod.literal('collect_more_evidence'),zod.literal('stop'),zod.literal(null)]).nullable(),
+  "pmNotes": zod.string().nullable(),
+  "resultEnteredAt": zod.coerce.date().nullable(),
+  "status": zod.enum(['draft', 'planned', 'running', 'completed', 'cancelled']),
+  "owner": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullable()
+}),
+  "plannedStartDate": zod.string().nullable(),
+  "plannedEndDate": zod.string().nullable(),
+  "startedAt": zod.coerce.date().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "hypothesis": zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+})
+
+
+/**
+ * @summary Update an owned experiment and its execution status
+ */
+export const UpdateValidationExperimentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateValidationExperimentBodyNameMax = 300;
+
+export const updateValidationExperimentBodyMethodKeyMax = 64;
+
+export const updateValidationExperimentBodySetupMax = 10000;
+
+export const updateValidationExperimentBodyTargetAudienceMax = 5000;
+
+export const updateValidationExperimentBodySuccessMeasuresMax = 10000;
+
+export const updateValidationExperimentBodyActualResultMax = 20000;
+
+export const updateValidationExperimentBodyPmNotesMax = 10000;
+
+export const updateValidationExperimentBodyPlannedStartDateMax = 10;
+
+export const updateValidationExperimentBodyPlannedEndDateMax = 10;
+
+
+
+export const UpdateValidationExperimentBody = zod.object({
+  "name": zod.string().min(1).max(updateValidationExperimentBodyNameMax).optional(),
+  "methodKey": zod.string().min(1).max(updateValidationExperimentBodyMethodKeyMax).optional(),
+  "setup": zod.string().max(updateValidationExperimentBodySetupMax).nullish(),
+  "targetAudience": zod.string().max(updateValidationExperimentBodyTargetAudienceMax).nullish(),
+  "successMeasures": zod.string().max(updateValidationExperimentBodySuccessMeasuresMax).nullish(),
+  "actualResult": zod.string().max(updateValidationExperimentBodyActualResultMax).nullish(),
+  "outcome": zod.union([zod.literal('validated'),zod.literal('invalidated'),zod.literal('inconclusive'),zod.literal('new_insight'),zod.literal(null)]).nullish(),
+  "pmDecision": zod.union([zod.literal('proceed'),zod.literal('iterate'),zod.literal('collect_more_evidence'),zod.literal('stop'),zod.literal(null)]).nullish(),
+  "pmNotes": zod.string().max(updateValidationExperimentBodyPmNotesMax).nullish(),
+  "status": zod.enum(['draft', 'planned', 'running', 'completed', 'cancelled']).optional(),
+  "plannedStartDate": zod.string().max(updateValidationExperimentBodyPlannedStartDateMax).nullish(),
+  "plannedEndDate": zod.string().max(updateValidationExperimentBodyPlannedEndDateMax).nullish()
+})
+
+export const UpdateValidationExperimentResponse = zod.object({
+  "id": zod.number(),
+  "hypothesisId": zod.number(),
+  "name": zod.string(),
+  "methodKey": zod.string(),
+  "method": zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['generative', 'evaluative', 'quantitative', 'smoke_test']),
+  "summary": zod.string(),
+  "bestFor": zod.string(),
+  "effort": zod.string(),
+  "evidenceStrength": zod.string(),
+  "defaultDurationDays": zod.number()
+}),
+  "setup": zod.string().nullable(),
+  "targetAudience": zod.string().nullable(),
+  "successMeasures": zod.string().nullable(),
+  "actualResult": zod.string().nullable(),
+  "outcome": zod.union([zod.literal('validated'),zod.literal('invalidated'),zod.literal('inconclusive'),zod.literal('new_insight'),zod.literal(null)]).nullable(),
+  "pmDecision": zod.union([zod.literal('proceed'),zod.literal('iterate'),zod.literal('collect_more_evidence'),zod.literal('stop'),zod.literal(null)]).nullable(),
+  "pmNotes": zod.string().nullable(),
+  "resultEnteredAt": zod.coerce.date().nullable(),
+  "status": zod.enum(['draft', 'planned', 'running', 'completed', 'cancelled']),
+  "owner": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullable()
+}),
+  "plannedStartDate": zod.string().nullable(),
+  "plannedEndDate": zod.string().nullable(),
+  "startedAt": zod.coerce.date().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "hypothesis": zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+})
+
+
+/**
+ * @summary Soft-archive one owned experiment
+ */
+export const ArchiveValidationExperimentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveValidationExperimentResponse = zod.object({
+  "id": zod.number(),
+  "hypothesisId": zod.number(),
+  "name": zod.string(),
+  "methodKey": zod.string(),
+  "method": zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['generative', 'evaluative', 'quantitative', 'smoke_test']),
+  "summary": zod.string(),
+  "bestFor": zod.string(),
+  "effort": zod.string(),
+  "evidenceStrength": zod.string(),
+  "defaultDurationDays": zod.number()
+}),
+  "setup": zod.string().nullable(),
+  "targetAudience": zod.string().nullable(),
+  "successMeasures": zod.string().nullable(),
+  "actualResult": zod.string().nullable(),
+  "outcome": zod.union([zod.literal('validated'),zod.literal('invalidated'),zod.literal('inconclusive'),zod.literal('new_insight'),zod.literal(null)]).nullable(),
+  "pmDecision": zod.union([zod.literal('proceed'),zod.literal('iterate'),zod.literal('collect_more_evidence'),zod.literal('stop'),zod.literal(null)]).nullable(),
+  "pmNotes": zod.string().nullable(),
+  "resultEnteredAt": zod.coerce.date().nullable(),
+  "status": zod.enum(['draft', 'planned', 'running', 'completed', 'cancelled']),
+  "owner": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullable()
+}),
+  "plannedStartDate": zod.string().nullable(),
+  "plannedEndDate": zod.string().nullable(),
+  "startedAt": zod.coerce.date().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "hypothesis": zod.object({
+  "id": zod.number(),
+  "opportunityId": zod.number(),
+  "hypothesisType": zod.enum(['problem', 'solution', 'value', 'business', 'pricing', 'custom']),
+  "statement": zod.string(),
+  "assumption": zod.string().nullable(),
+  "successCriteria": zod.string().nullable(),
+  "status": zod.enum(['draft', 'ready_for_validation', 'in_validation', 'validated', 'invalidated', 'inconclusive', 'needs_more_validation']),
+  "notes": zod.string().nullable(),
+  "aiSuggestion": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "status": zod.string(),
+  "relatedFeedbackCount": zod.number(),
+  "relatedSignalCount": zod.number(),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+}),
+  "prioritization": zod.object({
+  "analysisAvailable": zod.boolean(),
+  "riceScore": zod.number().nullable(),
+  "iceScore": zod.number().nullable(),
+  "moscowCategory": zod.string().nullable(),
+  "weightedScore": zod.number().nullable(),
+  "overallPriority": zod.number().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerImpact": zod.string().nullable(),
+  "engineeringEffort": zod.number().nullable()
+})
+})
+})
+
+
+/**
+ * @summary Analyze an entered experiment result against its success criteria
+ */
+export const AnalyzeValidationExperimentResultParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnalyzeValidationExperimentResultResponse = zod.object({
+  "successCriteriaQuote": zod.string().nullable(),
+  "actualResultQuote": zod.string(),
+  "assessment": zod.string(),
+  "recommendation": zod.enum(['proceed', 'iterate', 'collect_more_evidence', 'investigate_insight']),
+  "caveat": zod.string().nullable()
+})
+
+
+/**
+ * @summary Draft or improve experiment setup or success measures with AI
+ */
+export const assistValidationExperimentContentBodyMethodKeyMax = 64;
+
+export const assistValidationExperimentContentBodyTargetAudienceMax = 5000;
+
+export const assistValidationExperimentContentBodySetupMax = 10000;
+
+export const assistValidationExperimentContentBodySuccessMeasuresMax = 10000;
+
+export const assistValidationExperimentContentBodyExistingTextMax = 10000;
+
+
+
+export const AssistValidationExperimentContentBody = zod.object({
+  "field": zod.enum(['setup', 'successMeasures']),
+  "action": zod.enum(['write', 'improve']),
+  "hypothesisId": zod.number().optional(),
+  "methodKey": zod.string().min(1).max(assistValidationExperimentContentBodyMethodKeyMax),
+  "targetAudience": zod.string().max(assistValidationExperimentContentBodyTargetAudienceMax).nullish(),
+  "setup": zod.string().max(assistValidationExperimentContentBodySetupMax).nullish(),
+  "successMeasures": zod.string().max(assistValidationExperimentContentBodySuccessMeasuresMax).nullish(),
+  "existingText": zod.string().max(assistValidationExperimentContentBodyExistingTextMax).nullish()
+})
+
+export const assistValidationExperimentContentResponseTextMax = 10000;
+
+
+
+export const AssistValidationExperimentContentResponse = zod.object({
+  "text": zod.string().min(1).max(assistValidationExperimentContentResponseTextMax)
+})
 
 
 /**

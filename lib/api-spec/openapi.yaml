@@ -28,6 +28,8 @@ tags:
     description: AI insight operations
   - name: prioritization
     description: Prioritization framework operations
+  - name: validation
+    description: Product validation and hypothesis management operations
   - name: openai
     description: OpenAI AI chat, image, and audio operations
 
@@ -221,6 +223,19 @@ paths:
           in: query
           schema:
             type: string
+        - name: limit
+          in: query
+          description: Maximum number of Product Ideas to return (up to 200).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          description: Number of Product Ideas to skip for pagination.
+          schema:
+            type: integer
+            minimum: 0
       responses:
         "200":
           description: List of opportunities
@@ -862,6 +877,395 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AiPriorityRecommendation"
+
+  /prioritization/analyze/{opportunityId}:
+    post:
+      operationId: analyzePrioritization
+      tags: [prioritization]
+      summary: Run full AI analysis for one opportunity (all 7 frameworks)
+      parameters:
+        - name: opportunityId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Full analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrioritizationAnalysisEnvelope"
+
+  /prioritization/executive-recommendation:
+    get:
+      operationId: getExecutiveRecommendation
+      tags: [prioritization]
+      summary: Get executive recommendation across all analyzed opportunities
+      responses:
+        "200":
+          description: Executive recommendation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutiveRecommendationResult"
+
+  /prioritization/compare:
+    post:
+      operationId: compareFeatures
+      tags: [prioritization]
+      summary: Side-by-side AI comparison of two product ideas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureCompareInput"
+      responses:
+        "200":
+          description: Comparison result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureComparisonResult"
+
+  # --- Product Validation: Hypothesis Management and Experiments ---
+  /validation/summary:
+    get:
+      operationId: getValidationSummary
+      tags: [validation]
+      summary: Get validation module counts
+      responses:
+        "200":
+          description: Validation summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationSummary"
+
+  /validation/product-ideas:
+    get:
+      operationId: listValidationProductIdeas
+      tags: [validation]
+      summary: List the authenticated user's Product Ideas with validation context
+      responses:
+        "200":
+          description: Product Ideas with existing prioritization context
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ValidationProductIdea"
+
+  /validation/methods:
+    get:
+      operationId: listValidationMethods
+      tags: [validation]
+      summary: List reusable validation methods
+      responses:
+        "200":
+          description: Validation method catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ValidationMethod"
+
+  /validation/hypotheses:
+    get:
+      operationId: listValidationHypotheses
+      tags: [validation]
+      summary: List the authenticated user's hypotheses
+      parameters:
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/HypothesisStatus"
+        - name: hypothesisType
+          in: query
+          schema:
+            $ref: "#/components/schemas/HypothesisType"
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Hypothesis list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ValidationHypothesis"
+    post:
+      operationId: createValidationHypothesis
+      tags: [validation]
+      summary: Create a hypothesis for an existing Product Idea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationHypothesisInput"
+      responses:
+        "201":
+          description: Hypothesis created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationHypothesis"
+
+  /validation/hypotheses/improve:
+    post:
+      operationId: improveHypothesisWithAi
+      tags: [validation]
+      summary: Suggest a clearer and more testable hypothesis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HypothesisAiInput"
+      responses:
+        "200":
+          description: AI suggestion that the PM may edit or ignore
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HypothesisAiSuggestion"
+
+  /validation/hypotheses/{id}:
+    get:
+      operationId: getValidationHypothesis
+      tags: [validation]
+      summary: Get one owned hypothesis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Hypothesis detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationHypothesis"
+    patch:
+      operationId: updateValidationHypothesis
+      tags: [validation]
+      summary: Update one owned hypothesis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationHypothesisUpdate"
+      responses:
+        "200":
+          description: Hypothesis updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationHypothesis"
+
+  /validation/hypotheses/{id}/duplicate:
+    post:
+      operationId: duplicateValidationHypothesis
+      tags: [validation]
+      summary: Duplicate one owned hypothesis as a draft
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "201":
+          description: Duplicated hypothesis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationHypothesis"
+
+  /validation/hypotheses/{id}/archive:
+    post:
+      operationId: archiveValidationHypothesis
+      tags: [validation]
+      summary: Soft-archive one owned hypothesis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Archived hypothesis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationHypothesis"
+
+  /validation/experiments:
+    get:
+      operationId: listValidationExperiments
+      tags: [validation]
+      summary: List the authenticated user's experiments
+      parameters:
+        - name: hypothesisId
+          in: query
+          schema:
+            type: number
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ExperimentStatus"
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Experiment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ValidationExperiment"
+    post:
+      operationId: createValidationExperiment
+      tags: [validation]
+      summary: Create an experiment linked to an owned hypothesis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationExperimentInput"
+      responses:
+        "201":
+          description: Experiment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationExperiment"
+
+  /validation/experiments/{id}:
+    get:
+      operationId: getValidationExperiment
+      tags: [validation]
+      summary: Get one owned experiment, including archived history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Experiment detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationExperiment"
+    patch:
+      operationId: updateValidationExperiment
+      tags: [validation]
+      summary: Update an owned experiment and its execution status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationExperimentUpdate"
+      responses:
+        "200":
+          description: Experiment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationExperiment"
+
+  /validation/experiments/{id}/archive:
+    post:
+      operationId: archiveValidationExperiment
+      tags: [validation]
+      summary: Soft-archive one owned experiment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Archived experiment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationExperiment"
+
+  /validation/experiments/{id}/analyze-result:
+    post:
+      operationId: analyzeValidationExperimentResult
+      tags: [validation]
+      summary: Analyze an entered experiment result against its success criteria
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Grounded AI analysis of the entered result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResultAnalysis"
+
+  /validation/experiments/assist:
+    post:
+      operationId: assistValidationExperimentContent
+      tags: [validation]
+      summary: Draft or improve experiment setup or success measures with AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationExperimentAssistInput"
+      responses:
+        "200":
+          description: Editable AI-assisted experiment content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationExperimentAssistResponse"
 
   /openai/conversations:
     get:
@@ -1720,10 +2124,109 @@ components:
           type: ["string", "null"]
         kanoCategory:
           type: ["string", "null"]
+        weightedScore:
+          type: ["number", "null"]
+        opportunityScore:
+          type: ["number", "null"]
+        vveQuadrant:
+          type: ["string", "null"]
         aiRecommendation:
           type: ["string", "null"]
+        analyzed:
+          type: boolean
         overallRank:
           type: ["number", "null"]
+
+    PrioritizationAnalysis:
+      type: object
+      properties:
+        id:
+          type: number
+        opportunityId:
+          type: number
+        riceScore:
+          type: ["number", "null"]
+        iceScore:
+          type: ["number", "null"]
+        weightedScore:
+          type: ["number", "null"]
+        opportunityScore:
+          type: ["number", "null"]
+        moscowCategory:
+          type: ["string", "null"]
+        kanoCategory:
+          type: ["string", "null"]
+        vveQuadrant:
+          type: ["string", "null"]
+        riceData:
+          description: RICE framework detail (JSONB)
+        iceData:
+          description: ICE framework detail (JSONB)
+        moscowData:
+          description: MoSCoW classification detail (JSONB)
+        weightedData:
+          description: Weighted scoring detail (JSONB)
+        vveData:
+          description: Value vs Effort detail (JSONB)
+        kanoData:
+          description: Kano model detail (JSONB)
+        opportunityData:
+          description: Opportunity scoring detail (JSONB)
+        engineeringData:
+          description: Engineering effort estimate (JSONB)
+        businessContext:
+          description: Business context data (JSONB)
+        executiveData:
+          description: Executive recommendation data (JSONB)
+        analyzedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PrioritizationAnalysisEnvelope:
+      type: object
+      properties:
+        opportunity:
+          $ref: "#/components/schemas/Opportunity"
+        analysis:
+          $ref: "#/components/schemas/PrioritizationAnalysis"
+
+    ExecutiveRecommendationResult:
+      type: object
+      properties:
+        topRecommendation:
+          description: Top ranked opportunity with analysis
+        allRanked:
+          type: array
+          items:
+            description: Ranked opportunity entry
+        totalAnalyzed:
+          type: number
+
+    FeatureCompareInput:
+      type: object
+      required: [idA, idB]
+      properties:
+        idA:
+          type: number
+        idB:
+          type: number
+
+    FeatureComparisonResult:
+      type: object
+      properties:
+        opportunityA:
+          $ref: "#/components/schemas/Opportunity"
+        opportunityB:
+          $ref: "#/components/schemas/Opportunity"
+        analysisA:
+          $ref: "#/components/schemas/PrioritizationAnalysis"
+        analysisB:
+          $ref: "#/components/schemas/PrioritizationAnalysis"
+        aiInsight:
+          description: AI comparison insight (JSONB)
 
     RiceScore:
       type: object
@@ -1871,6 +2374,542 @@ components:
             type: string
         suggestedReleaseWindow:
           type: ["string", "null"]
+
+    # --- Product Validation: Hypothesis Management ---
+    HypothesisType:
+      type: string
+      enum: [problem, solution, value, business, pricing, custom]
+
+    HypothesisStatus:
+      type: string
+      enum:
+        - draft
+        - ready_for_validation
+        - in_validation
+        - validated
+        - invalidated
+        - inconclusive
+        - needs_more_validation
+
+    ValidationMethodCategory:
+      type: string
+      enum: [generative, evaluative, quantitative, smoke_test]
+
+    ValidationMethod:
+      type: object
+      required:
+        - key
+        - name
+        - category
+        - summary
+        - bestFor
+        - effort
+        - evidenceStrength
+        - defaultDurationDays
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/ValidationMethodCategory"
+        summary:
+          type: string
+        bestFor:
+          type: string
+        effort:
+          type: string
+        evidenceStrength:
+          type: string
+        defaultDurationDays:
+          type: number
+
+    ExperimentStatus:
+      type: string
+      enum: [draft, planned, running, completed, cancelled]
+
+    ExperimentInitialStatus:
+      type: string
+      enum: [draft, planned]
+
+    ValidationOwner:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+
+    ValidationSummary:
+      type: object
+      required: [hypotheses, experiments, evidence, results]
+      properties:
+        hypotheses:
+          type: number
+        experiments:
+          type: number
+        evidence:
+          type: number
+        results:
+          type: number
+
+    ValidationPrioritizationContext:
+      type: object
+      required:
+        - analysisAvailable
+        - riceScore
+        - iceScore
+        - moscowCategory
+        - weightedScore
+        - overallPriority
+        - businessValue
+        - customerImpact
+        - engineeringEffort
+      properties:
+        analysisAvailable:
+          type: boolean
+        riceScore:
+          type: ["number", "null"]
+        iceScore:
+          type: ["number", "null"]
+        moscowCategory:
+          type: ["string", "null"]
+        weightedScore:
+          type: ["number", "null"]
+        overallPriority:
+          type: ["number", "null"]
+        businessValue:
+          type: ["string", "null"]
+        customerImpact:
+          type: ["string", "null"]
+        engineeringEffort:
+          type: ["number", "null"]
+
+    ValidationProductIdea:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - problemStatement
+        - customerProblem
+        - suggestedSolution
+        - businessValue
+        - customerValue
+        - estimatedCustomerImpact
+        - estimatedBusinessImpact
+        - urgency
+        - confidenceScore
+        - status
+        - relatedFeedbackCount
+        - relatedSignalCount
+        - prioritization
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        description:
+          type: string
+        problemStatement:
+          type: ["string", "null"]
+        customerProblem:
+          type: ["string", "null"]
+        suggestedSolution:
+          type: ["string", "null"]
+        businessValue:
+          type: ["string", "null"]
+        customerValue:
+          type: ["string", "null"]
+        estimatedCustomerImpact:
+          type: ["string", "null"]
+        estimatedBusinessImpact:
+          type: ["string", "null"]
+        urgency:
+          type: ["string", "null"]
+        confidenceScore:
+          type: ["number", "null"]
+        status:
+          type: string
+        relatedFeedbackCount:
+          type: number
+        relatedSignalCount:
+          type: number
+        prioritization:
+          $ref: "#/components/schemas/ValidationPrioritizationContext"
+
+    ValidationHypothesis:
+      type: object
+      required:
+        - id
+        - opportunityId
+        - hypothesisType
+        - statement
+        - assumption
+        - successCriteria
+        - status
+        - notes
+        - aiSuggestion
+        - archivedAt
+        - createdAt
+        - updatedAt
+        - productIdea
+        - prioritization
+      properties:
+        id:
+          type: number
+        opportunityId:
+          type: number
+        hypothesisType:
+          $ref: "#/components/schemas/HypothesisType"
+        statement:
+          type: string
+        assumption:
+          type: ["string", "null"]
+        successCriteria:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/HypothesisStatus"
+        notes:
+          type: ["string", "null"]
+        aiSuggestion:
+          type: ["string", "null"]
+        archivedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        productIdea:
+          $ref: "#/components/schemas/ValidationProductIdea"
+        prioritization:
+          $ref: "#/components/schemas/ValidationPrioritizationContext"
+
+    ValidationHypothesisInput:
+      type: object
+      required: [opportunityId, hypothesisType, statement, status]
+      properties:
+        opportunityId:
+          type: number
+        hypothesisType:
+          $ref: "#/components/schemas/HypothesisType"
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        assumption:
+          type: ["string", "null"]
+          maxLength: 5000
+        successCriteria:
+          type: ["string", "null"]
+          maxLength: 5000
+        status:
+          $ref: "#/components/schemas/HypothesisStatus"
+        notes:
+          type: ["string", "null"]
+          maxLength: 10000
+        aiSuggestion:
+          type: ["string", "null"]
+          maxLength: 5000
+
+    ValidationHypothesisUpdate:
+      type: object
+      properties:
+        opportunityId:
+          type: number
+        hypothesisType:
+          $ref: "#/components/schemas/HypothesisType"
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        assumption:
+          type: ["string", "null"]
+          maxLength: 5000
+        successCriteria:
+          type: ["string", "null"]
+          maxLength: 5000
+        status:
+          $ref: "#/components/schemas/HypothesisStatus"
+        notes:
+          type: ["string", "null"]
+          maxLength: 10000
+        aiSuggestion:
+          type: ["string", "null"]
+          maxLength: 5000
+
+    ValidationExperiment:
+      type: object
+      required:
+        - id
+        - hypothesisId
+        - name
+        - methodKey
+        - method
+        - setup
+        - targetAudience
+        - successMeasures
+        - actualResult
+        - outcome
+        - pmDecision
+        - pmNotes
+        - resultEnteredAt
+        - status
+        - owner
+        - plannedStartDate
+        - plannedEndDate
+        - startedAt
+        - completedAt
+        - archivedAt
+        - createdAt
+        - updatedAt
+        - hypothesis
+      properties:
+        id:
+          type: number
+        hypothesisId:
+          type: number
+        name:
+          type: string
+        methodKey:
+          type: string
+        method:
+          $ref: "#/components/schemas/ValidationMethod"
+        setup:
+          type: ["string", "null"]
+        targetAudience:
+          type: ["string", "null"]
+        successMeasures:
+          type: ["string", "null"]
+        actualResult:
+          type: ["string", "null"]
+        outcome:
+          $ref: "#/components/schemas/ValidationOutcomeNullable"
+        pmDecision:
+          $ref: "#/components/schemas/ValidationPmDecisionNullable"
+        pmNotes:
+          type: ["string", "null"]
+        resultEnteredAt:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          $ref: "#/components/schemas/ExperimentStatus"
+        owner:
+          $ref: "#/components/schemas/ValidationOwner"
+        plannedStartDate:
+          type: ["string", "null"]
+        plannedEndDate:
+          type: ["string", "null"]
+        startedAt:
+          type: ["string", "null"]
+          format: date-time
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        archivedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        hypothesis:
+          $ref: "#/components/schemas/ValidationHypothesis"
+
+    ValidationExperimentInput:
+      type: object
+      required: [hypothesisId, name, methodKey, status]
+      properties:
+        hypothesisId:
+          type: number
+        name:
+          type: string
+          minLength: 1
+          maxLength: 300
+        methodKey:
+          type: string
+          minLength: 1
+          maxLength: 64
+        setup:
+          type: ["string", "null"]
+          maxLength: 10000
+        targetAudience:
+          type: ["string", "null"]
+          maxLength: 5000
+        successMeasures:
+          type: ["string", "null"]
+          maxLength: 10000
+        status:
+          $ref: "#/components/schemas/ExperimentInitialStatus"
+        plannedStartDate:
+          type: ["string", "null"]
+          maxLength: 10
+        plannedEndDate:
+          type: ["string", "null"]
+          maxLength: 10
+
+    ValidationOutcome:
+      type: string
+      enum: [validated, invalidated, inconclusive, new_insight]
+
+    ValidationOutcomeNullable:
+      type: ["string", "null"]
+      enum: [validated, invalidated, inconclusive, new_insight, null]
+
+    ValidationPmDecision:
+      type: string
+      enum: [proceed, iterate, collect_more_evidence, stop]
+
+    ValidationPmDecisionNullable:
+      type: ["string", "null"]
+      enum: [proceed, iterate, collect_more_evidence, stop, null]
+
+    ValidationResultAnalysis:
+      type: object
+      required:
+        - successCriteriaQuote
+        - actualResultQuote
+        - assessment
+        - recommendation
+        - caveat
+      properties:
+        successCriteriaQuote:
+          type: ["string", "null"]
+        actualResultQuote:
+          type: string
+        assessment:
+          type: string
+        recommendation:
+          type: string
+          enum: [proceed, iterate, collect_more_evidence, investigate_insight]
+        caveat:
+          type: ["string", "null"]
+
+    ValidationExperimentAssistInput:
+      type: object
+      required: [field, action, methodKey]
+      properties:
+        field:
+          type: string
+          enum: [setup, successMeasures]
+        action:
+          type: string
+          enum: [write, improve]
+        hypothesisId:
+          type: number
+        methodKey:
+          type: string
+          minLength: 1
+          maxLength: 64
+        targetAudience:
+          type: ["string", "null"]
+          maxLength: 5000
+        setup:
+          type: ["string", "null"]
+          maxLength: 10000
+        successMeasures:
+          type: ["string", "null"]
+          maxLength: 10000
+        existingText:
+          type: ["string", "null"]
+          maxLength: 10000
+
+    ValidationExperimentAssistResponse:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 10000
+
+    ValidationExperimentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 300
+        methodKey:
+          type: string
+          minLength: 1
+          maxLength: 64
+        setup:
+          type: ["string", "null"]
+          maxLength: 10000
+        targetAudience:
+          type: ["string", "null"]
+          maxLength: 5000
+        successMeasures:
+          type: ["string", "null"]
+          maxLength: 10000
+        actualResult:
+          type: ["string", "null"]
+          maxLength: 20000
+        outcome:
+          $ref: "#/components/schemas/ValidationOutcomeNullable"
+        pmDecision:
+          $ref: "#/components/schemas/ValidationPmDecisionNullable"
+        pmNotes:
+          type: ["string", "null"]
+          maxLength: 10000
+        status:
+          $ref: "#/components/schemas/ExperimentStatus"
+        plannedStartDate:
+          type: ["string", "null"]
+          maxLength: 10
+        plannedEndDate:
+          type: ["string", "null"]
+          maxLength: 10
+
+    HypothesisAiInput:
+      type: object
+      required: [opportunityId, hypothesisType, statement]
+      properties:
+        opportunityId:
+          type: number
+        hypothesisType:
+          $ref: "#/components/schemas/HypothesisType"
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        assumption:
+          type: ["string", "null"]
+          maxLength: 5000
+        successCriteria:
+          type: ["string", "null"]
+          maxLength: 5000
+
+    HypothesisAiSuggestion:
+      type: object
+      required:
+        - originalStatement
+        - suggestedStatement
+        - suggestedAssumption
+        - suggestedSuccessCriteria
+        - assumptionLabels
+      properties:
+        originalStatement:
+          type: string
+        suggestedStatement:
+          type: string
+        suggestedAssumption:
+          type: ["string", "null"]
+        suggestedSuccessCriteria:
+          type: ["string", "null"]
+        assumptionLabels:
+          type: array
+          items:
+            type: string
 
     AuthUser:
       type: object

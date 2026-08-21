@@ -1,30 +1,71 @@
 import { Router, type IRouter } from "express";
-import { eq, and, SQL } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { prioritizationScoresTable, opportunitiesTable } from "@workspace/db";
+import {
+  prioritizationAnalysisTable,
+  prioritizationScoresTable,
+  opportunitiesTable,
+} from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
 router.get("/prioritization", requireAuth, async (req, res, next): Promise<void> => {
-  const { framework } = req.query as Record<string, string>;
+  // Product Discovery → Product Ideas is the source of truth. Its default list
+  // is the current user's newest 50 ideas, so Prioritization uses the same
+  // ownership, ordering, and page population before adding analysis data.
+  const opps = await db
+    .select()
+    .from(opportunitiesTable)
+    .where(eq(opportunitiesTable.userId, req.user!.id))
+    .orderBy(desc(opportunitiesTable.createdAt))
+    .limit(50);
 
-  const opps = await db.select().from(opportunitiesTable).orderBy(opportunitiesTable.createdAt);
+  if (opps.length === 0) {
+    res.json([]);
+    return;
+  }
 
-  const results = await Promise.all(
-    opps.map(async (opp) => {
-      const scores = framework
-        ? await db
-            .select()
-            .from(prioritizationScoresTable)
-            .where(and(eq(prioritizationScoresTable.opportunityId, opp.id), eq(prioritizationScoresTable.framework, framework)))
-        : await db.select().from(prioritizationScoresTable).where(eq(prioritizationScoresTable.opportunityId, opp.id));
+  const opportunityIds = opps.map((opportunity) => opportunity.id);
+  const [scores, analyses] = await Promise.all([
+    db
+      .select()
+      .from(prioritizationScoresTable)
+      .where(inArray(prioritizationScoresTable.opportunityId, opportunityIds))
+      .orderBy(desc(prioritizationScoresTable.createdAt)),
+    db
+      .select()
+      .from(prioritizationAnalysisTable)
+      .where(inArray(prioritizationAnalysisTable.opportunityId, opportunityIds)),
+  ]);
 
-      const latestScore = scores[scores.length - 1] ?? null;
+  const latestScoreByOpportunity = new Map<number, typeof prioritizationScoresTable.$inferSelect>();
+  for (const score of scores) {
+    if (!latestScoreByOpportunity.has(score.opportunityId)) {
+      latestScoreByOpportunity.set(score.opportunityId, score);
+    }
+  }
+  const analysisByOpportunity = new Map(
+    analyses.map((analysis) => [analysis.opportunityId, analysis]),
+  );
+
+  const results = opps.map((opp) => {
+      const analysis = analysisByOpportunity.get(opp.id);
+      const latestScore = latestScoreByOpportunity.get(opp.id) ?? null;
+      const riceData = analysis?.riceData as Record<string, unknown> | null;
+      const iceData = analysis?.iceData as Record<string, unknown> | null;
 
       return {
         opportunity: { ...opp, tags: opp.tags ?? [] },
-        riceScore: latestScore
+        riceScore: riceData
+          ? {
+              reach: riceData.reach ?? null,
+              impact: riceData.impactValue ?? riceData.impact ?? null,
+              confidence: riceData.confidence ?? null,
+              effort: riceData.effortPoints ?? riceData.effort ?? null,
+              score: riceData.score ?? analysis?.riceScore ?? null,
+            }
+          : latestScore
           ? {
               reach: latestScore.riceReach,
               impact: latestScore.riceImpact,
@@ -33,7 +74,14 @@ router.get("/prioritization", requireAuth, async (req, res, next): Promise<void>
               score: latestScore.riceScore,
             }
           : null,
-        iceScore: latestScore
+        iceScore: iceData
+          ? {
+              impact: iceData.impact ?? null,
+              confidence: iceData.confidence ?? null,
+              ease: iceData.ease ?? null,
+              score: iceData.score ?? analysis?.iceScore ?? null,
+            }
+          : latestScore
           ? {
               impact: latestScore.iceImpact,
               confidence: latestScore.iceConfidence,
@@ -41,13 +89,21 @@ router.get("/prioritization", requireAuth, async (req, res, next): Promise<void>
               score: latestScore.iceScore,
             }
           : null,
-        moscowCategory: latestScore?.moscowCategory ?? null,
-        kanoCategory: latestScore?.kanoCategory ?? null,
+        weightedScore: analysis?.weightedScore ?? null,
+        opportunityScore: analysis?.opportunityScore ?? null,
+        vveQuadrant: analysis?.vveQuadrant ?? null,
+        moscowCategory: analysis?.moscowCategory ?? latestScore?.moscowCategory ?? null,
+        kanoCategory: analysis?.kanoCategory ?? latestScore?.kanoCategory ?? null,
         aiRecommendation: latestScore?.aiReasoning ?? null,
+        analyzed: Boolean(analysis?.analyzedAt),
+        riceData,
+        iceData,
+        weightedData: analysis?.weightedData ?? null,
+        vveData: analysis?.vveData ?? null,
+        opportunityData: analysis?.opportunityData ?? null,
         overallRank: null,
       };
-    })
-  );
+    });
 
   // Sort by RICE score descending
   results.sort((a, b) => (b.riceScore?.score ?? 0) - (a.riceScore?.score ?? 0));
@@ -128,7 +184,12 @@ router.patch("/prioritization/:id", requireAuth, async (req, res, next): Promise
 });
 
 router.post("/prioritization/ai-recommend", requireAuth, async (req, res, next): Promise<void> => {
-  const opps = await db.select().from(opportunitiesTable).orderBy(opportunitiesTable.createdAt).limit(20);
+  const opps = await db
+    .select()
+    .from(opportunitiesTable)
+    .where(eq(opportunitiesTable.userId, req.user!.id))
+    .orderBy(desc(opportunitiesTable.createdAt))
+    .limit(50);
 
   const recommendations = opps.map((opp, i) => ({
     opportunityId: opp.id,

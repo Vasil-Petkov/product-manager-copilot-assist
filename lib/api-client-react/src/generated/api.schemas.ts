@@ -490,9 +490,85 @@ export interface PrioritizedOpportunity {
   /** @nullable */
   kanoCategory?: string | null;
   /** @nullable */
+  weightedScore?: number | null;
+  /** @nullable */
+  opportunityScore?: number | null;
+  /** @nullable */
+  vveQuadrant?: string | null;
+  /** @nullable */
   aiRecommendation?: string | null;
+  analyzed?: boolean;
   /** @nullable */
   overallRank?: number | null;
+}
+
+export interface PrioritizationAnalysis {
+  id?: number;
+  opportunityId?: number;
+  /** @nullable */
+  riceScore?: number | null;
+  /** @nullable */
+  iceScore?: number | null;
+  /** @nullable */
+  weightedScore?: number | null;
+  /** @nullable */
+  opportunityScore?: number | null;
+  /** @nullable */
+  moscowCategory?: string | null;
+  /** @nullable */
+  kanoCategory?: string | null;
+  /** @nullable */
+  vveQuadrant?: string | null;
+  /** RICE framework detail (JSONB) */
+  riceData?: unknown;
+  /** ICE framework detail (JSONB) */
+  iceData?: unknown;
+  /** MoSCoW classification detail (JSONB) */
+  moscowData?: unknown;
+  /** Weighted scoring detail (JSONB) */
+  weightedData?: unknown;
+  /** Value vs Effort detail (JSONB) */
+  vveData?: unknown;
+  /** Kano model detail (JSONB) */
+  kanoData?: unknown;
+  /** Opportunity scoring detail (JSONB) */
+  opportunityData?: unknown;
+  /** Engineering effort estimate (JSONB) */
+  engineeringData?: unknown;
+  /** Business context data (JSONB) */
+  businessContext?: unknown;
+  /** Executive recommendation data (JSONB) */
+  executiveData?: unknown;
+  /** @nullable */
+  analyzedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PrioritizationAnalysisEnvelope {
+  opportunity?: Opportunity;
+  analysis?: PrioritizationAnalysis;
+}
+
+export interface ExecutiveRecommendationResult {
+  /** Top ranked opportunity with analysis */
+  topRecommendation?: unknown;
+  allRanked?: unknown[];
+  totalAnalyzed?: number;
+}
+
+export interface FeatureCompareInput {
+  idA: number;
+  idB: number;
+}
+
+export interface FeatureComparisonResult {
+  opportunityA?: Opportunity;
+  opportunityB?: Opportunity;
+  analysisA?: PrioritizationAnalysis;
+  analysisB?: PrioritizationAnalysis;
+  /** AI comparison insight (JSONB) */
+  aiInsight?: unknown;
 }
 
 export type PrioritizationScoreFramework = typeof PrioritizationScoreFramework[keyof typeof PrioritizationScoreFramework];
@@ -607,6 +683,496 @@ export interface AiPriorityRecommendation {
   suggestedReleaseWindow?: string | null;
 }
 
+export type HypothesisType = typeof HypothesisType[keyof typeof HypothesisType];
+
+
+export const HypothesisType = {
+  problem: 'problem',
+  solution: 'solution',
+  value: 'value',
+  business: 'business',
+  pricing: 'pricing',
+  custom: 'custom',
+} as const;
+
+export type HypothesisStatus = typeof HypothesisStatus[keyof typeof HypothesisStatus];
+
+
+export const HypothesisStatus = {
+  draft: 'draft',
+  ready_for_validation: 'ready_for_validation',
+  in_validation: 'in_validation',
+  validated: 'validated',
+  invalidated: 'invalidated',
+  inconclusive: 'inconclusive',
+  needs_more_validation: 'needs_more_validation',
+} as const;
+
+export type ValidationMethodCategory = typeof ValidationMethodCategory[keyof typeof ValidationMethodCategory];
+
+
+export const ValidationMethodCategory = {
+  generative: 'generative',
+  evaluative: 'evaluative',
+  quantitative: 'quantitative',
+  smoke_test: 'smoke_test',
+} as const;
+
+export interface ValidationMethod {
+  key: string;
+  name: string;
+  category: ValidationMethodCategory;
+  summary: string;
+  bestFor: string;
+  effort: string;
+  evidenceStrength: string;
+  defaultDurationDays: number;
+}
+
+export type ExperimentStatus = typeof ExperimentStatus[keyof typeof ExperimentStatus];
+
+
+export const ExperimentStatus = {
+  draft: 'draft',
+  planned: 'planned',
+  running: 'running',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export type ExperimentInitialStatus = typeof ExperimentInitialStatus[keyof typeof ExperimentInitialStatus];
+
+
+export const ExperimentInitialStatus = {
+  draft: 'draft',
+  planned: 'planned',
+} as const;
+
+export interface ValidationOwner {
+  id: string;
+  name: string;
+  /** @nullable */
+  email: string | null;
+}
+
+export interface ValidationSummary {
+  hypotheses: number;
+  experiments: number;
+  evidence: number;
+  results: number;
+}
+
+export interface ValidationPrioritizationContext {
+  analysisAvailable: boolean;
+  /** @nullable */
+  riceScore: number | null;
+  /** @nullable */
+  iceScore: number | null;
+  /** @nullable */
+  moscowCategory: string | null;
+  /** @nullable */
+  weightedScore: number | null;
+  /** @nullable */
+  overallPriority: number | null;
+  /** @nullable */
+  businessValue: string | null;
+  /** @nullable */
+  customerImpact: string | null;
+  /** @nullable */
+  engineeringEffort: number | null;
+}
+
+export interface ValidationProductIdea {
+  id: number;
+  title: string;
+  description: string;
+  /** @nullable */
+  problemStatement: string | null;
+  /** @nullable */
+  customerProblem: string | null;
+  /** @nullable */
+  suggestedSolution: string | null;
+  /** @nullable */
+  businessValue: string | null;
+  /** @nullable */
+  customerValue: string | null;
+  /** @nullable */
+  estimatedCustomerImpact: string | null;
+  /** @nullable */
+  estimatedBusinessImpact: string | null;
+  /** @nullable */
+  urgency: string | null;
+  /** @nullable */
+  confidenceScore: number | null;
+  status: string;
+  relatedFeedbackCount: number;
+  relatedSignalCount: number;
+  prioritization: ValidationPrioritizationContext;
+}
+
+export interface ValidationHypothesis {
+  id: number;
+  opportunityId: number;
+  hypothesisType: HypothesisType;
+  statement: string;
+  /** @nullable */
+  assumption: string | null;
+  /** @nullable */
+  successCriteria: string | null;
+  status: HypothesisStatus;
+  /** @nullable */
+  notes: string | null;
+  /** @nullable */
+  aiSuggestion: string | null;
+  /** @nullable */
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  productIdea: ValidationProductIdea;
+  prioritization: ValidationPrioritizationContext;
+}
+
+export interface ValidationHypothesisInput {
+  opportunityId: number;
+  hypothesisType: HypothesisType;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  statement: string;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  assumption?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  successCriteria?: string | null;
+  status: HypothesisStatus;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  notes?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  aiSuggestion?: string | null;
+}
+
+export interface ValidationHypothesisUpdate {
+  opportunityId?: number;
+  hypothesisType?: HypothesisType;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  statement?: string;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  assumption?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  successCriteria?: string | null;
+  status?: HypothesisStatus;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  notes?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  aiSuggestion?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type ValidationOutcomeNullable = typeof ValidationOutcomeNullable[keyof typeof ValidationOutcomeNullable] | null;
+
+
+export const ValidationOutcomeNullable = {
+  validated: 'validated',
+  invalidated: 'invalidated',
+  inconclusive: 'inconclusive',
+  new_insight: 'new_insight',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ValidationPmDecisionNullable = typeof ValidationPmDecisionNullable[keyof typeof ValidationPmDecisionNullable] | null;
+
+
+export const ValidationPmDecisionNullable = {
+  proceed: 'proceed',
+  iterate: 'iterate',
+  collect_more_evidence: 'collect_more_evidence',
+  stop: 'stop',
+} as const;
+
+export interface ValidationExperiment {
+  id: number;
+  hypothesisId: number;
+  name: string;
+  methodKey: string;
+  method: ValidationMethod;
+  /** @nullable */
+  setup: string | null;
+  /** @nullable */
+  targetAudience: string | null;
+  /** @nullable */
+  successMeasures: string | null;
+  /** @nullable */
+  actualResult: string | null;
+  outcome: ValidationOutcomeNullable | null;
+  pmDecision: ValidationPmDecisionNullable | null;
+  /** @nullable */
+  pmNotes: string | null;
+  /** @nullable */
+  resultEnteredAt: string | null;
+  status: ExperimentStatus;
+  owner: ValidationOwner;
+  /** @nullable */
+  plannedStartDate: string | null;
+  /** @nullable */
+  plannedEndDate: string | null;
+  /** @nullable */
+  startedAt: string | null;
+  /** @nullable */
+  completedAt: string | null;
+  /** @nullable */
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  hypothesis: ValidationHypothesis;
+}
+
+export interface ValidationExperimentInput {
+  hypothesisId: number;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 64
+     */
+  methodKey: string;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  setup?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  targetAudience?: string | null;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  successMeasures?: string | null;
+  status: ExperimentInitialStatus;
+  /**
+     * @maxLength 10
+     * @nullable
+     */
+  plannedStartDate?: string | null;
+  /**
+     * @maxLength 10
+     * @nullable
+     */
+  plannedEndDate?: string | null;
+}
+
+export type ValidationOutcome = typeof ValidationOutcome[keyof typeof ValidationOutcome];
+
+
+export const ValidationOutcome = {
+  validated: 'validated',
+  invalidated: 'invalidated',
+  inconclusive: 'inconclusive',
+  new_insight: 'new_insight',
+} as const;
+
+export type ValidationPmDecision = typeof ValidationPmDecision[keyof typeof ValidationPmDecision];
+
+
+export const ValidationPmDecision = {
+  proceed: 'proceed',
+  iterate: 'iterate',
+  collect_more_evidence: 'collect_more_evidence',
+  stop: 'stop',
+} as const;
+
+export type ValidationResultAnalysisRecommendation = typeof ValidationResultAnalysisRecommendation[keyof typeof ValidationResultAnalysisRecommendation];
+
+
+export const ValidationResultAnalysisRecommendation = {
+  proceed: 'proceed',
+  iterate: 'iterate',
+  collect_more_evidence: 'collect_more_evidence',
+  investigate_insight: 'investigate_insight',
+} as const;
+
+export interface ValidationResultAnalysis {
+  /** @nullable */
+  successCriteriaQuote: string | null;
+  actualResultQuote: string;
+  assessment: string;
+  recommendation: ValidationResultAnalysisRecommendation;
+  /** @nullable */
+  caveat: string | null;
+}
+
+export type ValidationExperimentAssistInputField = typeof ValidationExperimentAssistInputField[keyof typeof ValidationExperimentAssistInputField];
+
+
+export const ValidationExperimentAssistInputField = {
+  setup: 'setup',
+  successMeasures: 'successMeasures',
+} as const;
+
+export type ValidationExperimentAssistInputAction = typeof ValidationExperimentAssistInputAction[keyof typeof ValidationExperimentAssistInputAction];
+
+
+export const ValidationExperimentAssistInputAction = {
+  write: 'write',
+  improve: 'improve',
+} as const;
+
+export interface ValidationExperimentAssistInput {
+  field: ValidationExperimentAssistInputField;
+  action: ValidationExperimentAssistInputAction;
+  hypothesisId?: number;
+  /**
+     * @minLength 1
+     * @maxLength 64
+     */
+  methodKey: string;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  targetAudience?: string | null;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  setup?: string | null;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  successMeasures?: string | null;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  existingText?: string | null;
+}
+
+export interface ValidationExperimentAssistResponse {
+  /**
+     * @minLength 1
+     * @maxLength 10000
+     */
+  text: string;
+}
+
+export interface ValidationExperimentUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  name?: string;
+  /**
+     * @minLength 1
+     * @maxLength 64
+     */
+  methodKey?: string;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  setup?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  targetAudience?: string | null;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  successMeasures?: string | null;
+  /**
+     * @maxLength 20000
+     * @nullable
+     */
+  actualResult?: string | null;
+  outcome?: ValidationOutcomeNullable | null;
+  pmDecision?: ValidationPmDecisionNullable | null;
+  /**
+     * @maxLength 10000
+     * @nullable
+     */
+  pmNotes?: string | null;
+  status?: ExperimentStatus;
+  /**
+     * @maxLength 10
+     * @nullable
+     */
+  plannedStartDate?: string | null;
+  /**
+     * @maxLength 10
+     * @nullable
+     */
+  plannedEndDate?: string | null;
+}
+
+export interface HypothesisAiInput {
+  opportunityId: number;
+  hypothesisType: HypothesisType;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  statement: string;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  assumption?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  successCriteria?: string | null;
+}
+
+export interface HypothesisAiSuggestion {
+  originalStatement: string;
+  suggestedStatement: string;
+  /** @nullable */
+  suggestedAssumption: string | null;
+  /** @nullable */
+  suggestedSuccessCriteria: string | null;
+  assumptionLabels: string[];
+}
+
 export interface AuthUser {
   id: string;
   /** @nullable */
@@ -677,6 +1243,17 @@ category?: string;
 source_type?: string;
 sentiment?: string;
 search?: string;
+/**
+ * Maximum number of Product Ideas to return (up to 200).
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+/**
+ * Number of Product Ideas to skip for pagination.
+ * @minimum 0
+ */
+offset?: number;
 };
 
 export type ListSignalsParams = {
@@ -701,6 +1278,19 @@ export const ListPrioritizationFramework = {
   moscow: 'moscow',
   kano: 'kano',
 } as const;
+
+export type ListValidationHypothesesParams = {
+includeArchived?: boolean;
+status?: HypothesisStatus;
+hypothesisType?: HypothesisType;
+search?: string;
+};
+
+export type ListValidationExperimentsParams = {
+hypothesisId?: number;
+status?: ExperimentStatus;
+includeArchived?: boolean;
+};
 
 export type GetOpenaiConversation404 = {
   error: string;

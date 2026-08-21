@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useListOpportunities } from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +11,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Plus, Filter, Lightbulb, BrainCircuit } from "lucide-react";
 import { format } from "date-fns";
+
+interface SimilaritySummary {
+  analyzedAt: string;
+  matches: Array<{
+    candidateProductIdeaId: number;
+    candidateTitle: string;
+    similarityPercentage: number;
+    relationship: "duplicate" | "highly_similar" | "related" | "unique";
+  }>;
+}
+
+type SimilaritySummaryByIdea = Record<string, SimilaritySummary>;
 
 const STATUS_COLORS = {
   new: "bg-blue-500/10 text-blue-600 border-blue-500/20",
@@ -24,6 +38,11 @@ export default function ProductIdeasList() {
   const { data: ideas, isLoading } = useListOpportunities({
     status: status === "all" ? undefined : status,
     search: search || undefined
+  });
+  const { data: similaritySummary = {} } = useQuery<SimilaritySummaryByIdea>({
+    queryKey: ["product-ideas", "similarity-summary"],
+    queryFn: () => customFetch<SimilaritySummaryByIdea>("/api/product-ideas/similarity/summary"),
+    staleTime: 30_000,
   });
 
   return (
@@ -79,6 +98,7 @@ export default function ProductIdeasList() {
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium">Source</th>
                 <th className="px-6 py-4 font-medium">AI Confidence</th>
+                <th className="px-6 py-4 font-medium">Similarity</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -95,7 +115,7 @@ export default function ProductIdeasList() {
                 ))
               ) : ideas?.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                     No product ideas found. Create your first one to get started.
                   </td>
                 </tr>
@@ -130,6 +150,28 @@ export default function ProductIdeasList() {
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-xs">Not analyzed</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 min-w-[220px]">
+                      {similaritySummary[String(idea.id)] ? (
+                        similaritySummary[String(idea.id)].matches.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {similaritySummary[String(idea.id)].matches.map((match) => (
+                              <Link
+                                key={match.candidateProductIdeaId}
+                                href={`/discovery/opportunities/${match.candidateProductIdeaId}`}
+                                className="block max-w-[260px] truncate text-xs text-primary hover:underline"
+                                title={`${match.candidateTitle} — ${Math.round(match.similarityPercentage)}%`}
+                              >
+                                {match.candidateTitle} — {Math.round(match.similarityPercentage)}%
+                              </Link>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No similar ideas</span>
+                        )
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Not analyzed</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">

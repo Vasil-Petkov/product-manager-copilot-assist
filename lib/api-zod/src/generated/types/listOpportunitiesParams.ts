@@ -12,4 +12,15 @@ category?: string;
 source_type?: string;
 sentiment?: string;
 search?: string;
+/**
+ * Maximum number of Product Ideas to return (up to 200).
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+/**
+ * Number of Product Ideas to skip for pagination.
+ * @minimum 0
+ */
+offset?: number;
 };

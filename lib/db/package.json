@@ -9,7 +9,10 @@
   },
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "migrate:validation-phase2": "node ./scripts/run-validation-phase2-migration.mjs",
+    "migrate:validation-experiments": "node ./scripts/run-validation-experiments-migration.mjs",
+    "migrate:validation-results": "node ./scripts/run-validation-results-migration.mjs"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
