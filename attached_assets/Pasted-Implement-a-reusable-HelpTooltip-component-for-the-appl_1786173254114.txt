@@ -1,0 +1,121 @@
+Implement a reusable HelpTooltip component for the application and use it throughout the Product Discovery module.
+
+Requirements
+
+1. Create a reusable HelpTooltip component using the existing shadcn/ui Tooltip components (do not add new dependencies).
+
+2. Place a small Help / Info icon (CircleHelp or Info icon from lucide-react) immediately to the right of each page title.
+
+Examples:
+
+Discovery Dashboard    (i)
+Product Ideas          (i)
+Feedback Sources       (i)
+Competitors            (i)
+Meetings               (i)
+Stakeholders           (i)
+AI Insights            (i)
+
+3. On hover (desktop) or click (mobile), display a tooltip with:
+- a one sentence explanation of what the module is
+- a short bullet list of what users can do there
+
+4. Keep the tooltip compact:
+- max width around 320px
+- rounded
+- readable spacing
+- no scrolling
+- professional appearance consistent with the current UI
+
+5. Do NOT modify any backend code, database schema, routing, API endpoints, or business logic.
+Only implement the reusable tooltip component and integrate it into the page headers.
+
+Suggested tooltip text:
+
+--------------------------------------------------------
+Discovery Dashboard
+
+Purpose:
+Your command center for Product Discovery.
+
+You can:
+• View overall discovery health
+• Monitor new opportunities
+• Track insights and sentiment
+• See key metrics at a glance
+
+--------------------------------------------------------
+Product Ideas
+
+Purpose:
+Central workspace for managing product opportunities.
+
+You can:
+• Create product ideas
+• Review AI-generated opportunities
+• Edit idea details
+• Track lifecycle and status
+
+--------------------------------------------------------
+Feedback Sources
+
+Purpose:
+Collect qualitative product feedback from multiple channels.
+
+You can:
+• Import customer feedback
+• Capture meeting notes
+• Record stakeholder input
+• Process signals into product ideas
+
+--------------------------------------------------------
+Competitors
+
+Purpose:
+Monitor competitors and market positioning.
+
+You can:
+• Track competitors
+• Compare products
+• Review AI competitive insights
+• Identify market threats
+
+--------------------------------------------------------
+Meetings
+
+Purpose:
+Capture customer and stakeholder conversations.
+
+You can:
+• Store meeting notes
+• Analyze discussions with AI
+• Generate opportunities
+• Link meetings to product ideas
+
+--------------------------------------------------------
+Stakeholders
+
+Purpose:
+Manage important customer and business contacts.
+
+You can:
+• Track stakeholders
+• Record relationships
+• Connect feedback to people
+• View engagement history
+
+--------------------------------------------------------
+AI Insights
+
+Purpose:
+Review AI-generated recommendations across your workspace.
+
+You can:
+• Discover patterns
+• Identify trends
+• Review AI recommendations
+• Prioritize opportunities
+
+6. Build the component so future modules (Prioritization, Validation, Roadmap, Documentation, Analytics, AI Advisor) can reuse it by only changing the title and tooltip content.
+
+Keep the implementation lightweight and reusable.

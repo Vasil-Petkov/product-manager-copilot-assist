@@ -13,28 +13,30 @@ export const prioritizationAnalysisTable = pgTable("prioritization_analysis", {
     .unique()
     .references(() => opportunitiesTable.id, { onDelete: "cascade" }),
 
-  riceScore: real("rice_score"),
-  iceScore: real("ice_score"),
-  weightedScore: real("weighted_score"),
-  opportunityScore: real("opportunity_score"),
-  moscowCategory: text("moscow_category"),
-  kanoCategory: text("kano_category"),
-  vveQuadrant: text("vve_quadrant"),
+  // ── Top-level scalars for fast sorting ──────────────────────────────────────
+  riceScore:         real("rice_score"),
+  iceScore:          real("ice_score"),
+  weightedScore:     real("weighted_score"),
+  opportunityScore:  real("opportunity_score"),
+  moscowCategory:    text("moscow_category"),
+  kanoCategory:      text("kano_category"),
+  vveQuadrant:       text("vve_quadrant"),
 
-  riceData: jsonb("rice_data"),
-  iceData: jsonb("ice_data"),
-  moscowData: jsonb("moscow_data"),
-  weightedData: jsonb("weighted_data"),
-  vveData: jsonb("vve_data"),
-  kanoData: jsonb("kano_data"),
-  opportunityData: jsonb("opportunity_data"),
-  engineeringData: jsonb("engineering_data"),
-  businessContext: jsonb("business_context"),
-  executiveData: jsonb("executive_data"),
+  // ── Per-framework detail blobs (JSONB) ──────────────────────────────────────
+  riceData:         jsonb("rice_data"),       // reach, impactLabel, impactValue, confidence, effortPoints, score, explanation
+  iceData:          jsonb("ice_data"),        // impact, confidence, ease, score, explanation
+  moscowData:       jsonb("moscow_data"),     // category, explanation
+  weightedData:     jsonb("weighted_data"),   // 6 criteria scores, final score, explanation
+  vveData:          jsonb("vve_data"),        // businessValue, engineeringEffort, quadrant, explanation
+  kanoData:         jsonb("kano_data"),       // category, explanation
+  opportunityData:  jsonb("opportunity_data"), // importance, satisfaction, score, explanation
+  engineeringData:  jsonb("engineering_data"), // per-component SP, totalStoryPoints, estimatedDays, sprintCount, complexity, confidence
+  businessContext:  jsonb("business_context"), // customerCount, arrImpact, revenueOpportunity, retentionImpact, …
+  executiveData:    jsonb("executive_data"),  // score (0-100), confidence, whyBuildNext, businessImpact, customerImpact, engineering, risks, expectedROI
 
   analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  createdAt:  timestamp("created_at",  { withTimezone: true }).notNull().defaultNow(),
+  updatedAt:  timestamp("updated_at",  { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export type PrioritizationAnalysis = typeof prioritizationAnalysisTable.$inferSelect;

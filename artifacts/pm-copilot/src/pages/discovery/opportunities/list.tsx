@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Plus, Filter, Lightbulb, BrainCircuit } from "lucide-react";
+import { HelpTooltip } from "@/components/help-tooltip";
 import { format } from "date-fns";
 
 interface SimilaritySummary {
@@ -52,6 +53,15 @@ export default function ProductIdeasList() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Lightbulb className="size-8 text-primary" />
             Product Ideas
+            <HelpTooltip
+              purpose="Central workspace for managing product opportunities."
+              bullets={[
+                "Create product ideas",
+                "Review AI-generated opportunities",
+                "Edit idea details",
+                "Track lifecycle and status",
+              ]}
+            />
           </h1>
           <p className="text-muted-foreground mt-1">Your central workspace for every product opportunity — from signal to release.</p>
         </div>

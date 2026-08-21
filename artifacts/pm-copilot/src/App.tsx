@@ -104,7 +104,6 @@ function Router() {
         <Route path="/settings" component={Settings} />
         
         {/* Coming soon routes */}
-        <Route path="/validation"><ComingSoon title="Validation" description="Test your assumptions before building." /></Route>
         <Route path="/roadmap"><ComingSoon title="Roadmap" description="Visualize and share your product timeline." /></Route>
         <Route path="/documentation"><ComingSoon title="Documentation" description="Keep your specs and PRDs in sync." /></Route>
         <Route path="/meeting-intelligence"><ComingSoon title="Meeting Intelligence" description="Deep analysis of your customer calls." /></Route>

@@ -8,10 +8,10 @@ import { Brain, BarChart3, CheckCircle2, ArrowRight, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const MOSCOW_COLORS: Record<string, string> = {
-  must_have: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
-  should_have: "bg-blue-500/10 text-blue-700 border-blue-500/20",
-  could_have: "bg-amber-500/10 text-amber-700 border-amber-500/20",
-  wont_have: "bg-slate-500/10 text-slate-600 border-slate-500/20",
+  must_have:    "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+  should_have:  "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  could_have:   "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  wont_have:    "bg-slate-500/10 text-slate-600 border-slate-500/20",
 };
 
 const MOSCOW_LABELS: Record<string, string> = {
@@ -27,29 +27,29 @@ export default function DashboardTab({ onNavigate }: Props) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const total = items?.length ?? 0;
+  const total    = items?.length ?? 0;
   const analyzed = items?.filter(i => i.analyzed).length ?? 0;
   const topScore = items?.[0];
 
   const handleAnalyzeAll = async () => {
     if (!items?.length) return;
     const unanalyzed = items.filter(i => !i.analyzed);
-    if (!unanalyzed.length) {
-      toast({ title: "All ideas already analyzed." });
-      return;
-    }
+    if (!unanalyzed.length) { toast({ title: "All ideas already analyzed." }); return; }
     toast({ title: `Analyzing ${unanalyzed.length} idea${unanalyzed.length > 1 ? "s" : ""}…`, description: "This may take a moment." });
-    for (const item of unanalyzed) {
+    for (const item of unanalyzed.slice(0, 10)) {
       await new Promise<void>((resolve) =>
-        analyze.mutate({ opportunityId: item.opportunity.id }, { onSettled: () => resolve() }),
+        analyze.mutate({ opportunityId: item.opportunity.id }, {
+          onSettled: () => resolve(),
+        })
       );
     }
     queryClient.invalidateQueries({ queryKey: getListPrioritizationQueryKey({}) });
-    toast({ title: "Analysis complete", description: `${unanalyzed.length} idea${unanalyzed.length > 1 ? "s" : ""} analyzed.` });
+    toast({ title: "Analysis complete", description: `${Math.min(unanalyzed.length, 10)} idea${unanalyzed.length > 1 ? "s" : ""} analyzed.` });
   };
 
   return (
     <div className="space-y-6">
+      {/* Stat cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6 flex items-center gap-4">
@@ -90,6 +90,7 @@ export default function DashboardTab({ onNavigate }: Props) {
         </Card>
       </div>
 
+      {/* Actions */}
       <div className="flex flex-wrap gap-3">
         <Button onClick={handleAnalyzeAll} disabled={analyze.isPending} className="bg-ai text-ai-foreground hover:bg-ai/90 gap-2">
           <Brain className="size-4" />
@@ -103,6 +104,7 @@ export default function DashboardTab({ onNavigate }: Props) {
         </Button>
       </div>
 
+      {/* Top 5 ranked */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Top Ranked Product Ideas</CardTitle>
@@ -118,6 +120,7 @@ export default function DashboardTab({ onNavigate }: Props) {
                 </div>
               </div>
             )) : items?.slice(0, 5).map((item, idx) => {
+              const execData = item.opportunity && (item as any).executiveData;
               const moscow = item.moscowCategory;
               return (
                 <div key={item.opportunity.id} className="px-6 py-4 flex items-center gap-4 hover:bg-muted/30 transition-colors">
