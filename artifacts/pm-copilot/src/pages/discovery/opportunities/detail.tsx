@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRoute, Link } from "wouter";
+import { useRoute, Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useGetOpportunity,
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Brain, ArrowLeft, Building2, User, Clock, BarChart, ExternalLink, Archive,
   FileEdit, CheckCircle2, Lightbulb, Layers, GitMerge, Users, Zap, MessageSquare,
@@ -56,6 +57,22 @@ interface Comment { id: number; ideaId: number; author: string; content: string;
 interface TimelineEvent { id: number; ideaId: number; eventType: string; description: string; metadata: unknown; createdAt: string }
 interface Meeting { id: number; title: string; meetingDate: string; analyzed: boolean }
 interface Competitor { id: number; name: string; industry: string | null }
+interface SimilarityCandidate {
+  candidateProductIdeaId: number;
+  similarityPercentage: number;
+  relationship: "duplicate" | "highly_similar" | "related" | "unique";
+  explanation: string;
+  keySimilarities: string[];
+  keyDifferences: string[];
+  primaryRecommendation?: { productIdeaId: number; reason: string };
+  candidate: WorkspaceData["idea"];
+}
+interface SimilarityResponse { candidates: SimilarityCandidate[] }
+interface SimilarityComparison {
+  productIdeaA: WorkspaceData["idea"];
+  productIdeaB: WorkspaceData["idea"];
+  assessment: Omit<SimilarityCandidate, "candidateProductIdeaId" | "candidate">;
+}
 
 // ─── Status / grade helpers ───────────────────────────────────────────────────
 
@@ -74,6 +91,20 @@ const GRADE_COLORS: Record<string, string> = {
   F: "text-red-600 bg-red-50 border-red-200",
 };
 
+const RELATIONSHIP_LABELS: Record<SimilarityCandidate["relationship"], string> = {
+  duplicate: "Potential duplicate",
+  highly_similar: "Highly similar",
+  related: "Related",
+  unique: "Unique",
+};
+
+const RELATIONSHIP_COLORS: Record<SimilarityCandidate["relationship"], string> = {
+  duplicate: "bg-red-500/10 text-red-700 border-red-500/20",
+  highly_similar: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  related: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  unique: "bg-slate-500/10 text-slate-700 border-slate-500/20",
+};
+
 const TIMELINE_ICONS: Record<string, React.ReactNode> = {
   created: <Lightbulb className="size-4 text-blue-500" />,
   ai_analyzed: <Brain className="size-4 text-purple-500" />,
@@ -88,6 +119,7 @@ const TIMELINE_ICONS: Record<string, React.ReactNode> = {
 
 export default function ProductIdeaWorkspace() {
   const [, params] = useRoute("/discovery/opportunities/:id");
+  const [, navigate] = useLocation();
   const id = parseInt(params?.id || "0", 10);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -100,6 +132,11 @@ export default function ProductIdeaWorkspace() {
   const [newTag, setNewTag] = useState("");
   const [showLinkMeeting, setShowLinkMeeting] = useState(false);
   const [showLinkCompetitor, setShowLinkCompetitor] = useState(false);
+  const [similarityResults, setSimilarityResults] = useState<SimilarityCandidate[] | null>(null);
+  const [keptSeparateIds, setKeptSeparateIds] = useState<Set<number>>(new Set());
+  const [comparison, setComparison] = useState<SimilarityComparison | null>(null);
+  const [mergeCandidate, setMergeCandidate] = useState<SimilarityCandidate | null>(null);
+  const [mergePrimaryId, setMergePrimaryId] = useState<number | null>(null);
 
   // ─── Queries ────────────────────────────────────────────────────────────────
 
@@ -148,6 +185,7 @@ export default function ProductIdeaWorkspace() {
         toast({ title: "Saved", description: "Product Idea updated." });
         qc.invalidateQueries({ queryKey: getGetOpportunityQueryKey(id) });
         qc.invalidateQueries({ queryKey: ["workspace", id] });
+        qc.invalidateQueries({ queryKey: ["product-ideas", "similarity-summary"] });
         setEditMode(false);
         setEditData({});
       },
@@ -162,6 +200,7 @@ export default function ProductIdeaWorkspace() {
         qc.invalidateQueries({ queryKey: getGetOpportunityQueryKey(id) });
         qc.invalidateQueries({ queryKey: ["workspace", id] });
         qc.invalidateQueries({ queryKey: ["timeline", id] });
+        qc.invalidateQueries({ queryKey: ["product-ideas", "similarity-summary"] });
       },
       onError: () => toast({ title: "Analysis failed", variant: "destructive" }),
     });
@@ -173,6 +212,7 @@ export default function ProductIdeaWorkspace() {
         toast({ title: "Status updated" });
         qc.invalidateQueries({ queryKey: getGetOpportunityQueryKey(id) });
         qc.invalidateQueries({ queryKey: ["workspace", id] });
+        qc.invalidateQueries({ queryKey: ["product-ideas", "similarity-summary"] });
       },
     });
   };
@@ -230,6 +270,49 @@ export default function ProductIdeaWorkspace() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace", id] }),
   });
 
+  const findSimilar = useMutation({
+    mutationFn: () => customFetch<SimilarityResponse>(`/api/product-ideas/${id}/similarity`, { method: "POST" }),
+    onSuccess: (data) => {
+      setSimilarityResults(data.candidates);
+      toast({
+        title: data.candidates.length ? "Similar ideas found" : "No strong matches found",
+        description: data.candidates.length
+          ? `${data.candidates.length} similar Product Idea${data.candidates.length === 1 ? "" : "s"} found.`
+          : "No eligible ideas met the similarity threshold.",
+      });
+    },
+    onError: () => toast({ title: "Similarity analysis failed", description: "No Product Ideas were changed.", variant: "destructive" }),
+  });
+
+  const compareIdeas = useMutation({
+    mutationFn: (candidateId: number) => customFetch<SimilarityComparison>("/api/product-ideas/similarity/compare", {
+      method: "POST",
+      body: JSON.stringify({ productIdeaAId: id, productIdeaBId: candidateId }),
+    }),
+    onSuccess: setComparison,
+    onError: () => toast({ title: "Comparison failed", description: "No Product Ideas were changed.", variant: "destructive" }),
+  });
+
+  const mergeIdeas = useMutation({
+    mutationFn: ({ primaryProductIdeaId, duplicateProductIdeaId }: { primaryProductIdeaId: number; duplicateProductIdeaId: number }) =>
+      customFetch<{ primaryProductIdea: WorkspaceData["idea"]; message: string }>("/api/product-ideas/merge", {
+        method: "POST",
+        body: JSON.stringify({ primaryProductIdeaId, duplicateProductIdeaId }),
+      }),
+    onSuccess: (data) => {
+      const currentWasArchived = data.primaryProductIdea.id !== id;
+      setSimilarityResults((results) => results?.filter((candidate) => candidate.candidateProductIdeaId !== mergeCandidate?.candidateProductIdeaId) ?? null);
+      setMergeCandidate(null);
+      setMergePrimaryId(null);
+      qc.invalidateQueries({ queryKey: ["workspace"] });
+      qc.invalidateQueries({ queryKey: ["opportunities"] });
+      qc.invalidateQueries({ queryKey: ["product-ideas", "similarity-summary"] });
+      toast({ title: "Product Ideas merged", description: data.message });
+      if (currentWasArchived) navigate(`/discovery/opportunities/${data.primaryProductIdea.id}`);
+    },
+    onError: () => toast({ title: "Merge failed", description: "Both Product Ideas were preserved.", variant: "destructive" }),
+  });
+
   // ─── Loading / 404 ───────────────────────────────────────────────────────────
 
   if (isLoading || wsLoading) {
@@ -263,6 +346,9 @@ export default function ProductIdeaWorkspace() {
 
   const linkedMeetingIds = new Set(linkedMeetings.map(m => m.id));
   const linkedCompetitorIds = new Set(linkedCompetitors.map(c => c.id));
+  const visibleSimilarityCandidates = similarityResults?.filter(
+    (candidate) => !keptSeparateIds.has(candidate.candidateProductIdeaId),
+  ) ?? [];
 
   return (
     <div className="p-8 max-w-[1200px] mx-auto w-full space-y-6 animate-in fade-in">
@@ -326,6 +412,94 @@ export default function ProductIdeaWorkspace() {
           )}
         </div>
       </header>
+
+      {/* ── Similarity / Duplication ── */}
+      <Card className="border-ai/20">
+        <CardHeader className="flex-row items-center justify-between gap-4 pb-4">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <GitMerge className="size-4 text-ai" /> Similarity / Duplication
+            </CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              AI recommends potential overlaps. You decide whether ideas stay separate or merge.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="shrink-0 gap-2 bg-ai text-ai-foreground hover:bg-ai/90"
+            onClick={() => findSimilar.mutate()}
+            disabled={findSimilar.isPending}
+          >
+            <Brain className="size-4" />
+            {findSimilar.isPending ? "Finding…" : "Find Similar Ideas"}
+          </Button>
+        </CardHeader>
+        {similarityResults !== null && (
+          <CardContent className="space-y-3 border-t pt-4">
+            {visibleSimilarityCandidates.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
+                No meaningful similar Product Ideas are currently surfaced. You can run the check again after adding more ideas.
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-medium">
+                  {visibleSimilarityCandidates.length} similar idea{visibleSimilarityCandidates.length === 1 ? "" : "s"} found
+                </p>
+                {visibleSimilarityCandidates.map((candidate) => (
+                  <div key={candidate.candidateProductIdeaId} className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold">{candidate.candidate.title}</p>
+                          <Badge variant="outline" className={RELATIONSHIP_COLORS[candidate.relationship]}>
+                            {RELATIONSHIP_LABELS[candidate.relationship]}
+                          </Badge>
+                          <Badge variant="secondary">{Math.round(candidate.similarityPercentage)}% similar</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{candidate.explanation}</p>
+                        {candidate.primaryRecommendation && (
+                          <p className="text-xs text-ai">
+                            AI suggests keeping {candidate.primaryRecommendation.productIdeaId === id ? "this Product Idea" : candidate.candidate.title}: {candidate.primaryRecommendation.reason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Button variant="outline" size="sm" onClick={() => compareIdeas.mutate(candidate.candidateProductIdeaId)} disabled={compareIdeas.isPending}>
+                          Compare
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/discovery/opportunities/${candidate.candidateProductIdeaId}`}>View</Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setKeptSeparateIds((ids) => new Set([...ids, candidate.candidateProductIdeaId]));
+                            toast({ title: "Kept separate", description: "Neither Product Idea was changed." });
+                          }}
+                        >
+                          Keep Separate
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setMergeCandidate(candidate);
+                            setMergePrimaryId(candidate.primaryRecommendation?.productIdeaId ?? id);
+                          }}
+                        >
+                          Merge
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -504,7 +678,7 @@ export default function ProductIdeaWorkspace() {
                         <span className="text-3xl font-bold">{health.score}</span>
                         <span className="text-muted-foreground text-sm mb-1">/ 100</span>
                       </div>
-                      {Object.values(health.breakdown).map(dim => (
+                      {Object.values(health.breakdown ?? {}).map(dim => (
                         <div key={dim.label} className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="text-muted-foreground">{dim.label}</span>
@@ -958,6 +1132,145 @@ export default function ProductIdeaWorkspace() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={comparison !== null} onOpenChange={(open) => !open && setComparison(null)}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Compare Product Ideas</DialogTitle>
+            <DialogDescription>
+              Review the underlying opportunity and AI assessment. This comparison does not modify either Product Idea.
+            </DialogDescription>
+          </DialogHeader>
+          {comparison && (
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                {[comparison.productIdeaA, comparison.productIdeaB].map((productIdea) => (
+                  <Card key={productIdea.id}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">{productIdea.title}</CardTitle>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className={STATUS_COLORS[productIdea.status] || ""}>
+                          {productIdea.status.replace(/_/g, " ")}
+                        </Badge>
+                        <Badge variant="secondary">{productIdea.sourceType}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</p>
+                        <p>{productIdea.description}</p>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer problem</p>
+                        <p>{productIdea.customerProblem || "Not defined"}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Created {format(new Date(productIdea.createdAt), "MMM d, yyyy")}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Card className="border-ai/30 bg-ai/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                    <Brain className="size-4 text-ai" /> AI Similarity Assessment
+                    <Badge variant="outline" className={RELATIONSHIP_COLORS[comparison.assessment.relationship]}>
+                      {RELATIONSHIP_LABELS[comparison.assessment.relationship]}
+                    </Badge>
+                    <Badge variant="secondary">{Math.round(comparison.assessment.similarityPercentage)}% similar</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <p>{comparison.assessment.explanation}</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Key similarities</p>
+                      <ul className="space-y-1 text-muted-foreground">
+                        {comparison.assessment.keySimilarities.map((item) => <li key={item}>• {item}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Key differences</p>
+                      <ul className="space-y-1 text-muted-foreground">
+                        {comparison.assessment.keyDifferences.map((item) => <li key={item}>• {item}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                  {comparison.assessment.primaryRecommendation && (
+                    <p className="rounded-md border border-ai/20 bg-background/60 p-3 text-ai">
+                      AI suggests keeping {comparison.assessment.primaryRecommendation.productIdeaId === comparison.productIdeaA.id
+                        ? comparison.productIdeaA.title
+                        : comparison.productIdeaB.title}: {comparison.assessment.primaryRecommendation.reason}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setComparison(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={mergeCandidate !== null}
+        onOpenChange={(open) => {
+          if (!open && !mergeIdeas.isPending) {
+            setMergeCandidate(null);
+            setMergePrimaryId(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Merge Product Ideas?</DialogTitle>
+            <DialogDescription>
+              Choose the Product Idea to keep. The other idea will be archived, never automatically deleted.
+            </DialogDescription>
+          </DialogHeader>
+          {mergeCandidate && (
+            <div className="space-y-3">
+              {[
+                { productIdea: idea, role: "Current Product Idea" },
+                { productIdea: mergeCandidate.candidate, role: "Potential duplicate" },
+              ].map(({ productIdea, role }) => (
+                <button
+                  type="button"
+                  key={productIdea.id}
+                  onClick={() => setMergePrimaryId(productIdea.id)}
+                  className={`w-full rounded-lg border p-4 text-left transition-colors ${
+                    mergePrimaryId === productIdea.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/50"
+                  }`}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{role}</p>
+                  <p className="mt-1 font-semibold">{productIdea.title}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{productIdea.description}</p>
+                  {mergePrimaryId === productIdea.id && <Badge className="mt-3">Primary / keep</Badge>}
+                </button>
+              ))}
+              <p className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-muted-foreground">
+                Confirm Merge will reassign safe related records to the selected primary and archive the other Product Idea. Core title, description, and status of the primary will not be overwritten.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setMergeCandidate(null); setMergePrimaryId(null); }} disabled={mergeIdeas.isPending}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={!mergeCandidate || !mergePrimaryId || mergeIdeas.isPending}
+              onClick={() => {
+                if (!mergeCandidate || !mergePrimaryId) return;
+                mergeIdeas.mutate({
+                  primaryProductIdeaId: mergePrimaryId,
+                  duplicateProductIdeaId: mergePrimaryId === id ? mergeCandidate.candidateProductIdeaId : id,
+                });
+              }}
+            >
+              {mergeIdeas.isPending ? "Merging…" : "Confirm Merge"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

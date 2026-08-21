@@ -18,6 +18,11 @@ import MeetingsList from './pages/discovery/meetings/list';
 import MeetingDetail from './pages/discovery/meetings/detail';
 import StakeholderFeedback from './pages/discovery/feedback';
 import AiInsights from './pages/discovery/insights';
+import HypothesisManagement from './pages/validation/hypotheses';
+import ValidationMethods from './pages/validation/methods';
+import ValidationResults from './pages/validation/results';
+import NewValidationExperiment from './pages/validation/experiments/new';
+import ValidationExperimentDetail from './pages/validation/experiments/detail';
 import Prioritization from './pages/prioritization/index';
 import Settings from './pages/settings';
 import ComingSoon from './pages/coming-soon';
@@ -88,10 +93,17 @@ function Router() {
         <Route path="/discovery/insights" component={AiInsights} />
         
         <Route path="/prioritization" component={Prioritization} />
+
+        {/* Validation Routes */}
+        <Route path="/validation/hypotheses" component={HypothesisManagement} />
+        <Route path="/validation/methods" component={ValidationMethods} />
+        <Route path="/validation/experiments/new" component={NewValidationExperiment} />
+        <Route path="/validation/experiments/:id" component={ValidationExperimentDetail} />
+        <Route path="/validation/results" component={ValidationResults} />
+        <Route path="/validation"><HypothesisManagement /></Route>
         <Route path="/settings" component={Settings} />
         
         {/* Coming soon routes */}
-        <Route path="/validation"><ComingSoon title="Validation" description="Test your assumptions before building." /></Route>
         <Route path="/roadmap"><ComingSoon title="Roadmap" description="Visualize and share your product timeline." /></Route>
         <Route path="/documentation"><ComingSoon title="Documentation" description="Keep your specs and PRDs in sync." /></Route>
         <Route path="/meeting-intelligence"><ComingSoon title="Meeting Intelligence" description="Deep analysis of your customer calls." /></Route>

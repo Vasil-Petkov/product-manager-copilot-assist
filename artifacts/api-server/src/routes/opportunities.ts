@@ -40,7 +40,10 @@ router.get("/opportunities", requireAuth, async (req, res, next): Promise<void> 
     const take = Math.min(parseInt(limit, 10) || 50, 200);
     const skip = parseInt(offset, 10) || 0;
 
-    const conditions: SQL[] = [];
+    // Product Ideas are user-owned throughout the application. Keep the
+    // Discovery list aligned with Validation's getOwnedOpportunity check so
+    // every idea offered by the shared selector can be attached successfully.
+    const conditions: SQL[] = [eq(opportunitiesTable.userId, req.user!.id)];
     if (status) conditions.push(eq(opportunitiesTable.status, status));
     if (category) conditions.push(eq(opportunitiesTable.category, category));
     if (source_type) conditions.push(eq(opportunitiesTable.sourceType, source_type));
@@ -96,7 +99,10 @@ router.get("/opportunities/:id", requireAuth, async (req, res, next): Promise<vo
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const [opp] = await db.select().from(opportunitiesTable).where(eq(opportunitiesTable.id, id));
+    const [opp] = await db.select().from(opportunitiesTable).where(and(
+      eq(opportunitiesTable.id, id),
+      eq(opportunitiesTable.userId, req.user!.id),
+    ));
     if (!opp) throw new NotFoundError("Product Idea");
 
     const [relatedSignals, relatedFeedback] = await Promise.all([
@@ -157,7 +163,10 @@ router.patch(
       const [updated] = await db
         .update(opportunitiesTable)
         .set(updateData as never)
-        .where(eq(opportunitiesTable.id, id))
+        .where(and(
+          eq(opportunitiesTable.id, id),
+          eq(opportunitiesTable.userId, req.user!.id),
+        ))
         .returning();
 
       if (!updated) throw new NotFoundError("Product Idea");
@@ -175,7 +184,10 @@ router.delete("/opportunities/:id", requireAuth, async (req, res, next): Promise
 
     const [deleted] = await db
       .delete(opportunitiesTable)
-      .where(eq(opportunitiesTable.id, id))
+      .where(and(
+        eq(opportunitiesTable.id, id),
+        eq(opportunitiesTable.userId, req.user!.id),
+      ))
       .returning();
 
     if (!deleted) throw new NotFoundError("Product Idea");
@@ -189,6 +201,14 @@ router.post("/opportunities/:id/analyze", requireAuth, async (req, res, next): P
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
+
+    const [ownedIdea] = await db.select({ id: opportunitiesTable.id })
+      .from(opportunitiesTable)
+      .where(and(
+        eq(opportunitiesTable.id, id),
+        eq(opportunitiesTable.userId, req.user!.id),
+      ));
+    if (!ownedIdea) throw new NotFoundError("Product Idea");
 
     // 1. Build full product context before calling AI
     const ctx = await buildProductContext(id);

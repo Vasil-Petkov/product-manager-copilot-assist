@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Compass, Lightbulb, Database, Target, Video, Brain, Users,
   BarChart3, FlaskConical, Map as MapIcon, FileText, MessageSquare,
   TrendingUp, Bot, Settings, ChevronDown, ChevronRight,
+  BookOpen, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,19 @@ type NavModule = {
   defaultOpen: boolean;
   items: NavItem[];
 };
+
+function isNavItemActive(item: NavItem, location: string): boolean {
+  if (item.href === "/validation/methods") {
+    return location === item.href
+      || location.startsWith(`${item.href}/`)
+      || location === "/validation/experiments/new"
+      || location.startsWith("/validation/experiments/");
+  }
+  return location === item.href
+    || (item.href !== "/"
+      && item.href !== "/discovery"
+      && location.startsWith(item.href));
+}
 
 // ─── Navigation data ─────────────────────────────────────────────────────────
 
@@ -50,11 +64,19 @@ const MODULES: NavModule[] = [
     ],
   },
   {
+    label: "Product Validation",
+    defaultOpen: false,
+    items: [
+      { href: "/validation/hypotheses", label: "Hypothesis Management", icon: FlaskConical },
+      { href: "/validation/methods",    label: "Validation Methods",    icon: BookOpen    },
+      { href: "/validation/results",    label: "Validation Results",    icon: ClipboardList },
+    ],
+  },
+  {
     label: "Planning & Analysis",
     defaultOpen: false,
     items: [
       { href: "/prioritization",      label: "Prioritization",       icon: BarChart3,   },
-      { href: "/validation",          label: "Validation",           icon: FlaskConical, soon: true },
       { href: "/roadmap",             label: "Roadmap",              icon: MapIcon,      soon: true },
       { href: "/documentation",       label: "Documentation",        icon: FileText,     soon: true },
       { href: "/meeting-intelligence",label: "Meeting Intelligence", icon: MessageSquare,soon: true },
@@ -99,11 +121,7 @@ function NavModuleSection({
         <div className="space-y-1">
           {module.items.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              location === item.href ||
-              (item.href !== "/" &&
-                item.href !== "/discovery" &&
-                location.startsWith(item.href));
+            const isActive = isNavItemActive(item, location);
 
             return (
               <Link

@@ -83,7 +83,11 @@ function buildFallbackAnalysis(opp: typeof opportunitiesTable.$inferSelect) {
 router.get("/prioritization", requireAuth, async (req, res, next): Promise<void> => {
   try {
     const { framework } = req.query as Record<string, string>;
-    const opps = await db.select().from(opportunitiesTable).orderBy(opportunitiesTable.createdAt);
+    const opps = await db
+      .select()
+      .from(opportunitiesTable)
+      .where(eq(opportunitiesTable.userId, req.user!.id))
+      .orderBy(opportunitiesTable.createdAt);
 
     const results = await Promise.all(
       opps.map(async (opp) => {
@@ -134,6 +138,14 @@ router.post("/prioritization/score", requireAuth, async (req, res, next): Promis
   try {
     const { opportunityId, framework, riceReach, riceImpact, riceConfidence, riceEffort, iceImpact, iceConfidence, iceEase, moscowCategory, kanoCategory } = req.body;
     if (!opportunityId || !framework) { res.status(400).json({ error: "opportunityId and framework are required" }); return; }
+    const [ownedOpportunity] = await db
+      .select({ id: opportunitiesTable.id, userId: opportunitiesTable.userId })
+      .from(opportunitiesTable)
+      .where(eq(opportunitiesTable.id, opportunityId));
+    if (!ownedOpportunity || ownedOpportunity.userId !== req.user!.id) {
+      res.status(404).json({ error: "Opportunity not found" });
+      return;
+    }
 
     let riceScore: number | null = null;
     if (riceReach && riceImpact && riceConfidence && riceEffort && riceEffort > 0) {
@@ -165,14 +177,21 @@ router.patch("/prioritization/:id", requireAuth, async (req, res, next): Promise
     }
 
     const [current] = await db.select().from(prioritizationScoresTable).where(eq(prioritizationScoresTable.id, id));
-    if (current) {
-      const reach = (updateData.riceReach ?? current.riceReach) as number;
-      const impact = (updateData.riceImpact ?? current.riceImpact) as number;
-      const conf   = (updateData.riceConfidence ?? current.riceConfidence) as number;
-      const effort = (updateData.riceEffort ?? current.riceEffort) as number;
-      if (reach && impact && conf && effort && effort > 0) {
-        updateData.riceScore = parseFloat(((reach * impact * (conf / 100)) / effort).toFixed(2));
-      }
+    if (!current) { res.status(404).json({ error: "Not found" }); return; }
+    const [ownedOpportunity] = await db
+      .select({ id: opportunitiesTable.id, userId: opportunitiesTable.userId })
+      .from(opportunitiesTable)
+      .where(eq(opportunitiesTable.id, current.opportunityId));
+    if (!ownedOpportunity || ownedOpportunity.userId !== req.user!.id) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    const reach = (updateData.riceReach ?? current.riceReach) as number;
+    const impact = (updateData.riceImpact ?? current.riceImpact) as number;
+    const conf   = (updateData.riceConfidence ?? current.riceConfidence) as number;
+    const effort = (updateData.riceEffort ?? current.riceEffort) as number;
+    if (reach && impact && conf && effort && effort > 0) {
+      updateData.riceScore = parseFloat(((reach * impact * (conf / 100)) / effort).toFixed(2));
     }
 
     const [updated] = await db.update(prioritizationScoresTable).set(updateData as never).where(eq(prioritizationScoresTable.id, id)).returning();
@@ -183,7 +202,12 @@ router.patch("/prioritization/:id", requireAuth, async (req, res, next): Promise
 
 router.post("/prioritization/ai-recommend", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const opps = await db.select().from(opportunitiesTable).orderBy(opportunitiesTable.createdAt).limit(20);
+    const opps = await db
+      .select()
+      .from(opportunitiesTable)
+      .where(eq(opportunitiesTable.userId, req.user!.id))
+      .orderBy(opportunitiesTable.createdAt)
+      .limit(20);
     const recommendations = opps.map((opp, i) => ({
       opportunityId: opp.id,
       rank: i + 1,
@@ -204,8 +228,14 @@ router.post("/prioritization/analyze/:opportunityId", requireAuth, async (req, r
     const oppId = parseInt(req.params.opportunityId as string, 10);
     if (isNaN(oppId)) { res.status(400).json({ error: "Invalid opportunityId" }); return; }
 
-    const [opp] = await db.select().from(opportunitiesTable).where(eq(opportunitiesTable.id, oppId));
-    if (!opp) { res.status(404).json({ error: "Opportunity not found" }); return; }
+    const [opp] = await db
+      .select()
+      .from(opportunitiesTable)
+      .where(eq(opportunitiesTable.id, oppId));
+    if (!opp || opp.userId !== req.user!.id) {
+      res.status(404).json({ error: "Opportunity not found" });
+      return;
+    }
 
     // ── Single AI call — ask for inputs only, server computes formulas ─────────
     let aiData: Record<string, any> = buildFallbackAnalysis(opp);
@@ -295,7 +325,10 @@ router.get("/prioritization/executive-recommendation", requireAuth, async (req, 
   try {
     const analyses = await db.select().from(prioritizationAnalysisTable)
       .where(isNotNull(prioritizationAnalysisTable.analyzedAt));
-    const opps = await db.select().from(opportunitiesTable);
+    const opps = await db
+      .select()
+      .from(opportunitiesTable)
+      .where(eq(opportunitiesTable.userId, req.user!.id));
     const oppMap = Object.fromEntries(opps.map((o) => [o.id, o]));
 
     const ranked = analyses
@@ -329,7 +362,15 @@ router.post("/prioritization/compare", requireAuth, async (req, res, next): Prom
       db.select().from(prioritizationAnalysisTable).where(eq(prioritizationAnalysisTable.opportunityId, idB)),
     ]);
 
-    if (!oppA || !oppB) { res.status(404).json({ error: "One or both opportunities not found" }); return; }
+    if (
+      !oppA ||
+      !oppB ||
+      oppA.userId !== req.user!.id ||
+      oppB.userId !== req.user!.id
+    ) {
+      res.status(404).json({ error: "One or both opportunities not found" });
+      return;
+    }
 
     // Lean summary for the AI prompt (avoids sending full JSONB blobs)
     const summarise = (opp: typeof oppA, analysis: typeof analysisA | undefined) => ({
