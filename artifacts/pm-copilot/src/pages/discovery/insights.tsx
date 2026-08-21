@@ -28,7 +28,7 @@ export default function AiInsights() {
   const { toast } = useToast();
 
   const handleGenerate = () => {
-    generate.mutate({}, {
+    generate.mutate(undefined, {
       onSuccess: () => {
         toast({ title: "Insights generated", description: "AI has processed new signals." });
         queryClient.invalidateQueries({ queryKey: getListInsightsQueryKey() });

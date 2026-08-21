@@ -11,6 +11,7 @@ import {
   useListOpportunities,
   getGetValidationHypothesisQueryKey,
   getListValidationHypothesesQueryKey,
+  getListOpportunitiesQueryKey,
   HypothesisType,
   HypothesisStatus,
   type HypothesisAiSuggestion
@@ -81,7 +82,7 @@ export function HypothesisForm({ hypothesisId, onSave, onCancel }: { hypothesisI
     refetch: refetchIdeas,
   } = useListOpportunities(
     { limit: 200 },
-    { query: { refetchOnMount: "always", staleTime: 0 } },
+    { query: { queryKey: getListOpportunitiesQueryKey({ limit: 200 }), refetchOnMount: "always", staleTime: 0 } },
   );
   // Validation-specific context enriches the selected idea below; it is not the
   // source used to populate the selector.

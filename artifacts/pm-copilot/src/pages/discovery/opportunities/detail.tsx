@@ -787,7 +787,7 @@ export default function ProductIdeaWorkspace() {
                             {icon} {label}
                           </h3>
                           <p className="text-sm text-foreground/80 leading-relaxed">
-                            {(idea as Record<string, string | null>)[field] || <span className="text-muted-foreground italic">Run AI analysis to populate</span>}
+                            {(idea as unknown as Record<string, string | null>)[field] || <span className="text-muted-foreground italic">Run AI analysis to populate</span>}
                           </p>
                         </div>
                       ))}
