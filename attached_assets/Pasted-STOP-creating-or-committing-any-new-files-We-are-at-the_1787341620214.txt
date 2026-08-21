@@ -1,0 +1,157 @@
+STOP creating or committing any new files. We are at the final Git delivery step and I do NOT want another checkpoint, documentation commit, prompt-artifact commit, amended commit, or replacement commit.
+
+Current approved state:
+
+origin/main:
+1733cb67282ca4bce88ae74a5264474b94060193
+
+Approved local project commit:
+26226f45a152ec800de236bf5a0dc8d5de95354e
+Update discovery page components and prioritization results view
+
+Unwanted commit currently on top:
+4de30a2 Add audit warning note for pre-push checks
+
+The unwanted commit contains only this prompt artifact:
+attached_assets/Pasted-STOP-Do-not-push-the-current-state-The-pre-push-audit-c_1787341443124.txt
+
+The objective is to publish EXACTLY the existing commit 26226f4 to origin/main.
+
+DO NOT create a new commit to accomplish this.
+
+STEP 1 — REMOVE THE UNWANTED COMMIT
+
+Reset local `main` exactly to:
+
+26226f45a152ec800de236bf5a0dc8d5de95354e
+
+Use:
+
+git reset --hard 26226f45a152ec800de236bf5a0dc8d5de95354e
+
+Do NOT amend 26226f4.
+Do NOT rebase it.
+Do NOT cherry-pick it.
+Do NOT create a replacement commit.
+
+STEP 2 — PREVENT THE PROMPT ARTIFACT FROM BEING AUTO-COMMITTED AGAIN
+
+The file:
+
+attached_assets/Pasted-STOP-Do-not-push-the-current-state-The-pre-push-audit-c_1787341443124.txt
+
+is NOT project source code and must never be published.
+
+Remove that specific attached prompt-artifact file from the workspace if it exists.
+
+Do not remove any project source files.
+Do not modify any of the six approved cleanup files.
+Do not remove unrelated attached assets.
+
+After removal, verify:
+
+git status --short
+
+There must be no tracked source changes.
+
+IMPORTANT:
+Do NOT create a commit for removing the prompt artifact.
+
+STEP 3 — VERIFY THE EXACT APPROVED STATE
+
+Run read-only checks.
+
+Confirm:
+
+- current branch = main
+- HEAD = 26226f45a152ec800de236bf5a0dc8d5de95354e
+- origin/main = 1733cb67282ca4bce88ae74a5264474b94060193
+- local main is exactly 1 commit ahead and 0 commits behind
+- the only commit ahead of origin/main is 26226f4
+- 4de30a2 is NOT in local main history
+- none of the earlier prompt-artifact commits are in local main history
+- no tracked files are modified
+- no new commit is created
+- `git diff --check` passes
+
+Confirm that 26226f4 contains exactly these six files:
+
+artifacts/api-server/src/routes/product-ideas.ts
+artifacts/pm-copilot/src/pages/discovery/feedback.tsx
+artifacts/pm-copilot/src/pages/discovery/insights.tsx
+artifacts/pm-copilot/src/pages/discovery/opportunities/detail.tsx
+artifacts/pm-copilot/src/pages/prioritization/results-tab.tsx
+artifacts/pm-copilot/src/pages/validation/components/hypothesis-form.tsx
+
+Do not change their contents.
+
+STEP 4 — FIX GIT AUTHENTICATION
+
+The previous normal Git push failed because the shell Git HTTPS credential was invalid.
+
+Do NOT create a new GitHub API commit.
+Do NOT use an API-created replacement commit.
+Do NOT force-push.
+Do NOT rewrite history.
+
+Use the already-connected secure GitHub authorization available to this workspace to authenticate the normal Git remote, if that secure connection supports Git authentication.
+
+The goal is specifically to make this command work:
+
+git push origin main
+
+using valid authentication.
+
+Before attempting the push, verify that the authentication method will push the EXISTING local commit 26226f4 unchanged.
+
+STEP 5 — PUSH EXACTLY ONCE
+
+ONLY after Steps 1–4 pass, execute:
+
+git push origin main
+
+This must be a normal fast-forward push.
+
+Do NOT:
+- force-push
+- amend
+- rebase
+- cherry-pick
+- create a new commit
+- create documentation
+- create a PR
+- use GitHub API to manufacture another commit
+- commit attached files
+- modify source code
+
+If authentication still fails, STOP. Do not create any workaround commit and do not make any further Git history changes.
+
+STEP 6 — FINAL VERIFICATION
+
+If the push succeeds, verify:
+
+git rev-parse HEAD
+git rev-parse origin/main
+
+They must return exactly the same SHA:
+
+26226f45a152ec800de236bf5a0dc8d5de95354e
+
+Also verify:
+
+git status
+
+and confirm there are no tracked source changes.
+
+Final report should contain only:
+
+- Push succeeded/failed
+- final local HEAD
+- final origin/main
+- confirmation that they match
+- confirmation that exactly the existing 26226f4 commit was pushed
+- confirmation that no prompt/artifact files were committed
+- confirmation that no force-push, rebase, amend, or replacement commit was used
+
+CRITICAL SAFETY RULE:
+If ANY unexpected commit appears at ANY point before the push, STOP immediately. Do not try to clean it up automatically. Report the unexpected commit SHA and stop.
