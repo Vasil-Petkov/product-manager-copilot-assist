@@ -1,0 +1,224 @@
+TASK: READ-ONLY RECOVERY OF THE SIX-FILE TYPECHECK CLEANUP
+
+We are preparing a clean GitHub main branch and need to recover the exact six-file typecheck cleanup that was previously created in the Replit workspace as commit:
+
+26226f4
+"Update discovery page components and prioritization results view"
+
+IMPORTANT CONTEXT:
+
+- GitHub main is currently the source of truth.
+- The current clean GitHub main commit is:
+  1733cb6
+- The old cleanup commit 26226f4 was created locally in the previous Replit workspace but was NEVER successfully pushed to GitHub.
+- A fresh local clone confirms that 26226f4 does not exist on GitHub.
+- The local clone is currently completely clean and synchronized with origin/main.
+- We therefore need to recover the EXACT CONTENT of the six-file cleanup without bringing any of the unwanted prompt/instruction attachment commits with it.
+
+ABSOLUTE SAFETY RULES:
+
+1. READ-ONLY OPERATION ONLY.
+2. DO NOT modify any source files.
+3. DO NOT create, amend, reset, rebase, cherry-pick, squash, or delete commits.
+4. DO NOT create any new commits.
+5. DO NOT push anything to GitHub.
+6. DO NOT create branches.
+7. DO NOT attach or commit any prompt/instruction files.
+8. DO NOT run automated cleanup or formatting.
+9. DO NOT regenerate API clients or modify generated files.
+10. DO NOT "fix" anything beyond identifying the exact historical six-file diff.
+11. Do not use the GitHub API to create replacement commits.
+12. Do not restore unrelated historical changes.
+13. If 26226f4 is unavailable, STOP and report that clearly. Do not reconstruct or guess the changes.
+
+PRIMARY OBJECTIVE:
+
+Determine whether commit 26226f4 is still available anywhere in the current Replit Git history/object database.
+
+First inspect:
+
+git status --short
+git branch -a
+git log --all --oneline --decorate --graph -30
+git show --stat --oneline 26226f4
+git cat-file -t 26226f4
+
+If 26226f4 exists, inspect it READ-ONLY.
+
+The commit is expected to contain EXACTLY these six files:
+
+1. artifacts/api-server/src/routes/product-ideas.ts
+2. artifacts/pm-copilot/src/pages/discovery/feedback.tsx
+3. artifacts/pm-copilot/src/pages/discovery/insights.tsx
+4. artifacts/pm-copilot/src/pages/discovery/opportunities/detail.tsx
+5. artifacts/pm-copilot/src/pages/prioritization/results-tab.tsx
+6. artifacts/pm-copilot/src/pages/validation/components/hypothesis-form.tsx
+
+EXPECTED HISTORICAL STAT:
+
+6 files changed
+23 insertions(+)
+13 deletions(-)
+
+EXPECTED FUNCTIONAL CONTENT:
+
+A) Product Ideas Similarity / Duplication
+
+In:
+artifacts/api-server/src/routes/product-ideas.ts
+
+The historical cleanup fixed the new Similarity implementation's TypeScript issues:
+
+- The JSON.stringify mapping callback was made explicitly typed/safe.
+- The new similarity endpoint's req.params.id was safely coerced because its generated type could be string | string[].
+- The legacy Product Ideas parseInt line was restored and must NOT be changed as part of this cleanup.
+
+IMPORTANT:
+Do not change any other legacy Product Ideas route typing errors.
+
+B) Prioritization Results
+
+In:
+artifacts/pm-copilot/src/pages/prioritization/results-tab.tsx
+
+The historical cleanup:
+
+- Replaced invalid item.riceData access with the actual item.riceScore response field.
+- Added a narrow local RICE display type for extra analysis fields where necessary.
+- Preserved the existing RICE UI and behavior.
+- Used safe fallbacks:
+  impactLabel -> impact
+  effortPoints -> effort
+
+Do NOT redesign the Prioritization Results UI.
+Do NOT alter any scoring framework.
+Do NOT alter Prioritization behavior.
+
+C) Validation Hypothesis Form
+
+In:
+artifacts/pm-copilot/src/pages/validation/components/hypothesis-form.tsx
+
+The historical cleanup added the generated:
+
+getListOpportunitiesQueryKey({ limit: 200 })
+
+where required by the generated query-options typing.
+
+Do NOT change Product Idea selection behavior.
+Do NOT change Validation functionality.
+Do NOT change AI behavior.
+
+D) Discovery Feedback
+
+In:
+artifacts/pm-copilot/src/pages/discovery/feedback.tsx
+
+The historical cleanup reused the generated:
+
+FeedbackInputDepartment
+
+enum/type instead of the outdated local enum.
+
+Do NOT change the Feedback UI or behavior.
+
+E) Discovery Insights
+
+In:
+artifacts/pm-copilot/src/pages/discovery/insights.tsx
+
+The historical cleanup passed:
+
+undefined
+
+to the generated void Insights mutation where required by the generated client typing.
+
+Do NOT change Insights behavior.
+
+F) Discovery Product Idea Detail
+
+In:
+artifacts/pm-copilot/src/pages/discovery/opportunities/detail.tsx
+
+The historical cleanup used a narrow `unknown` bridge for the existing dynamic Product Idea display-field cast.
+
+Do NOT redesign the Similarity UI.
+Do NOT change Product Idea merge behavior.
+Do NOT change Product Idea similarity behavior.
+
+CRITICAL DIFF AUDIT:
+
+If commit 26226f4 exists, run:
+
+git diff 26226f4^ 26226f4 -- \
+  artifacts/api-server/src/routes/product-ideas.ts \
+  artifacts/pm-copilot/src/pages/discovery/feedback.tsx \
+  artifacts/pm-copilot/src/pages/discovery/insights.tsx \
+  artifacts/pm-copilot/src/pages/discovery/opportunities/detail.tsx \
+  artifacts/pm-copilot/src/pages/prioritization/results-tab.tsx \
+  artifacts/pm-copilot/src/pages/validation/components/hypothesis-form.tsx
+
+Also run:
+
+git show --name-only --format="" 26226f4
+
+and:
+
+git show --stat --oneline 26226f4
+
+Then verify that the commit contains NO:
+
+- attached_assets/
+- .agents/
+- prompt files
+- instruction files
+- screenshots
+- unrelated source files
+- database migrations
+- OpenAPI changes
+- generated API client changes
+
+DO NOT apply the diff.
+
+DO NOT cherry-pick it.
+
+DO NOT commit it.
+
+DO NOT push it.
+
+FINAL RESPONSE FORMAT:
+
+If 26226f4 exists, report:
+
+1. Exact commit SHA.
+2. Exact commit message.
+3. Exact six files.
+4. Exact stat.
+5. Full diff for ONLY those six files.
+6. Confirm whether the diff matches the six expected cleanup changes above.
+7. Confirm whether any unrelated files are present.
+8. Confirm current Git status.
+9. Confirm that you made ZERO modifications.
+10. Confirm that you created ZERO commits.
+11. Confirm that you pushed ZERO commits.
+
+If 26226f4 does NOT exist:
+
+STOP.
+
+Report:
+
+"Commit 26226f4 is not available in the current Replit Git history/object database, so I will not reconstruct or guess the six-file cleanup."
+
+Do not make any changes in that case.
+
+MOST IMPORTANT:
+
+This is a RECOVERY/AUDIT task, NOT an implementation task.
+
+Do not recreate the fixes from memory.
+Do not improve them.
+Do not make a new version.
+Do not touch Git history.
+
+We need the exact historical diff so it can later be reviewed and, if approved, applied manually to a separate clean local clone.
