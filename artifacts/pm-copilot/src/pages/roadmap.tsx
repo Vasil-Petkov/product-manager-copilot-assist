@@ -299,7 +299,6 @@ export default function Roadmap() {
         <Tabs value={view} onValueChange={(value) => setView(value as ViewMode)}>
           <TabsList><TabsTrigger value="monthly">Monthly</TabsTrigger><TabsTrigger value="quarterly">Quarterly</TabsTrigger><TabsTrigger value="annual">Annual</TabsTrigger></TabsList>
         </Tabs>
-        <Button variant="outline" size="sm" onClick={() => { setEditingInitiative(null); setInitiativeDialog(true); }}><Plus className="mr-2 size-4" /> New initiative</Button>
       </div>
 
       {isLoading ? (
