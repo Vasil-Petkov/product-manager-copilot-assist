@@ -1,0 +1,66 @@
+Update the application logo so that the violet square displays “PM” instead of “C”.
+
+## Objective
+
+Change the logo text in the violet square from “C” to “PM” across the application.
+
+## Scope
+
+- Update the logo used in the UI (header/sidebar and any other place where the logo is rendered).
+- The violet box should contain the text “PM” in white, centered, with the same typography and styling as the current logo.
+- The text “Copilot Assist” must remain unchanged.
+- Ensure the change is applied consistently everywhere the logo appears.
+- Preserve the existing logo dimensions, spacing, colors, rounded corners, and overall layout.
+
+## Implementation Guidelines
+
+1. Find the component/file responsible for rendering the logo (for example, a Logo component, header brand, sidebar brand, or shared branding component).
+2. Change only the displayed text inside the violet square from:
+   “C”
+   to:
+   “PM”
+3. Maintain the existing visual styling.
+4. If the logo is implemented as a shared component, update the shared component so all instances automatically receive the change.
+5. Do not duplicate the logo or create a second implementation.
+
+## Constraints — IMPORTANT
+
+- Do NOT change package versions.
+- Do NOT modify package.json unless absolutely required (it should not be required for this task).
+- Do NOT modify pnpm-lock.yaml.
+- Do NOT modify pnpm-workspace.yaml.
+- Do NOT modify TypeScript, Vite, build, or workspace configuration.
+- Do NOT install any new packages.
+- Do NOT perform unrelated refactoring.
+- Do NOT change application functionality.
+- Do NOT change the “Copilot Assist” text.
+- Do NOT change colors, fonts, dimensions, spacing, or other styling unless required to make “PM” fit correctly.
+- Keep the change minimal and focused.
+
+## Verification
+
+After implementing the change:
+
+1. Confirm the logo displays “PM” correctly wherever it appears.
+2. Confirm “Copilot Assist” remains unchanged.
+3. Run:
+
+pnpm run typecheck:libs
+
+4. Then run:
+
+cd artifacts/pm-copilot
+pnpm run typecheck
+
+5. If there is a lightweight existing build command that is appropriate for this application, run it as well.
+
+If any verification command fails because of an environment/dependency issue, do NOT modify dependencies or configuration to work around it. Report the exact error instead.
+
+## Deliverables
+
+- Only the files necessary for the logo change.
+- A brief summary of the files changed.
+- Confirmation that the typecheck commands passed.
+- Do not commit or push anything to GitHub unless explicitly requested.
+
+Start by locating the existing shared logo/branding component and make the smallest possible change from “C” to “PM”.
