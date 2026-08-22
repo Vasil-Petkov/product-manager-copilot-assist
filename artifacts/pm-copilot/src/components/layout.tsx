@@ -203,7 +203,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <aside className="w-64 flex-shrink-0 bg-sidebar flex flex-col border-r border-sidebar-border h-screen sticky top-0 overflow-y-auto custom-scrollbar">
         <div className="p-4 flex items-center gap-2 mb-2">
           <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl">
-            C
+            PM
           </div>
           <span className="font-semibold text-sidebar-foreground tracking-tight text-lg">
             Copilot Assist
