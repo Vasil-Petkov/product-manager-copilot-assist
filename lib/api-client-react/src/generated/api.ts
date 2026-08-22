@@ -72,6 +72,17 @@ import type {
   PrioritizationPatch,
   PrioritizationScore,
   PrioritizedOpportunity,
+  RoadmapData,
+  RoadmapInitiative,
+  RoadmapInitiativeInput,
+  RoadmapInitiativePatch,
+  RoadmapItem,
+  RoadmapItemInput,
+  RoadmapItemPatch,
+  RoadmapMilestone,
+  RoadmapMilestoneInput,
+  RoadmapMilestonePatch,
+  RoadmapProposal,
   Signal,
   SignalInput,
   SignalProcessResult,
@@ -5343,5 +5354,795 @@ export const useSendOpenaiMessage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSendOpenaiMessageMutationOptions(options));
+    }
+
+export const getGetRoadmapUrl = () => {
+
+
+
+
+  return `/api/roadmap`
+}
+
+/**
+ * @summary Get the authenticated user's roadmap workspace
+ */
+export const getRoadmap = async ( options?: Parameters<typeof customFetch>[1]): Promise<RoadmapData> => {
+
+  return customFetch<RoadmapData>(getGetRoadmapUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRoadmapQueryKey = () => {
+    return [
+    `/api/roadmap`
+    ] as const;
+    }
+
+
+export const getGetRoadmapQueryOptions = <TData = Awaited<ReturnType<typeof getRoadmap>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoadmap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRoadmapQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRoadmap>>> = ({ signal }) => getRoadmap({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRoadmap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRoadmapQueryResult = NonNullable<Awaited<ReturnType<typeof getRoadmap>>>
+export type GetRoadmapQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the authenticated user's roadmap workspace
+ */
+
+export function useGetRoadmap<TData = Awaited<ReturnType<typeof getRoadmap>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoadmap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRoadmapQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateRoadmapInitiativeUrl = () => {
+
+
+
+
+  return `/api/roadmap/initiatives`
+}
+
+/**
+ * @summary Create a roadmap initiative
+ */
+export const createRoadmapInitiative = async (roadmapInitiativeInput: RoadmapInitiativeInput, options?: Parameters<typeof customFetch>[1]): Promise<RoadmapInitiative> => {
+
+  return customFetch<RoadmapInitiative>(getCreateRoadmapInitiativeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(roadmapInitiativeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRoadmapInitiativeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoadmapInitiative>>, TError,{data: BodyType<RoadmapInitiativeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRoadmapInitiative>>, TError,{data: BodyType<RoadmapInitiativeInput>}, TContext> => {
+
+const mutationKey = ['createRoadmapInitiative'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRoadmapInitiative>>, {data: BodyType<RoadmapInitiativeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRoadmapInitiative(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRoadmapInitiativeMutationResult = NonNullable<Awaited<ReturnType<typeof createRoadmapInitiative>>>
+    export type CreateRoadmapInitiativeMutationBody = BodyType<RoadmapInitiativeInput>
+    export type CreateRoadmapInitiativeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a roadmap initiative
+ */
+export const useCreateRoadmapInitiative = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoadmapInitiative>>, TError,{data: BodyType<RoadmapInitiativeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRoadmapInitiative>>,
+        TError,
+        {data: BodyType<RoadmapInitiativeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRoadmapInitiativeMutationOptions(options));
+    }
+
+export const getUpdateRoadmapInitiativeUrl = (id: number,) => {
+
+
+
+
+  return `/api/roadmap/initiatives/${id}`
+}
+
+/**
+ * @summary Update a roadmap initiative
+ */
+export const updateRoadmapInitiative = async (id: number,
+    roadmapInitiativePatch: RoadmapInitiativePatch, options?: Parameters<typeof customFetch>[1]): Promise<RoadmapInitiative> => {
+
+  return customFetch<RoadmapInitiative>(getUpdateRoadmapInitiativeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(roadmapInitiativePatch)
+  }
+);}
+
+
+
+
+
+export const getUpdateRoadmapInitiativeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapInitiative>>, TError,{id: number;data: BodyType<RoadmapInitiativePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapInitiative>>, TError,{id: number;data: BodyType<RoadmapInitiativePatch>}, TContext> => {
+
+const mutationKey = ['updateRoadmapInitiative'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRoadmapInitiative>>, {id: number;data: BodyType<RoadmapInitiativePatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateRoadmapInitiative(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRoadmapInitiativeMutationResult = NonNullable<Awaited<ReturnType<typeof updateRoadmapInitiative>>>
+    export type UpdateRoadmapInitiativeMutationBody = BodyType<RoadmapInitiativePatch>
+    export type UpdateRoadmapInitiativeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a roadmap initiative
+ */
+export const useUpdateRoadmapInitiative = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapInitiative>>, TError,{id: number;data: BodyType<RoadmapInitiativePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRoadmapInitiative>>,
+        TError,
+        {id: number;data: BodyType<RoadmapInitiativePatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateRoadmapInitiativeMutationOptions(options));
+    }
+
+export const getDeleteRoadmapInitiativeUrl = (id: number,) => {
+
+
+
+
+  return `/api/roadmap/initiatives/${id}`
+}
+
+/**
+ * @summary Delete an initiative and leave its items unassigned
+ */
+export const deleteRoadmapInitiative = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteRoadmapInitiativeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteRoadmapInitiativeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapInitiative>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapInitiative>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteRoadmapInitiative'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRoadmapInitiative>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteRoadmapInitiative(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRoadmapInitiativeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRoadmapInitiative>>>
+
+    export type DeleteRoadmapInitiativeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete an initiative and leave its items unassigned
+ */
+export const useDeleteRoadmapInitiative = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapInitiative>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRoadmapInitiative>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRoadmapInitiativeMutationOptions(options));
+    }
+
+export const getCreateRoadmapItemUrl = () => {
+
+
+
+
+  return `/api/roadmap/items`
+}
+
+/**
+ * @summary Place an existing Product Idea on the roadmap
+ */
+export const createRoadmapItem = async (roadmapItemInput: RoadmapItemInput, options?: Parameters<typeof customFetch>[1]): Promise<RoadmapItem> => {
+
+  return customFetch<RoadmapItem>(getCreateRoadmapItemUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(roadmapItemInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRoadmapItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoadmapItem>>, TError,{data: BodyType<RoadmapItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRoadmapItem>>, TError,{data: BodyType<RoadmapItemInput>}, TContext> => {
+
+const mutationKey = ['createRoadmapItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRoadmapItem>>, {data: BodyType<RoadmapItemInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRoadmapItem(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRoadmapItemMutationResult = NonNullable<Awaited<ReturnType<typeof createRoadmapItem>>>
+    export type CreateRoadmapItemMutationBody = BodyType<RoadmapItemInput>
+    export type CreateRoadmapItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Place an existing Product Idea on the roadmap
+ */
+export const useCreateRoadmapItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoadmapItem>>, TError,{data: BodyType<RoadmapItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRoadmapItem>>,
+        TError,
+        {data: BodyType<RoadmapItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRoadmapItemMutationOptions(options));
+    }
+
+export const getUpdateRoadmapItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/roadmap/items/${id}`
+}
+
+/**
+ * @summary Update roadmap scheduling and status
+ */
+export const updateRoadmapItem = async (id: number,
+    roadmapItemPatch: RoadmapItemPatch, options?: Parameters<typeof customFetch>[1]): Promise<RoadmapItem> => {
+
+  return customFetch<RoadmapItem>(getUpdateRoadmapItemUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(roadmapItemPatch)
+  }
+);}
+
+
+
+
+
+export const getUpdateRoadmapItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapItem>>, TError,{id: number;data: BodyType<RoadmapItemPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapItem>>, TError,{id: number;data: BodyType<RoadmapItemPatch>}, TContext> => {
+
+const mutationKey = ['updateRoadmapItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRoadmapItem>>, {id: number;data: BodyType<RoadmapItemPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateRoadmapItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRoadmapItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateRoadmapItem>>>
+    export type UpdateRoadmapItemMutationBody = BodyType<RoadmapItemPatch>
+    export type UpdateRoadmapItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update roadmap scheduling and status
+ */
+export const useUpdateRoadmapItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapItem>>, TError,{id: number;data: BodyType<RoadmapItemPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRoadmapItem>>,
+        TError,
+        {id: number;data: BodyType<RoadmapItemPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateRoadmapItemMutationOptions(options));
+    }
+
+export const getDeleteRoadmapItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/roadmap/items/${id}`
+}
+
+/**
+ * @summary Remove a Product Idea from the roadmap without deleting the idea
+ */
+export const deleteRoadmapItem = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteRoadmapItemUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteRoadmapItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapItem>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteRoadmapItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRoadmapItem>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteRoadmapItem(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRoadmapItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRoadmapItem>>>
+
+    export type DeleteRoadmapItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove a Product Idea from the roadmap without deleting the idea
+ */
+export const useDeleteRoadmapItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRoadmapItem>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRoadmapItemMutationOptions(options));
+    }
+
+export const getCreateRoadmapMilestoneUrl = () => {
+
+
+
+
+  return `/api/roadmap/milestones`
+}
+
+/**
+ * @summary Create a roadmap milestone
+ */
+export const createRoadmapMilestone = async (roadmapMilestoneInput: RoadmapMilestoneInput, options?: Parameters<typeof customFetch>[1]): Promise<RoadmapMilestone> => {
+
+  return customFetch<RoadmapMilestone>(getCreateRoadmapMilestoneUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(roadmapMilestoneInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRoadmapMilestoneMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoadmapMilestone>>, TError,{data: BodyType<RoadmapMilestoneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRoadmapMilestone>>, TError,{data: BodyType<RoadmapMilestoneInput>}, TContext> => {
+
+const mutationKey = ['createRoadmapMilestone'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRoadmapMilestone>>, {data: BodyType<RoadmapMilestoneInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRoadmapMilestone(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRoadmapMilestoneMutationResult = NonNullable<Awaited<ReturnType<typeof createRoadmapMilestone>>>
+    export type CreateRoadmapMilestoneMutationBody = BodyType<RoadmapMilestoneInput>
+    export type CreateRoadmapMilestoneMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a roadmap milestone
+ */
+export const useCreateRoadmapMilestone = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoadmapMilestone>>, TError,{data: BodyType<RoadmapMilestoneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRoadmapMilestone>>,
+        TError,
+        {data: BodyType<RoadmapMilestoneInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRoadmapMilestoneMutationOptions(options));
+    }
+
+export const getUpdateRoadmapMilestoneUrl = (id: number,) => {
+
+
+
+
+  return `/api/roadmap/milestones/${id}`
+}
+
+/**
+ * @summary Update a roadmap milestone
+ */
+export const updateRoadmapMilestone = async (id: number,
+    roadmapMilestonePatch: RoadmapMilestonePatch, options?: Parameters<typeof customFetch>[1]): Promise<RoadmapMilestone> => {
+
+  return customFetch<RoadmapMilestone>(getUpdateRoadmapMilestoneUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(roadmapMilestonePatch)
+  }
+);}
+
+
+
+
+
+export const getUpdateRoadmapMilestoneMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapMilestone>>, TError,{id: number;data: BodyType<RoadmapMilestonePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapMilestone>>, TError,{id: number;data: BodyType<RoadmapMilestonePatch>}, TContext> => {
+
+const mutationKey = ['updateRoadmapMilestone'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRoadmapMilestone>>, {id: number;data: BodyType<RoadmapMilestonePatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateRoadmapMilestone(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRoadmapMilestoneMutationResult = NonNullable<Awaited<ReturnType<typeof updateRoadmapMilestone>>>
+    export type UpdateRoadmapMilestoneMutationBody = BodyType<RoadmapMilestonePatch>
+    export type UpdateRoadmapMilestoneMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a roadmap milestone
+ */
+export const useUpdateRoadmapMilestone = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRoadmapMilestone>>, TError,{id: number;data: BodyType<RoadmapMilestonePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRoadmapMilestone>>,
+        TError,
+        {id: number;data: BodyType<RoadmapMilestonePatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateRoadmapMilestoneMutationOptions(options));
+    }
+
+export const getDeleteRoadmapMilestoneUrl = (id: number,) => {
+
+
+
+
+  return `/api/roadmap/milestones/${id}`
+}
+
+/**
+ * @summary Delete a roadmap milestone
+ */
+export const deleteRoadmapMilestone = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteRoadmapMilestoneUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteRoadmapMilestoneMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapMilestone>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapMilestone>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteRoadmapMilestone'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRoadmapMilestone>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteRoadmapMilestone(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRoadmapMilestoneMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRoadmapMilestone>>>
+
+    export type DeleteRoadmapMilestoneMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a roadmap milestone
+ */
+export const useDeleteRoadmapMilestone = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRoadmapMilestone>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRoadmapMilestone>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRoadmapMilestoneMutationOptions(options));
+    }
+
+export const getGenerateRoadmapProposalUrl = () => {
+
+
+
+
+  return `/api/roadmap/proposal`
+}
+
+/**
+ * @summary Generate a non-persistent advisory roadmap proposal
+ */
+export const generateRoadmapProposal = async ( options?: Parameters<typeof customFetch>[1]): Promise<RoadmapProposal> => {
+
+  return customFetch<RoadmapProposal>(getGenerateRoadmapProposalUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getGenerateRoadmapProposalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateRoadmapProposal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateRoadmapProposal>>, TError,void, TContext> => {
+
+const mutationKey = ['generateRoadmapProposal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateRoadmapProposal>>, void> = () => {
+
+
+          return  generateRoadmapProposal(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateRoadmapProposalMutationResult = NonNullable<Awaited<ReturnType<typeof generateRoadmapProposal>>>
+
+    export type GenerateRoadmapProposalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate a non-persistent advisory roadmap proposal
+ */
+export const useGenerateRoadmapProposal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateRoadmapProposal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateRoadmapProposal>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGenerateRoadmapProposalMutationOptions(options));
     }
 

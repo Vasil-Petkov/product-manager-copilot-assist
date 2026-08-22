@@ -2504,3 +2504,352 @@ export const SendOpenaiMessageBody = zod.object({
 export const SendOpenaiMessageResponse = zod.unknown()
 
 
+/**
+ * @summary Get the authenticated user's roadmap workspace
+ */
+export const getRoadmapResponseInitiativesItemNameMax = 240;
+
+export const getRoadmapResponseInitiativesItemDescriptionMax = 4000;
+
+export const getRoadmapResponseItemsItemOneStartDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const getRoadmapResponseItemsItemOneEndDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const getRoadmapResponseItemsItemOneProgressMin = 0;
+export const getRoadmapResponseItemsItemOneProgressMax = 100;
+
+export const getRoadmapResponseItemsItemOneNotesMax = 6000;
+
+export const getRoadmapResponseMilestonesItemNameMax = 240;
+
+export const getRoadmapResponseMilestonesItemDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const getRoadmapResponseMilestonesItemDescriptionMax = 4000;
+
+
+
+export const GetRoadmapResponse = zod.object({
+  "initiatives": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string().max(getRoadmapResponseInitiativesItemNameMax),
+  "description": zod.string().max(getRoadmapResponseInitiativesItemDescriptionMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "initiativeId": zod.number().nullable(),
+  "opportunityId": zod.number(),
+  "startDate": zod.string().regex(getRoadmapResponseItemsItemOneStartDateRegExp),
+  "endDate": zod.string().regex(getRoadmapResponseItemsItemOneEndDateRegExp),
+  "status": zod.enum(['planned', 'in_progress', 'completed', 'at_risk', 'on_hold']),
+  "progress": zod.number().min(getRoadmapResponseItemsItemOneProgressMin).max(getRoadmapResponseItemsItemOneProgressMax),
+  "notes": zod.string().max(getRoadmapResponseItemsItemOneNotesMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}).and(zod.object({
+  "productIdea": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.string().nullable(),
+  "status": zod.string(),
+  "urgency": zod.string().nullable(),
+  "confidenceScore": zod.number().nullable(),
+  "riceScore": zod.number().nullable()
+})
+}))),
+  "milestones": zod.array(zod.object({
+  "id": zod.number(),
+  "initiativeId": zod.number().nullable(),
+  "name": zod.string().max(getRoadmapResponseMilestonesItemNameMax),
+  "date": zod.string().regex(getRoadmapResponseMilestonesItemDateRegExp),
+  "description": zod.string().max(getRoadmapResponseMilestonesItemDescriptionMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Create a roadmap initiative
+ */
+export const createRoadmapInitiativeBodyNameMax = 240;
+
+export const createRoadmapInitiativeBodyDescriptionMax = 4000;
+
+
+
+export const CreateRoadmapInitiativeBody = zod.object({
+  "name": zod.string().min(1).max(createRoadmapInitiativeBodyNameMax),
+  "description": zod.string().max(createRoadmapInitiativeBodyDescriptionMax).nullish()
+})
+
+export const createRoadmapInitiativeResponseNameMax = 240;
+
+export const createRoadmapInitiativeResponseDescriptionMax = 4000;
+
+
+
+export const CreateRoadmapInitiativeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string().max(createRoadmapInitiativeResponseNameMax),
+  "description": zod.string().max(createRoadmapInitiativeResponseDescriptionMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a roadmap initiative
+ */
+export const UpdateRoadmapInitiativeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateRoadmapInitiativeBodyNameMax = 240;
+
+export const updateRoadmapInitiativeBodyDescriptionMax = 4000;
+
+
+
+export const UpdateRoadmapInitiativeBody = zod.object({
+  "name": zod.string().min(1).max(updateRoadmapInitiativeBodyNameMax).optional(),
+  "description": zod.string().max(updateRoadmapInitiativeBodyDescriptionMax).nullish()
+})
+
+export const updateRoadmapInitiativeResponseNameMax = 240;
+
+export const updateRoadmapInitiativeResponseDescriptionMax = 4000;
+
+
+
+export const UpdateRoadmapInitiativeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string().max(updateRoadmapInitiativeResponseNameMax),
+  "description": zod.string().max(updateRoadmapInitiativeResponseDescriptionMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete an initiative and leave its items unassigned
+ */
+export const DeleteRoadmapInitiativeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteRoadmapInitiativeResponse = zod.void()
+
+
+/**
+ * @summary Place an existing Product Idea on the roadmap
+ */
+export const createRoadmapItemBodyStartDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createRoadmapItemBodyEndDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createRoadmapItemBodyProgressMin = 0;
+export const createRoadmapItemBodyProgressMax = 100;
+
+export const createRoadmapItemBodyNotesMax = 6000;
+
+
+
+export const CreateRoadmapItemBody = zod.object({
+  "initiativeId": zod.number().nullish(),
+  "opportunityId": zod.number(),
+  "startDate": zod.string().regex(createRoadmapItemBodyStartDateRegExp),
+  "endDate": zod.string().regex(createRoadmapItemBodyEndDateRegExp),
+  "status": zod.enum(['planned', 'in_progress', 'completed', 'at_risk', 'on_hold']).optional(),
+  "progress": zod.number().min(createRoadmapItemBodyProgressMin).max(createRoadmapItemBodyProgressMax).optional(),
+  "notes": zod.string().max(createRoadmapItemBodyNotesMax).nullish()
+})
+
+export const createRoadmapItemResponseStartDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createRoadmapItemResponseEndDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createRoadmapItemResponseProgressMin = 0;
+export const createRoadmapItemResponseProgressMax = 100;
+
+export const createRoadmapItemResponseNotesMax = 6000;
+
+
+
+export const CreateRoadmapItemResponse = zod.object({
+  "id": zod.number(),
+  "initiativeId": zod.number().nullable(),
+  "opportunityId": zod.number(),
+  "startDate": zod.string().regex(createRoadmapItemResponseStartDateRegExp),
+  "endDate": zod.string().regex(createRoadmapItemResponseEndDateRegExp),
+  "status": zod.enum(['planned', 'in_progress', 'completed', 'at_risk', 'on_hold']),
+  "progress": zod.number().min(createRoadmapItemResponseProgressMin).max(createRoadmapItemResponseProgressMax),
+  "notes": zod.string().max(createRoadmapItemResponseNotesMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update roadmap scheduling and status
+ */
+export const UpdateRoadmapItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateRoadmapItemBodyStartDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateRoadmapItemBodyEndDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateRoadmapItemBodyProgressMin = 0;
+export const updateRoadmapItemBodyProgressMax = 100;
+
+export const updateRoadmapItemBodyNotesMax = 6000;
+
+
+
+export const UpdateRoadmapItemBody = zod.object({
+  "initiativeId": zod.number().nullish(),
+  "opportunityId": zod.number().optional(),
+  "startDate": zod.string().regex(updateRoadmapItemBodyStartDateRegExp).optional(),
+  "endDate": zod.string().regex(updateRoadmapItemBodyEndDateRegExp).optional(),
+  "status": zod.enum(['planned', 'in_progress', 'completed', 'at_risk', 'on_hold']).optional(),
+  "progress": zod.number().min(updateRoadmapItemBodyProgressMin).max(updateRoadmapItemBodyProgressMax).optional(),
+  "notes": zod.string().max(updateRoadmapItemBodyNotesMax).nullish()
+})
+
+export const updateRoadmapItemResponseStartDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateRoadmapItemResponseEndDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateRoadmapItemResponseProgressMin = 0;
+export const updateRoadmapItemResponseProgressMax = 100;
+
+export const updateRoadmapItemResponseNotesMax = 6000;
+
+
+
+export const UpdateRoadmapItemResponse = zod.object({
+  "id": zod.number(),
+  "initiativeId": zod.number().nullable(),
+  "opportunityId": zod.number(),
+  "startDate": zod.string().regex(updateRoadmapItemResponseStartDateRegExp),
+  "endDate": zod.string().regex(updateRoadmapItemResponseEndDateRegExp),
+  "status": zod.enum(['planned', 'in_progress', 'completed', 'at_risk', 'on_hold']),
+  "progress": zod.number().min(updateRoadmapItemResponseProgressMin).max(updateRoadmapItemResponseProgressMax),
+  "notes": zod.string().max(updateRoadmapItemResponseNotesMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Remove a Product Idea from the roadmap without deleting the idea
+ */
+export const DeleteRoadmapItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteRoadmapItemResponse = zod.void()
+
+
+/**
+ * @summary Create a roadmap milestone
+ */
+export const createRoadmapMilestoneBodyNameMax = 240;
+
+export const createRoadmapMilestoneBodyDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createRoadmapMilestoneBodyDescriptionMax = 4000;
+
+
+
+export const CreateRoadmapMilestoneBody = zod.object({
+  "initiativeId": zod.number().nullish(),
+  "name": zod.string().min(1).max(createRoadmapMilestoneBodyNameMax),
+  "date": zod.string().regex(createRoadmapMilestoneBodyDateRegExp),
+  "description": zod.string().max(createRoadmapMilestoneBodyDescriptionMax).nullish()
+})
+
+export const createRoadmapMilestoneResponseNameMax = 240;
+
+export const createRoadmapMilestoneResponseDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createRoadmapMilestoneResponseDescriptionMax = 4000;
+
+
+
+export const CreateRoadmapMilestoneResponse = zod.object({
+  "id": zod.number(),
+  "initiativeId": zod.number().nullable(),
+  "name": zod.string().max(createRoadmapMilestoneResponseNameMax),
+  "date": zod.string().regex(createRoadmapMilestoneResponseDateRegExp),
+  "description": zod.string().max(createRoadmapMilestoneResponseDescriptionMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a roadmap milestone
+ */
+export const UpdateRoadmapMilestoneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateRoadmapMilestoneBodyNameMax = 240;
+
+export const updateRoadmapMilestoneBodyDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateRoadmapMilestoneBodyDescriptionMax = 4000;
+
+
+
+export const UpdateRoadmapMilestoneBody = zod.object({
+  "initiativeId": zod.number().nullish(),
+  "name": zod.string().min(1).max(updateRoadmapMilestoneBodyNameMax).optional(),
+  "date": zod.string().regex(updateRoadmapMilestoneBodyDateRegExp).optional(),
+  "description": zod.string().max(updateRoadmapMilestoneBodyDescriptionMax).nullish()
+})
+
+export const updateRoadmapMilestoneResponseNameMax = 240;
+
+export const updateRoadmapMilestoneResponseDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateRoadmapMilestoneResponseDescriptionMax = 4000;
+
+
+
+export const UpdateRoadmapMilestoneResponse = zod.object({
+  "id": zod.number(),
+  "initiativeId": zod.number().nullable(),
+  "name": zod.string().max(updateRoadmapMilestoneResponseNameMax),
+  "date": zod.string().regex(updateRoadmapMilestoneResponseDateRegExp),
+  "description": zod.string().max(updateRoadmapMilestoneResponseDescriptionMax).nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a roadmap milestone
+ */
+export const DeleteRoadmapMilestoneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteRoadmapMilestoneResponse = zod.void()
+
+
+/**
+ * @summary Generate a non-persistent advisory roadmap proposal
+ */
+export const GenerateRoadmapProposalResponse = zod.object({
+  "initiatives": zod.array(zod.object({
+  "name": zod.string(),
+  "description": zod.string(),
+  "reason": zod.string(),
+  "items": zod.array(zod.object({
+  "opportunityId": zod.number(),
+  "sequence": zod.number(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "status": zod.enum(['planned', 'in_progress', 'completed', 'at_risk', 'on_hold']),
+  "progress": zod.number(),
+  "notes": zod.string(),
+  "risks": zod.array(zod.string()),
+  "why": zod.string()
+}))
+})),
+  "generatedAt": zod.string(),
+  "source": zod.enum(['ai', 'fallback', 'no_product_ideas'])
+})
+
+
