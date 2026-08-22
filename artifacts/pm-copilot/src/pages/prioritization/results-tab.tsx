@@ -1,10 +1,21 @@
 import { useState } from "react";
-import { useListPrioritization } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  getListPrioritizationQueryKey,
+  useListPrioritization,
+  useScoreOpportunity,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Info, Pencil } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // ─── Framework display config ────────────────────────────────────────────────
 
@@ -43,9 +54,18 @@ const FRAMEWORKS: { id: Framework; label: string }[] = [
   { id: "opportunity", label: "Opportunity Score" },
 ];
 
+const RICE_IMPACT_OPTIONS = [
+  { label: "Massive", value: 3 },
+  { label: "High", value: 2 },
+  { label: "Medium", value: 1 },
+  { label: "Low", value: 0.5 },
+  { label: "Minimal", value: 0.25 },
+] as const;
+
 type RiceDetails = {
   reach?: number | null;
   impact?: number | null;
+  impactValue?: number | null;
   impactLabel?: string | null;
   confidence?: number | null;
   effort?: number | null;
@@ -56,6 +76,12 @@ type RiceDetails = {
 
 function MissingData() {
   return <span className="text-muted-foreground">Not available</span>;
+}
+
+function formatRiceImpact(impact?: number | null, label?: string | null) {
+  const option = RICE_IMPACT_OPTIONS.find((item) => item.value === impact)
+    ?? RICE_IMPACT_OPTIONS.find((item) => item.label === label);
+  return option ? `${option.label} (${option.value})` : null;
 }
 
 function ScoreBar({ value, max }: { value: number; max: number }) {
@@ -80,8 +106,87 @@ function ExplanationRow({ text }: { text?: string }) {
 export default function ResultsTab() {
   const [fw, setFw] = useState<Framework>("rice");
   const { data: items, isLoading } = useListPrioritization({});
+  const scoreOpportunity = useScoreOpportunity();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [editingItem, setEditingItem] = useState<NonNullable<typeof items>[number] | null>(null);
+  const [riceForm, setRiceForm] = useState<RiceFormValues>(EMPTY_RICE_FORM);
+  const [riceError, setRiceError] = useState("");
 
   const opportunities = items ?? [];
+
+  const openRiceEditor = (item: (typeof opportunities)[number]) => {
+    const rice = item.riceScore as RiceDetails | null;
+    setEditingItem(item);
+    setRiceForm({
+      reach: rice?.reach != null ? String(rice.reach) : "",
+      impact: rice?.impactValue != null
+        ? String(rice.impactValue)
+        : rice?.impact != null
+          ? String(rice.impact)
+          : "",
+      confidence: rice?.confidence != null ? String(rice.confidence) : "",
+      effort: rice?.effortPoints != null
+        ? String(rice.effortPoints)
+        : rice?.effort != null
+          ? String(rice.effort)
+          : "",
+    });
+    setRiceError("");
+  };
+
+  const closeRiceEditor = () => {
+    if (!scoreOpportunity.isPending) {
+      setEditingItem(null);
+      setRiceError("");
+    }
+  };
+
+  const saveRice = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const reach = Number(riceForm.reach);
+    const impact = Number(riceForm.impact);
+    const confidence = Number(riceForm.confidence);
+    const effort = Number(riceForm.effort);
+
+    if (
+      !riceForm.reach.trim() ||
+      !riceForm.impact.trim() ||
+      !riceForm.confidence.trim() ||
+      !riceForm.effort.trim() ||
+      ![reach, impact, confidence, effort].every(Number.isFinite)
+    ) {
+      setRiceError("Enter a number for every RICE input.");
+      return;
+    }
+    if (reach <= 0 || impact <= 0 || confidence <= 0 || confidence > 100 || effort <= 0) {
+      setRiceError("Reach, Impact, Confidence, and Effort must be greater than zero. Confidence cannot exceed 100%.");
+      return;
+    }
+    if (!editingItem) return;
+
+    scoreOpportunity.mutate(
+      {
+        data: {
+          opportunityId: editingItem.opportunity.id,
+          framework: "rice",
+          riceReach: reach,
+          riceImpact: impact,
+          riceConfidence: confidence,
+          riceEffort: effort,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListPrioritizationQueryKey({}) });
+          setEditingItem(null);
+          setRiceError("");
+          toast({ title: "RICE score saved", description: "The updated inputs and score are now available in Results." });
+        },
+        onError: () => setRiceError("Unable to save the RICE inputs. Please try again."),
+      },
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -115,7 +220,7 @@ export default function ResultsTab() {
               <tr>
                 <th className="px-6 py-4 w-10 text-center">#</th>
                 <th className="px-6 py-4">Product Idea</th>
-                {fw === "rice"        && <><th className="px-6 py-4 text-center">Reach</th><th className="px-6 py-4 text-center">Impact</th><th className="px-6 py-4 text-center">Confidence</th><th className="px-6 py-4 text-center">Effort SP</th><th className="px-6 py-4 text-center text-primary">RICE Score</th></>}
+                {fw === "rice"        && <><th className="px-6 py-4 text-center">Reach</th><th className="px-6 py-4 text-center">Impact</th><th className="px-6 py-4 text-center">Confidence</th><th className="px-6 py-4 text-center">Effort SP</th><th className="px-6 py-4 text-center text-primary">RICE Score</th><th className="px-6 py-4 text-center">Actions</th></>}
                 {fw === "ice"         && <><th className="px-6 py-4 text-center">Impact</th><th className="px-6 py-4 text-center">Confidence</th><th className="px-6 py-4 text-center">Ease</th><th className="px-6 py-4 text-center text-primary">ICE Score</th></>}
                 {fw === "weighted"    && <><th className="px-6 py-4 text-center">Cust. Value</th><th className="px-6 py-4 text-center">Revenue</th><th className="px-6 py-4 text-center">Strategic</th><th className="px-6 py-4 text-center">Complexity</th><th className="px-6 py-4 text-center text-primary">Score</th></>}
                 {fw === "moscow"      && <th className="px-6 py-4">Classification</th>}
@@ -152,7 +257,7 @@ export default function ResultsTab() {
 
                     {fw === "rice" && (<>
                        <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.reach ?? <MissingData />}</td>
-                       <td className="px-6 py-4 text-center text-sm">{riceData?.impactLabel ?? riceData?.impact ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center text-sm">{formatRiceImpact(riceData?.impactValue ?? riceData?.impact, riceData?.impactLabel) ?? <MissingData />}</td>
                        <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.confidence != null ? `${riceData.confidence}%` : <MissingData />}</td>
                        <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.effortPoints ?? riceData?.effort ?? <MissingData />}</td>
                       <td className="px-6 py-4 text-center">
@@ -160,6 +265,17 @@ export default function ResultsTab() {
                           <ScoreBar value={riceData?.score ?? 0} max={500} />
                            <span className="font-bold text-primary font-mono">{riceData?.score?.toFixed(1) ?? <MissingData />}</span>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => openRiceEditor(item)}
+                        >
+                          <Pencil className="size-3.5" />
+                          {riceData ? "Edit RICE" : "Add RICE"}
+                        </Button>
                       </td>
                     </>)}
 
@@ -226,7 +342,7 @@ export default function ResultsTab() {
                     </>)}
                   </tr>,
                   // AI explanation row
-                  fw === "rice"        && riceData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={8}><ExplanationRow text={riceData.explanation} /></td></tr>,
+                  fw === "rice"        && riceData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={9}><ExplanationRow text={riceData.explanation} /></td></tr>,
                   fw === "ice"         && (ice as any)?.explanation       && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={6}><ExplanationRow text={(ice as any).explanation} /></td></tr>,
                   fw === "weighted"    && wd?.explanation                  && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={7}><ExplanationRow text={wd.explanation} /></td></tr>,
                   fw === "moscow"      && (item as any).moscowData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={4}><ExplanationRow text={(item as any).moscowData.explanation} /></td></tr>,
@@ -239,6 +355,99 @@ export default function ResultsTab() {
           </table>
         </div>
       </Card>
+
+      <Dialog open={editingItem !== null} onOpenChange={(open) => !open && closeRiceEditor()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>RICE score</DialogTitle>
+            <DialogDescription>
+              Enter the inputs for <strong>{editingItem?.opportunity.title}</strong>. Confidence is a percentage.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveRice} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="rice-reach">Reach</Label>
+                <Input
+                  id="rice-reach"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="500"
+                  value={riceForm.reach}
+                  onChange={(event) => setRiceForm((current) => ({ ...current, reach: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rice-impact">Impact</Label>
+                <Select
+                  value={riceForm.impact}
+                  onValueChange={(value) => setRiceForm((current) => ({ ...current, impact: value }))}
+                >
+                  <SelectTrigger id="rice-impact">
+                    <SelectValue placeholder="Select impact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RICE_IMPACT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label} ({option.value})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rice-confidence">Confidence (%)</Label>
+                <Input
+                  id="rice-confidence"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  placeholder="80"
+                  value={riceForm.confidence}
+                  onChange={(event) => setRiceForm((current) => ({ ...current, confidence: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rice-effort">Effort (story points)</Label>
+                <Input
+                  id="rice-effort"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="5"
+                  value={riceForm.effort}
+                  onChange={(event) => setRiceForm((current) => ({ ...current, effort: event.target.value }))}
+                />
+              </div>
+            </div>
+            {riceError && <p className="text-sm text-destructive">{riceError}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeRiceEditor} disabled={scoreOpportunity.isPending}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={scoreOpportunity.isPending}>
+                {scoreOpportunity.isPending ? "Saving…" : "Save RICE"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+const EMPTY_RICE_FORM: RiceFormValues = {
+  reach: "",
+  impact: "",
+  confidence: "",
+  effort: "",
+};
+
+type RiceFormValues = {
+  reach: string;
+  impact: string;
+  confidence: string;
+  effort: string;
+};
