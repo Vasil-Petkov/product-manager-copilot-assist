@@ -82,7 +82,7 @@ const MODULES: NavModule[] = [
     lifecycleNumber: 4,
     defaultOpen: false,
     items: [
-      { href: "/roadmap", label: "Roadmap workspace", icon: MapIcon, soon: true },
+      { href: "/roadmap", label: "Roadmap workspace", icon: MapIcon },
     ],
   },
   {

@@ -1391,8 +1391,182 @@ paths:
           content:
             text/event-stream: {}
 
+  # --- Roadmap ---
+  /roadmap:
+    get:
+      operationId: getRoadmap
+      tags: [roadmap]
+      summary: Get the authenticated user's roadmap workspace
+      responses:
+        "200":
+          description: Roadmap data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapData"
+
+  /roadmap/initiatives:
+    post:
+      operationId: createRoadmapInitiative
+      tags: [roadmap]
+      summary: Create a roadmap initiative
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoadmapInitiativeInput"
+      responses:
+        "201":
+          description: Initiative created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapInitiative"
+
+  /roadmap/initiatives/{id}:
+    patch:
+      operationId: updateRoadmapInitiative
+      tags: [roadmap]
+      summary: Update a roadmap initiative
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoadmapInitiativePatch"
+      responses:
+        "200":
+          description: Initiative updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapInitiative"
+    delete:
+      operationId: deleteRoadmapInitiative
+      tags: [roadmap]
+      summary: Delete an initiative and leave its items unassigned
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204":
+          description: Initiative deleted
+
+  /roadmap/items:
+    post:
+      operationId: createRoadmapItem
+      tags: [roadmap]
+      summary: Place an existing Product Idea on the roadmap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoadmapItemInput"
+      responses:
+        "201":
+          description: Roadmap item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapItem"
+
+  /roadmap/items/{id}:
+    patch:
+      operationId: updateRoadmapItem
+      tags: [roadmap]
+      summary: Update roadmap scheduling and status
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoadmapItemPatch"
+      responses:
+        "200":
+          description: Roadmap item updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapItem"
+    delete:
+      operationId: deleteRoadmapItem
+      tags: [roadmap]
+      summary: Remove a Product Idea from the roadmap without deleting the idea
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204":
+          description: Roadmap item deleted
+
+  /roadmap/milestones:
+    post:
+      operationId: createRoadmapMilestone
+      tags: [roadmap]
+      summary: Create a roadmap milestone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoadmapMilestoneInput"
+      responses:
+        "201":
+          description: Milestone created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapMilestone"
+
+  /roadmap/milestones/{id}:
+    patch:
+      operationId: updateRoadmapMilestone
+      tags: [roadmap]
+      summary: Update a roadmap milestone
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoadmapMilestonePatch"
+      responses:
+        "200":
+          description: Milestone updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapMilestone"
+    delete:
+      operationId: deleteRoadmapMilestone
+      tags: [roadmap]
+      summary: Delete a roadmap milestone
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204":
+          description: Milestone deleted
+
+  /roadmap/proposal:
+    post:
+      operationId: generateRoadmapProposal
+      tags: [roadmap]
+      summary: Generate a non-persistent advisory roadmap proposal
+      responses:
+        "200":
+          description: A reviewable proposal which must be applied separately
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapProposal"
+
 components:
   parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: number
     AuthorizationSessionHeader:
       name: Authorization
       in: header
@@ -1409,6 +1583,172 @@ components:
         type: string
 
   schemas:
+    RoadmapStatus:
+      type: string
+      enum: [planned, in_progress, completed, at_risk, on_hold]
+
+    RoadmapInitiative:
+      type: object
+      required: [id, name, description, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        name: { type: string, maxLength: 240 }
+        description: { type: ["string", "null"], maxLength: 4000 }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    RoadmapInitiativeInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 240 }
+        description: { type: ["string", "null"], maxLength: 4000 }
+
+    RoadmapInitiativePatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 240 }
+        description: { type: ["string", "null"], maxLength: 4000 }
+
+    RoadmapItem:
+      type: object
+      required: [id, initiativeId, opportunityId, startDate, endDate, status, progress, notes, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        initiativeId: { type: ["number", "null"] }
+        opportunityId: { type: number }
+        startDate: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        endDate: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        status: { $ref: "#/components/schemas/RoadmapStatus" }
+        progress: { type: number, minimum: 0, maximum: 100 }
+        notes: { type: ["string", "null"], maxLength: 6000 }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    RoadmapItemInput:
+      type: object
+      required: [opportunityId, startDate, endDate]
+      properties:
+        initiativeId: { type: ["number", "null"] }
+        opportunityId: { type: number }
+        startDate: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        endDate: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        status: { $ref: "#/components/schemas/RoadmapStatus" }
+        progress: { type: number, minimum: 0, maximum: 100 }
+        notes: { type: ["string", "null"], maxLength: 6000 }
+
+    RoadmapItemPatch:
+      type: object
+      properties:
+        initiativeId: { type: ["number", "null"] }
+        opportunityId: { type: number }
+        startDate: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        endDate: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        status: { $ref: "#/components/schemas/RoadmapStatus" }
+        progress: { type: number, minimum: 0, maximum: 100 }
+        notes: { type: ["string", "null"], maxLength: 6000 }
+
+    RoadmapMilestone:
+      type: object
+      required: [id, initiativeId, name, date, description, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        initiativeId: { type: ["number", "null"] }
+        name: { type: string, maxLength: 240 }
+        date: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        description: { type: ["string", "null"], maxLength: 4000 }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    RoadmapMilestoneInput:
+      type: object
+      required: [name, date]
+      properties:
+        initiativeId: { type: ["number", "null"] }
+        name: { type: string, minLength: 1, maxLength: 240 }
+        date: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        description: { type: ["string", "null"], maxLength: 4000 }
+
+    RoadmapMilestonePatch:
+      type: object
+      properties:
+        initiativeId: { type: ["number", "null"] }
+        name: { type: string, minLength: 1, maxLength: 240 }
+        date: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        description: { type: ["string", "null"], maxLength: 4000 }
+
+    RoadmapProductIdea:
+      type: object
+      required: [id, title, description, category, status, urgency, confidenceScore, riceScore]
+      properties:
+        id: { type: number }
+        title: { type: string }
+        description: { type: string }
+        category: { type: ["string", "null"] }
+        status: { type: string }
+        urgency: { type: ["string", "null"] }
+        confidenceScore: { type: ["number", "null"] }
+        riceScore: { type: ["number", "null"] }
+
+    RoadmapItemWithProductIdea:
+      allOf:
+        - $ref: "#/components/schemas/RoadmapItem"
+        - type: object
+          required: [productIdea]
+          properties:
+            productIdea: { $ref: "#/components/schemas/RoadmapProductIdea" }
+
+    RoadmapData:
+      type: object
+      required: [initiatives, items, milestones]
+      properties:
+        initiatives:
+          type: array
+          items: { $ref: "#/components/schemas/RoadmapInitiative" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RoadmapItemWithProductIdea" }
+        milestones:
+          type: array
+          items: { $ref: "#/components/schemas/RoadmapMilestone" }
+
+    RoadmapProposalItem:
+      type: object
+      required: [opportunityId, sequence, startDate, endDate, status, progress, notes, risks, why]
+      properties:
+        opportunityId: { type: number }
+        sequence: { type: number }
+        startDate: { type: string }
+        endDate: { type: string }
+        status: { $ref: "#/components/schemas/RoadmapStatus" }
+        progress: { type: number }
+        notes: { type: string }
+        risks: { type: array, items: { type: string } }
+        why: { type: string }
+
+    RoadmapProposalInitiative:
+      type: object
+      required: [name, description, reason, items]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        reason: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RoadmapProposalItem" }
+
+    RoadmapProposal:
+      type: object
+      required: [initiatives, generatedAt, source]
+      properties:
+        initiatives:
+          type: array
+          items: { $ref: "#/components/schemas/RoadmapProposalInitiative" }
+        generatedAt: { type: string }
+        source:
+          type: string
+          enum: [ai, no_product_ideas]
+
     OpenaiConversation:
       type: object
       required: [id, title, createdAt]

@@ -5,6 +5,231 @@
  * Product Manager Copilot Assist API
  * OpenAPI spec version: 0.1.0
  */
+export type RoadmapStatus = typeof RoadmapStatus[keyof typeof RoadmapStatus];
+
+
+export const RoadmapStatus = {
+  planned: 'planned',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  at_risk: 'at_risk',
+  on_hold: 'on_hold',
+} as const;
+
+export interface RoadmapInitiative {
+  id: number;
+  /** @maxLength 240 */
+  name: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoadmapInitiativeInput {
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  name: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+}
+
+export interface RoadmapInitiativePatch {
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  name?: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+}
+
+export interface RoadmapItem {
+  id: number;
+  /** @nullable */
+  initiativeId: number | null;
+  opportunityId: number;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  startDate: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  endDate: string;
+  status: RoadmapStatus;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  progress: number;
+  /**
+     * @maxLength 6000
+     * @nullable
+     */
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoadmapItemInput {
+  /** @nullable */
+  initiativeId?: number | null;
+  opportunityId: number;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  startDate: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  endDate: string;
+  status?: RoadmapStatus;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  progress?: number;
+  /**
+     * @maxLength 6000
+     * @nullable
+     */
+  notes?: string | null;
+}
+
+export interface RoadmapItemPatch {
+  /** @nullable */
+  initiativeId?: number | null;
+  opportunityId?: number;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  startDate?: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  endDate?: string;
+  status?: RoadmapStatus;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  progress?: number;
+  /**
+     * @maxLength 6000
+     * @nullable
+     */
+  notes?: string | null;
+}
+
+export interface RoadmapMilestone {
+  id: number;
+  /** @nullable */
+  initiativeId: number | null;
+  /** @maxLength 240 */
+  name: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  date: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoadmapMilestoneInput {
+  /** @nullable */
+  initiativeId?: number | null;
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  name: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  date: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+}
+
+export interface RoadmapMilestonePatch {
+  /** @nullable */
+  initiativeId?: number | null;
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  name?: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  date?: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+}
+
+export interface RoadmapProductIdea {
+  id: number;
+  title: string;
+  description: string;
+  /** @nullable */
+  category: string | null;
+  status: string;
+  /** @nullable */
+  urgency: string | null;
+  /** @nullable */
+  confidenceScore: number | null;
+  /** @nullable */
+  riceScore: number | null;
+}
+
+export type RoadmapItemWithProductIdea = RoadmapItem & {
+  productIdea: RoadmapProductIdea;
+};
+
+export interface RoadmapData {
+  initiatives: RoadmapInitiative[];
+  items: RoadmapItemWithProductIdea[];
+  milestones: RoadmapMilestone[];
+}
+
+export interface RoadmapProposalItem {
+  opportunityId: number;
+  sequence: number;
+  startDate: string;
+  endDate: string;
+  status: RoadmapStatus;
+  progress: number;
+  notes: string;
+  risks: string[];
+  why: string;
+}
+
+export interface RoadmapProposalInitiative {
+  name: string;
+  description: string;
+  reason: string;
+  items: RoadmapProposalItem[];
+}
+
+export type RoadmapProposalSource = typeof RoadmapProposalSource[keyof typeof RoadmapProposalSource];
+
+
+export const RoadmapProposalSource = {
+  ai: 'ai',
+  no_product_ideas: 'no_product_ideas',
+} as const;
+
+export interface RoadmapProposal {
+  initiatives: RoadmapProposalInitiative[];
+  generatedAt: string;
+  source: RoadmapProposalSource;
+}
+
 export interface OpenaiConversation {
   id: number;
   title: string;

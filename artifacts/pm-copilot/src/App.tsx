@@ -24,6 +24,7 @@ import ValidationResults from './pages/validation/results';
 import NewValidationExperiment from './pages/validation/experiments/new';
 import ValidationExperimentDetail from './pages/validation/experiments/detail';
 import Prioritization from './pages/prioritization/index';
+import Roadmap from './pages/roadmap';
 import Documentation from './pages/documentation';
 import Settings from './pages/settings';
 import ComingSoon from './pages/coming-soon';
@@ -105,7 +106,7 @@ function Router() {
         <Route path="/settings" component={Settings} />
         
         {/* Coming soon routes */}
-        <Route path="/roadmap"><ComingSoon title="Roadmap" description="Visualize and share your product timeline." /></Route>
+        <Route path="/roadmap" component={Roadmap} />
         <Route path="/documentation" component={Documentation} />
         <Route path="/meeting-intelligence"><ComingSoon title="Meeting Intelligence" description="Deep analysis of your customer calls." /></Route>
         <Route path="/analytics"><ComingSoon title="Analytics" description="Track feature usage and impact." /></Route>

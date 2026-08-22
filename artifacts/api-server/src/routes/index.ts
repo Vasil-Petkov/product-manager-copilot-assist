@@ -11,6 +11,7 @@ import feedbackRouter from "./feedback";
 import insightsRouter from "./insights";
 import prioritizationRouter from "./prioritization";
 import validationRouter from "./validation";
+import roadmapRouter from "./roadmap";
 import openaiConversationsRouter from "./openai-conversations";
 
 const router: IRouter = Router();
@@ -27,6 +28,7 @@ router.use(feedbackRouter);
 router.use(insightsRouter);
 router.use(prioritizationRouter);
 router.use(validationRouter);
+router.use(roadmapRouter);
 router.use(openaiConversationsRouter);
 
 export default router;

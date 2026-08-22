@@ -8,6 +8,7 @@ export * from "./insights";
 export * from "./prioritization";
 export * from "./prioritization-analysis";
 export * from "./validation";
+export * from "./roadmap";
 export * from "./conversations";
 export * from "./messages";
 export * from "./idea-comments";
