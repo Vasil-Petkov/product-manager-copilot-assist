@@ -141,39 +141,6 @@ async function listRoadmap(userId: string) {
   };
 }
 
-function defaultProposal(ideas: Array<{ id: number; title: string; category: string | null; urgency: string | null; riceScore: number | null }>) {
-  const today = new Date();
-  const toDate = (offsetMonths: number) => {
-    const value = new Date(today.getFullYear(), today.getMonth() + offsetMonths, 1);
-    return value.toISOString().slice(0, 10);
-  };
-  const groups = new Map<string, typeof ideas>();
-  for (const idea of ideas) {
-    const key = idea.category?.replaceAll("_", " ") || "Product improvements";
-    groups.set(key, [...(groups.get(key) ?? []), idea]);
-  }
-  return {
-    initiatives: [...groups.entries()].map(([name, groupedIdeas], groupIndex) => ({
-      name: name.replace(/\b\w/g, (letter) => letter.toUpperCase()),
-      description: "A focused sequence of related Product Ideas.",
-      reason: "Grouped by the available Product Idea category and priority context.",
-      items: groupedIdeas
-        .sort((a, b) => (b.riceScore ?? 0) - (a.riceScore ?? 0))
-        .map((idea, itemIndex) => ({
-          opportunityId: idea.id,
-          sequence: itemIndex + 1,
-          startDate: toDate(groupIndex * 2 + itemIndex),
-          endDate: toDate(groupIndex * 2 + itemIndex + 1),
-          status: "planned",
-          progress: 0,
-          notes: "",
-          risks: idea.riceScore == null ? ["Prioritization information is not yet available."] : [],
-          why: idea.riceScore == null ? "Schedule after validating priority and effort." : "Sequenced using available RICE context.",
-        })),
-    })),
-  };
-}
-
 router.get("/roadmap", requireAuth, async (req, res, next): Promise<void> => {
   try {
     res.json(GetRoadmapResponse.parse(asJson(await listRoadmap(req.user!.id))));
@@ -320,8 +287,7 @@ router.post("/roadmap/proposal", requireAuth, async (req, res, next): Promise<vo
   try {
     const ideas = await db.select().from(opportunitiesTable)
       .where(eq(opportunitiesTable.userId, req.user!.id))
-      .orderBy(desc(opportunitiesTable.updatedAt))
-      .limit(20);
+      .orderBy(desc(opportunitiesTable.updatedAt));
     const ideaIds = ideas.map((idea) => idea.id);
     const [scores, experimentRows] = await Promise.all([
       ideaIds.length
@@ -345,16 +311,12 @@ router.post("/roadmap/proposal", requireAuth, async (req, res, next): Promise<vo
       ]);
     }
 
-    const proposalIdeas = ideas.map((idea) => ({
-      id: idea.id,
-      title: idea.title,
-      category: idea.category,
-      urgency: idea.urgency,
-      riceScore: riceByIdea.get(idea.id) ?? null,
-    }));
-    const fallback = defaultProposal(proposalIdeas);
     if (!ideas.length) {
-      res.json(GenerateRoadmapProposalResponse.parse({ ...fallback, generatedAt: new Date().toISOString(), source: "no_product_ideas" }));
+      res.json(GenerateRoadmapProposalResponse.parse({
+        initiatives: [],
+        generatedAt: new Date().toISOString(),
+        source: "no_product_ideas",
+      }));
       return;
     }
 
@@ -412,7 +374,7 @@ ${contexts.map((entry) => `IDEA ${entry.id} | RICE ${entry.riceScore ?? "unavail
       };
       res.json(GenerateRoadmapProposalResponse.parse({ ...safe, generatedAt: new Date().toISOString(), source: "ai" }));
     } catch {
-      res.json(GenerateRoadmapProposalResponse.parse({ ...fallback, generatedAt: new Date().toISOString(), source: "fallback" }));
+      throw new AppError(502, "The AI Roadmap Proposal could not be generated. Please try again.", "AI_PROPOSAL_UNAVAILABLE");
     }
   } catch (err) { next(err); }
 });

@@ -1747,7 +1747,7 @@ components:
         generatedAt: { type: string }
         source:
           type: string
-          enum: [ai, fallback, no_product_ideas]
+          enum: [ai, no_product_ideas]
 
     OpenaiConversation:
       type: object

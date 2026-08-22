@@ -221,7 +221,6 @@ export type RoadmapProposalSource = typeof RoadmapProposalSource[keyof typeof Ro
 
 export const RoadmapProposalSource = {
   ai: 'ai',
-  fallback: 'fallback',
   no_product_ideas: 'no_product_ideas',
 } as const;
 

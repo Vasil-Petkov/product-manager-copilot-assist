@@ -2849,7 +2849,7 @@ export const GenerateRoadmapProposalResponse = zod.object({
 }))
 })),
   "generatedAt": zod.string(),
-  "source": zod.enum(['ai', 'fallback', 'no_product_ideas'])
+  "source": zod.enum(['ai', 'no_product_ideas'])
 })
 
 
