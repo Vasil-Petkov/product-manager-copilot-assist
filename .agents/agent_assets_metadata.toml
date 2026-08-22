@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "cOkJEJoyxfgtG6nNyH-V8"
+uri = "file://typecheck-cleanup-26226f4.patch"
+type = "unspecified"
+title = "Typecheck cleanup patch"
+description = "Exact six-file diff from commit 26226f4."
+logical_id = "17af1540-5867-49bd-addd-45a225c04993"
+content_hash = "sha256:7f2c0a5b29bcdfbe61a7d930d7475c6449ad826fa26212a708437e9d2babc568"
+size = 9500
+mtime_ms = 1787382431925
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:6e868f5b-2ba5-4113-9e7f-1e2319975d9f/17af1540-5867-49bd-addd-45a225c04993/f52f3477-2945-447a-8687-fd6896b79dd8"
+storage_version_token = "1787382594228730"
+content_type = "application/octet-stream"
