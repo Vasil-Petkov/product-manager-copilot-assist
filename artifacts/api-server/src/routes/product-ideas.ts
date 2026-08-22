@@ -482,7 +482,7 @@ router.get("/product-ideas/similarity/summary", requireAuth, async (req, res, ne
 
 router.post("/product-ideas/:id/similarity", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const selected = await findOwnedIdea(id, req.user!.id);
@@ -513,7 +513,7 @@ Selected Product Idea:
 ${JSON.stringify(ideaForSimilarity(selected))}
 
 Candidate Product Ideas:
-${candidates.map(ideaForSimilarity).map(JSON.stringify).join("\n")}`, similarityResponseSchema) as z.infer<typeof similarityResponseSchema>;
+${candidates.map((idea) => JSON.stringify(ideaForSimilarity(idea))).join("\n")}`, similarityResponseSchema) as z.infer<typeof similarityResponseSchema>;
 
     const safeCandidates = result.candidates
       .filter((candidate) => allowedIds.has(candidate.candidateProductIdeaId))

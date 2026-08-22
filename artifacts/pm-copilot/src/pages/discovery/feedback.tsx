@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListFeedback, useCreateFeedback, getListFeedbackQueryKey } from "@workspace/api-client-react";
+import { useListFeedback, useCreateFeedback, getListFeedbackQueryKey, FeedbackInputDepartment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, Plus, Building2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-const FeedbackInputDepartment = { sales: 'sales', customer_success: 'customer_success', marketing: 'marketing', engineering: 'engineering', executive: 'executive', other: 'other' } as const;
-type FeedbackInputDepartment = typeof FeedbackInputDepartment[keyof typeof FeedbackInputDepartment];
 
 export default function StakeholderFeedback() {
   const [department, setDepartment] = useState<string>("all");

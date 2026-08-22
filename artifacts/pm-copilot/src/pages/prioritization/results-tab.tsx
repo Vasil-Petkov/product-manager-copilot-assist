@@ -43,6 +43,17 @@ const FRAMEWORKS: { id: Framework; label: string }[] = [
   { id: "opportunity", label: "Opportunity Score" },
 ];
 
+type RiceDetails = {
+  reach?: number | null;
+  impact?: number | null;
+  impactLabel?: string | null;
+  confidence?: number | null;
+  effort?: number | null;
+  effortPoints?: number | null;
+  score?: number | null;
+  explanation?: string | null;
+};
+
 function ScoreBar({ value, max }: { value: number; max: number }) {
   const pct = Math.min(Math.max((value / max) * 100, 2), 100);
   return (
@@ -117,12 +128,12 @@ export default function ResultsTab() {
                   No analyzed ideas yet. Go to the <strong>Product Ideas</strong> tab and click "Analyze with AI".
                 </td></tr>
               ) : analyzed.map((item, idx) => {
-                const rice = item.riceData as Record<string, any> | null;
+                const rice = item.riceScore as RiceDetails | null;
                 const ice  = item.iceScore as Record<string, any> | null;
                 const wd   = (item as any).weightedData as Record<string, any> | null;
                 const vve  = (item as any).vveData as Record<string, any> | null;
                 const opp  = (item as any).opportunityData as Record<string, any> | null;
-                const riceData = rice ?? (item.riceScore as any);
+                const riceData = rice;
                 const vveQ = item.vveQuadrant as string | null;
                 const quadrant = vveQ ? QUADRANT_META[vveQ] : null;
 
@@ -137,9 +148,9 @@ export default function ResultsTab() {
 
                     {fw === "rice" && (<>
                       <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.reach ?? "—"}</td>
-                      <td className="px-6 py-4 text-center text-sm">{riceData?.impactLabel ?? "—"}</td>
+                      <td className="px-6 py-4 text-center text-sm">{riceData?.impactLabel ?? riceData?.impact ?? "—"}</td>
                       <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.confidence != null ? `${riceData.confidence}%` : "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.effortPoints ?? "—"}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.effortPoints ?? riceData?.effort ?? "—"}</td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <ScoreBar value={riceData?.score ?? 0} max={500} />
@@ -211,7 +222,7 @@ export default function ResultsTab() {
                     </>)}
                   </tr>,
                   // AI explanation row
-                  fw === "rice"        && (riceData as any)?.explanation  && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={8}><ExplanationRow text={(riceData as any).explanation} /></td></tr>,
+                  fw === "rice"        && riceData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={8}><ExplanationRow text={riceData.explanation} /></td></tr>,
                   fw === "ice"         && (ice as any)?.explanation       && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={6}><ExplanationRow text={(ice as any).explanation} /></td></tr>,
                   fw === "weighted"    && wd?.explanation                  && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={7}><ExplanationRow text={wd.explanation} /></td></tr>,
                   fw === "moscow"      && (item as any).moscowData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={4}><ExplanationRow text={(item as any).moscowData.explanation} /></td></tr>,
