@@ -54,6 +54,10 @@ type RiceDetails = {
   explanation?: string | null;
 };
 
+function MissingData() {
+  return <span className="text-muted-foreground">Not available</span>;
+}
+
 function ScoreBar({ value, max }: { value: number; max: number }) {
   const pct = Math.min(Math.max((value / max) * 100, 2), 100);
   return (
@@ -77,7 +81,7 @@ export default function ResultsTab() {
   const [fw, setFw] = useState<Framework>("rice");
   const { data: items, isLoading } = useListPrioritization({});
 
-  const analyzed = items?.filter(i => i.analyzed) ?? [];
+  const opportunities = items ?? [];
 
   return (
     <div className="space-y-4">
@@ -123,11 +127,11 @@ export default function ResultsTab() {
             <tbody className="divide-y divide-border">
               {isLoading ? Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}><td colSpan={8} className="px-6 py-4"><Skeleton className="h-4 w-full" /></td></tr>
-              )) : !analyzed.length ? (
+              )) : !opportunities.length ? (
                 <tr><td colSpan={8} className="px-6 py-12 text-center text-muted-foreground text-sm">
-                  No analyzed ideas yet. Go to the <strong>Product Ideas</strong> tab and click "Analyze with AI".
+                  No Product Ideas yet.
                 </td></tr>
-              ) : analyzed.map((item, idx) => {
+              ) : opportunities.map((item, idx) => {
                 const rice = item.riceScore as RiceDetails | null;
                 const ice  = item.iceScore as Record<string, any> | null;
                 const wd   = (item as any).weightedData as Record<string, any> | null;
@@ -147,39 +151,39 @@ export default function ResultsTab() {
                     </td>
 
                     {fw === "rice" && (<>
-                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.reach ?? "—"}</td>
-                      <td className="px-6 py-4 text-center text-sm">{riceData?.impactLabel ?? riceData?.impact ?? "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.confidence != null ? `${riceData.confidence}%` : "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.effortPoints ?? riceData?.effort ?? "—"}</td>
+                       <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.reach ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center text-sm">{riceData?.impactLabel ?? riceData?.impact ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.confidence != null ? `${riceData.confidence}%` : <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.effortPoints ?? riceData?.effort ?? <MissingData />}</td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <ScoreBar value={riceData?.score ?? 0} max={500} />
-                          <span className="font-bold text-primary font-mono">{riceData?.score?.toFixed(1) ?? "—"}</span>
+                           <span className="font-bold text-primary font-mono">{riceData?.score?.toFixed(1) ?? <MissingData />}</span>
                         </div>
                       </td>
                     </>)}
 
                     {fw === "ice" && (<>
-                      <td className="px-6 py-4 text-center font-mono">{(ice as any)?.impact ?? "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono">{(ice as any)?.confidence ?? "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono">{(ice as any)?.ease ?? "—"}</td>
+                       <td className="px-6 py-4 text-center font-mono">{(ice as any)?.impact ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono">{(ice as any)?.confidence ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono">{(ice as any)?.ease ?? <MissingData />}</td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <ScoreBar value={(ice as any)?.score ?? 0} max={1000} />
-                          <span className="font-bold text-primary font-mono">{(ice as any)?.score?.toFixed(0) ?? "—"}</span>
+                           <span className="font-bold text-primary font-mono">{(ice as any)?.score?.toFixed(0) ?? <MissingData />}</span>
                         </div>
                       </td>
                     </>)}
 
                     {fw === "weighted" && (<>
-                      <td className="px-6 py-4 text-center font-mono">{wd?.customerValue ?? "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono">{wd?.revenueImpact ?? "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono">{wd?.strategicAlignment ?? "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono">{wd?.technicalComplexity ?? "—"}</td>
+                       <td className="px-6 py-4 text-center font-mono">{wd?.customerValue ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono">{wd?.revenueImpact ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono">{wd?.strategicAlignment ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono">{wd?.technicalComplexity ?? <MissingData />}</td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <ScoreBar value={item.weightedScore ?? 0} max={10} />
-                          <span className="font-bold text-primary font-mono">{item.weightedScore?.toFixed(1) ?? "—"}</span>
+                           <span className="font-bold text-primary font-mono">{item.weightedScore?.toFixed(1) ?? <MissingData />}</span>
                         </div>
                       </td>
                     </>)}
@@ -188,17 +192,17 @@ export default function ResultsTab() {
                       <td className="px-6 py-4">
                         {item.moscowCategory
                           ? <Badge variant="outline" className={MOSCOW_COLORS[item.moscowCategory] ?? ""}>{MOSCOW_LABELS[item.moscowCategory] ?? item.moscowCategory}</Badge>
-                          : <span className="text-muted-foreground">—</span>}
+                           : <MissingData />}
                       </td>
                     )}
 
                     {fw === "vve" && (<>
-                      <td className="px-6 py-4 text-center font-mono">{vve?.businessValue ?? "—"} / 10</td>
-                      <td className="px-6 py-4 text-center font-mono">{vve?.engineeringEffort ?? "—"} / 10</td>
+                       <td className="px-6 py-4 text-center font-mono">{vve?.businessValue != null ? `${vve.businessValue} / 10` : <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono">{vve?.engineeringEffort != null ? `${vve.engineeringEffort} / 10` : <MissingData />}</td>
                       <td className="px-6 py-4">
                         {quadrant
                           ? <Badge variant="outline" className={quadrant.color}>{quadrant.label}</Badge>
-                          : <span className="text-muted-foreground">—</span>}
+                           : <MissingData />}
                       </td>
                     </>)}
 
@@ -206,17 +210,17 @@ export default function ResultsTab() {
                       <td className="px-6 py-4">
                         {item.kanoCategory
                           ? <Badge variant="outline" className={KANO_COLORS[item.kanoCategory] ?? ""}>{item.kanoCategory.charAt(0).toUpperCase() + item.kanoCategory.slice(1)}</Badge>
-                          : <span className="text-muted-foreground">—</span>}
+                           : <MissingData />}
                       </td>
                     )}
 
                     {fw === "opportunity" && (<>
-                      <td className="px-6 py-4 text-center font-mono">{opp?.importance ?? "—"}</td>
-                      <td className="px-6 py-4 text-center font-mono">{opp?.satisfaction ?? "—"}</td>
+                       <td className="px-6 py-4 text-center font-mono">{opp?.importance ?? <MissingData />}</td>
+                       <td className="px-6 py-4 text-center font-mono">{opp?.satisfaction ?? <MissingData />}</td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <ScoreBar value={item.opportunityScore ?? 0} max={20} />
-                          <span className="font-bold text-primary font-mono">{item.opportunityScore?.toFixed(1) ?? "—"}</span>
+                           <span className="font-bold text-primary font-mono">{item.opportunityScore?.toFixed(1) ?? <MissingData />}</span>
                         </div>
                       </td>
                     </>)}
