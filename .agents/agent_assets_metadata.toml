@@ -14,3 +14,17 @@ mtime_ms = 1787382431925
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:6e868f5b-2ba5-4113-9e7f-1e2319975d9f/17af1540-5867-49bd-addd-45a225c04993/f52f3477-2945-447a-8687-fd6896b79dd8"
 storage_version_token = "1787382594228730"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "sfxd9FRHjWNth8aBnjPv3"
+uri = "file://pm-logo-change.patch"
+type = "unspecified"
+title = "PM logo change patch"
+description = "One-file patch for the App.tsx violet-square logo text update from C to PM."
+logical_id = "c7542aea-d87a-48ab-bef0-7e7a27918eee"
+content_hash = "sha256:77c84b422e9d771b9e8be816d73c2687aea9b488c57350fa22b131395c96ccb6"
+size = 1606
+mtime_ms = 1787393202496
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:6e868f5b-2ba5-4113-9e7f-1e2319975d9f/c7542aea-d87a-48ab-bef0-7e7a27918eee/b6f6df11-3cd0-4104-b8ea-470e9602eb49"
+storage_version_token = "1787393220028205"
+content_type = "application/octet-stream"
