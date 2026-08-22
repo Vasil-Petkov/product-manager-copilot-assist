@@ -3,12 +3,10 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Compass, Lightbulb, Database, Target, Video, Brain, Users,
   BarChart3, FlaskConical, Map as MapIcon, FileText, MessageSquare,
-  TrendingUp, Bot, Settings, ChevronDown, ChevronRight,
+  TrendingUp, Bot, Rocket, Activity, Settings, ChevronDown, ChevronRight,
   BookOpen, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 type NavItem = {
   href: string;
@@ -18,9 +16,9 @@ type NavItem = {
 };
 
 type NavModule = {
-  /** Section heading shown in the sidebar */
   label: string;
-  /** Whether the section is open on first render */
+  group: "Product Lifecycle" | "Upcoming";
+  lifecycleNumber?: number;
   defaultOpen: boolean;
   items: NavItem[];
 };
@@ -38,55 +36,93 @@ function isNavItemActive(item: NavItem, location: string): boolean {
       && location.startsWith(item.href));
 }
 
-// ─── Navigation data ─────────────────────────────────────────────────────────
-
-/** Items that always appear above the collapsible modules */
 const STANDALONE: NavItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboard },
 ];
 
-/**
- * Collapsible module sections.
- * To add a future module, append an entry here — no other changes needed.
- */
 const MODULES: NavModule[] = [
   {
     label: "Product Discovery",
+    group: "Product Lifecycle",
+    lifecycleNumber: 1,
     defaultOpen: true,
     items: [
-      { href: "/discovery",              label: "Discovery Dashboard", icon: Compass   },
-      { href: "/discovery/opportunities",label: "Product Ideas",       icon: Lightbulb },
-      { href: "/discovery/sources",      label: "Feedback Sources",    icon: Database  },
-      { href: "/discovery/competitors",  label: "Competitors",         icon: Target    },
-      { href: "/discovery/meetings",     label: "Meetings",            icon: Video     },
-      { href: "/discovery/feedback",     label: "Stakeholders",        icon: Users     },
-      { href: "/discovery/insights",     label: "AI Insights",         icon: Brain     },
+      { href: "/discovery",               label: "Discovery Dashboard", icon: Compass },
+      { href: "/discovery/opportunities", label: "Product Ideas",       icon: Lightbulb },
+      { href: "/discovery/sources",       label: "Feedback Sources",    icon: Database },
+      { href: "/discovery/competitors",   label: "Competitors",         icon: Target },
+      { href: "/discovery/meetings",      label: "Meetings",            icon: Video },
+      { href: "/discovery/feedback",      label: "Stakeholders",        icon: Users },
+      { href: "/discovery/insights",      label: "AI Insights",         icon: Brain },
     ],
   },
   {
-    label: "Product Validation",
+    label: "Prioritization",
+    group: "Product Lifecycle",
+    lifecycleNumber: 2,
+    defaultOpen: false,
+    items: [
+      { href: "/prioritization", label: "Prioritization workspace", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Validation",
+    group: "Product Lifecycle",
+    lifecycleNumber: 3,
     defaultOpen: false,
     items: [
       { href: "/validation/hypotheses", label: "Hypothesis Management", icon: FlaskConical },
-      { href: "/validation/methods",    label: "Validation Methods",    icon: BookOpen    },
+      { href: "/validation/methods",    label: "Validation Methods",    icon: BookOpen },
       { href: "/validation/results",    label: "Validation Results",    icon: ClipboardList },
     ],
   },
   {
-    label: "Planning & Analysis",
+    label: "Roadmap",
+    group: "Product Lifecycle",
+    lifecycleNumber: 4,
     defaultOpen: false,
     items: [
-      { href: "/prioritization",      label: "Prioritization",       icon: BarChart3,   },
-      { href: "/roadmap",             label: "Roadmap",              icon: MapIcon,      soon: true },
-      { href: "/documentation",       label: "Documentation",        icon: FileText,     soon: true },
-      { href: "/meeting-intelligence",label: "Meeting Intelligence", icon: MessageSquare,soon: true },
-      { href: "/analytics",           label: "Analytics",            icon: TrendingUp,   soon: true },
-      { href: "/ai-advisor",          label: "AI Advisor",           icon: Bot,          soon: true },
+      { href: "/roadmap", label: "Roadmap workspace", icon: MapIcon, soon: true },
+    ],
+  },
+  {
+    label: "Documentation",
+    group: "Product Lifecycle",
+    lifecycleNumber: 5,
+    defaultOpen: false,
+    items: [
+      { href: "/documentation", label: "Documentation workspace", icon: FileText, soon: true },
+    ],
+  },
+  {
+    label: "Go To Market",
+    group: "Product Lifecycle",
+    lifecycleNumber: 6,
+    defaultOpen: false,
+    items: [
+      { href: "/go-to-market", label: "Go To Market workspace", icon: Rocket, soon: true },
+    ],
+  },
+  {
+    label: "Post Launch Monitoring",
+    group: "Product Lifecycle",
+    lifecycleNumber: 7,
+    defaultOpen: false,
+    items: [
+      { href: "/post-launch-monitoring", label: "Post Launch Monitoring workspace", icon: Activity, soon: true },
+    ],
+  },
+  {
+    label: "Upcoming",
+    group: "Upcoming",
+    defaultOpen: false,
+    items: [
+      { href: "/meeting-intelligence", label: "Meeting Intelligence", icon: MessageSquare, soon: true },
+      { href: "/analytics",            label: "Analytics",            icon: TrendingUp, soon: true },
+      { href: "/ai-advisor",           label: "AI Advisor",           icon: Bot, soon: true },
     ],
   },
 ];
-
-// ─── Reusable collapsible module ─────────────────────────────────────────────
 
 function NavModuleSection({
   module,
@@ -103,20 +139,23 @@ function NavModuleSection({
 
   return (
     <div className="mt-4">
-      {/* Module heading — click anywhere to toggle */}
       <button
         type="button"
         onClick={onToggle}
         className="w-full flex items-center justify-between px-3 pb-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring rounded"
         aria-expanded={open}
       >
-        <span className="text-xs font-bold uppercase tracking-wider text-sidebar-foreground/60 group-hover:text-sidebar-foreground/80 transition-colors">
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sidebar-foreground/60 group-hover:text-sidebar-foreground/80 transition-colors">
+          {module.lifecycleNumber !== undefined && (
+            <span className="text-[10px] font-semibold tabular-nums text-sidebar-foreground/45">
+              {module.lifecycleNumber}
+            </span>
+          )}
           {module.label}
         </span>
         <Chevron className="size-3.5 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/60 transition-colors shrink-0" />
       </button>
 
-      {/* Submenu items */}
       {open && (
         <div className="space-y-1">
           {module.items.map((item) => {
@@ -134,12 +173,7 @@ function NavModuleSection({
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 )}
               >
-                <Icon
-                  className={cn(
-                    "size-4 shrink-0",
-                    isActive ? "text-primary" : "text-sidebar-foreground/50"
-                  )}
-                />
+                <Icon className={cn("size-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/50")} />
                 <span className="truncate">{item.label}</span>
                 {item.soon && (
                   <span className="ml-auto text-[10px] uppercase font-bold bg-sidebar-accent text-sidebar-foreground/50 px-1.5 py-0.5 rounded">
@@ -155,12 +189,8 @@ function NavModuleSection({
   );
 }
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-
-  // Initialise from each module's defaultOpen — persists for the session
   const [openModules, setOpenModules] = useState<Record<string, boolean>>(
     () => Object.fromEntries(MODULES.map((m) => [m.label, m.defaultOpen]))
   );
@@ -170,9 +200,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full bg-background font-sans text-foreground">
-      {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 bg-sidebar flex flex-col border-r border-sidebar-border h-screen sticky top-0 overflow-y-auto custom-scrollbar">
-        {/* Logo */}
         <div className="p-4 flex items-center gap-2 mb-2">
           <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl">
             C
@@ -183,7 +211,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 px-3 pb-4">
-          {/* Standalone top-level items */}
           <div className="space-y-1">
             {STANDALONE.map((item) => {
               const Icon = item.icon;
@@ -199,31 +226,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      "size-4 shrink-0",
-                      isActive ? "text-primary" : "text-sidebar-foreground/50"
-                    )}
-                  />
+                  <Icon className={cn("size-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/50")} />
                   <span className="truncate">{item.label}</span>
                 </Link>
               );
             })}
           </div>
 
-          {/* Collapsible module sections */}
-          {MODULES.map((module) => (
-            <NavModuleSection
-              key={module.label}
-              module={module}
-              location={location}
-              open={openModules[module.label] ?? module.defaultOpen}
-              onToggle={() => toggleModule(module.label)}
-            />
+          {MODULES.map((module, index) => (
+            <div key={module.label}>
+              {(index === 0 || MODULES[index - 1].group !== module.group) && (
+                <div className="mt-5 px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+                  {module.group}
+                </div>
+              )}
+              <NavModuleSection
+                module={module}
+                location={location}
+                open={openModules[module.label] ?? module.defaultOpen}
+                onToggle={() => toggleModule(module.label)}
+              />
+            </div>
           ))}
         </nav>
 
-        {/* Settings pinned at bottom */}
         <div className="p-3 border-t border-sidebar-border mt-auto shrink-0">
           <Link
             href="/settings"
@@ -240,7 +266,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto bg-background">
         {children}
       </main>
