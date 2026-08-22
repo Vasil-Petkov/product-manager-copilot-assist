@@ -1,0 +1,147 @@
+diff --git a/artifacts/api-server/src/routes/product-ideas.ts b/artifacts/api-server/src/routes/product-ideas.ts
+index 9ba068b..e779d83 100644
+--- a/artifacts/api-server/src/routes/product-ideas.ts
++++ b/artifacts/api-server/src/routes/product-ideas.ts
+@@ -482,7 +482,7 @@ router.get("/product-ideas/similarity/summary", requireAuth, async (req, res, ne
+ 
+ router.post("/product-ideas/:id/similarity", requireAuth, async (req, res, next): Promise<void> => {
+   try {
+-    const id = parseInt(req.params.id, 10);
++    const id = parseInt(String(req.params.id), 10);
+     if (isNaN(id)) throw new AppError(400, "Invalid id");
+ 
+     const selected = await findOwnedIdea(id, req.user!.id);
+@@ -513,7 +513,7 @@ Selected Product Idea:
+ ${JSON.stringify(ideaForSimilarity(selected))}
+ 
+ Candidate Product Ideas:
+-${candidates.map(ideaForSimilarity).map(JSON.stringify).join("\n")}`, similarityResponseSchema) as z.infer<typeof similarityResponseSchema>;
++${candidates.map((idea) => JSON.stringify(ideaForSimilarity(idea))).join("\n")}`, similarityResponseSchema) as z.infer<typeof similarityResponseSchema>;
+ 
+     const safeCandidates = result.candidates
+       .filter((candidate) => allowedIds.has(candidate.candidateProductIdeaId))
+diff --git a/artifacts/pm-copilot/src/pages/discovery/feedback.tsx b/artifacts/pm-copilot/src/pages/discovery/feedback.tsx
+index fd25fef..67c19ea 100644
+--- a/artifacts/pm-copilot/src/pages/discovery/feedback.tsx
++++ b/artifacts/pm-copilot/src/pages/discovery/feedback.tsx
+@@ -1,5 +1,5 @@
+ import { useState } from "react";
+-import { useListFeedback, useCreateFeedback, getListFeedbackQueryKey } from "@workspace/api-client-react";
++import { useListFeedback, useCreateFeedback, getListFeedbackQueryKey, FeedbackInputDepartment } from "@workspace/api-client-react";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+ import { Button } from "@/components/ui/button";
+@@ -13,8 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
+ import { Users, Plus, Building2, AlertCircle } from "lucide-react";
+ import { format } from "date-fns";
+ import { useToast } from "@/hooks/use-toast";
+-const FeedbackInputDepartment = { sales: 'sales', customer_success: 'customer_success', marketing: 'marketing', engineering: 'engineering', executive: 'executive', other: 'other' } as const;
+-type FeedbackInputDepartment = typeof FeedbackInputDepartment[keyof typeof FeedbackInputDepartment];
+ 
+ export default function StakeholderFeedback() {
+   const [department, setDepartment] = useState<string>("all");
+diff --git a/artifacts/pm-copilot/src/pages/discovery/insights.tsx b/artifacts/pm-copilot/src/pages/discovery/insights.tsx
+index 7a8417a..46853a0 100644
+--- a/artifacts/pm-copilot/src/pages/discovery/insights.tsx
++++ b/artifacts/pm-copilot/src/pages/discovery/insights.tsx
+@@ -28,7 +28,7 @@ export default function AiInsights() {
+   const { toast } = useToast();
+ 
+   const handleGenerate = () => {
+-    generate.mutate({}, {
++    generate.mutate(undefined, {
+       onSuccess: () => {
+         toast({ title: "Insights generated", description: "AI has processed new signals." });
+         queryClient.invalidateQueries({ queryKey: getListInsightsQueryKey() });
+diff --git a/artifacts/pm-copilot/src/pages/discovery/opportunities/detail.tsx b/artifacts/pm-copilot/src/pages/discovery/opportunities/detail.tsx
+index 71e15db..c7f894d 100644
+--- a/artifacts/pm-copilot/src/pages/discovery/opportunities/detail.tsx
++++ b/artifacts/pm-copilot/src/pages/discovery/opportunities/detail.tsx
+@@ -787,7 +787,7 @@ export default function ProductIdeaWorkspace() {
+                             {icon} {label}
+                           </h3>
+                           <p className="text-sm text-foreground/80 leading-relaxed">
+-                            {(idea as Record<string, string | null>)[field] || <span className="text-muted-foreground italic">Run AI analysis to populate</span>}
++                            {(idea as unknown as Record<string, string | null>)[field] || <span className="text-muted-foreground italic">Run AI analysis to populate</span>}
+                           </p>
+                         </div>
+                       ))}
+diff --git a/artifacts/pm-copilot/src/pages/prioritization/results-tab.tsx b/artifacts/pm-copilot/src/pages/prioritization/results-tab.tsx
+index fbd0f86..39d0127 100644
+--- a/artifacts/pm-copilot/src/pages/prioritization/results-tab.tsx
++++ b/artifacts/pm-copilot/src/pages/prioritization/results-tab.tsx
+@@ -43,6 +43,17 @@ const FRAMEWORKS: { id: Framework; label: string }[] = [
+   { id: "opportunity", label: "Opportunity Score" },
+ ];
+ 
++type RiceDetails = {
++  reach?: number | null;
++  impact?: number | null;
++  impactLabel?: string | null;
++  confidence?: number | null;
++  effort?: number | null;
++  effortPoints?: number | null;
++  score?: number | null;
++  explanation?: string | null;
++};
++
+ function ScoreBar({ value, max }: { value: number; max: number }) {
+   const pct = Math.min(Math.max((value / max) * 100, 2), 100);
+   return (
+@@ -117,12 +128,12 @@ export default function ResultsTab() {
+                   No analyzed ideas yet. Go to the <strong>Product Ideas</strong> tab and click "Analyze with AI".
+                 </td></tr>
+               ) : analyzed.map((item, idx) => {
+-                const rice = item.riceData as Record<string, any> | null;
++                const rice = item.riceScore as RiceDetails | null;
+                 const ice  = item.iceScore as Record<string, any> | null;
+                 const wd   = (item as any).weightedData as Record<string, any> | null;
+                 const vve  = (item as any).vveData as Record<string, any> | null;
+                 const opp  = (item as any).opportunityData as Record<string, any> | null;
+-                const riceData = rice ?? (item.riceScore as any);
++                const riceData = rice;
+                 const vveQ = item.vveQuadrant as string | null;
+                 const quadrant = vveQ ? QUADRANT_META[vveQ] : null;
+ 
+@@ -137,9 +148,9 @@ export default function ResultsTab() {
+ 
+                     {fw === "rice" && (<>
+                       <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.reach ?? "—"}</td>
+-                      <td className="px-6 py-4 text-center text-sm">{riceData?.impactLabel ?? "—"}</td>
++                      <td className="px-6 py-4 text-center text-sm">{riceData?.impactLabel ?? riceData?.impact ?? "—"}</td>
+                       <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.confidence != null ? `${riceData.confidence}%` : "—"}</td>
+-                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.effortPoints ?? "—"}</td>
++                      <td className="px-6 py-4 text-center font-mono text-sm">{riceData?.effortPoints ?? riceData?.effort ?? "—"}</td>
+                       <td className="px-6 py-4 text-center">
+                         <div className="flex items-center justify-center gap-2">
+                           <ScoreBar value={riceData?.score ?? 0} max={500} />
+@@ -211,7 +222,7 @@ export default function ResultsTab() {
+                     </>)}
+                   </tr>,
+                   // AI explanation row
+-                  fw === "rice"        && (riceData as any)?.explanation  && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={8}><ExplanationRow text={(riceData as any).explanation} /></td></tr>,
++                  fw === "rice"        && riceData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={8}><ExplanationRow text={riceData.explanation} /></td></tr>,
+                   fw === "ice"         && (ice as any)?.explanation       && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={6}><ExplanationRow text={(ice as any).explanation} /></td></tr>,
+                   fw === "weighted"    && wd?.explanation                  && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={7}><ExplanationRow text={wd.explanation} /></td></tr>,
+                   fw === "moscow"      && (item as any).moscowData?.explanation && <tr key={`exp-${item.opportunity.id}`} className="bg-ai/5"><td colSpan={4}><ExplanationRow text={(item as any).moscowData.explanation} /></td></tr>,
+diff --git a/artifacts/pm-copilot/src/pages/validation/components/hypothesis-form.tsx b/artifacts/pm-copilot/src/pages/validation/components/hypothesis-form.tsx
+index 0d1efce..d63760c 100644
+--- a/artifacts/pm-copilot/src/pages/validation/components/hypothesis-form.tsx
++++ b/artifacts/pm-copilot/src/pages/validation/components/hypothesis-form.tsx
+@@ -11,6 +11,7 @@ import {
+   useListOpportunities,
+   getGetValidationHypothesisQueryKey,
+   getListValidationHypothesesQueryKey,
++  getListOpportunitiesQueryKey,
+   HypothesisType,
+   HypothesisStatus,
+   type HypothesisAiSuggestion
+@@ -81,7 +82,7 @@ export function HypothesisForm({ hypothesisId, onSave, onCancel }: { hypothesisI
+     refetch: refetchIdeas,
+   } = useListOpportunities(
+     { limit: 200 },
+-    { query: { refetchOnMount: "always", staleTime: 0 } },
++    { query: { queryKey: getListOpportunitiesQueryKey({ limit: 200 }), refetchOnMount: "always", staleTime: 0 } },
+   );
+   // Validation-specific context enriches the selected idea below; it is not the
+   // source used to populate the selector.
