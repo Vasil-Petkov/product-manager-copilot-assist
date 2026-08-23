@@ -20,6 +20,7 @@ type NavModule = {
   group: "Product Lifecycle" | "Upcoming";
   lifecycleNumber?: number;
   defaultOpen: boolean;
+  soon?: boolean;
   items: NavItem[];
 };
 
@@ -81,6 +82,7 @@ const MODULES: NavModule[] = [
     group: "Product Lifecycle",
     lifecycleNumber: 4,
     defaultOpen: false,
+    soon: true,
     items: [
       { href: "/roadmap", label: "Roadmap workspace", icon: MapIcon },
     ],
@@ -90,8 +92,9 @@ const MODULES: NavModule[] = [
     group: "Product Lifecycle",
     lifecycleNumber: 5,
     defaultOpen: false,
+    soon: true,
     items: [
-      { href: "/documentation", label: "Documentation workspace", icon: FileText, soon: true },
+      { href: "/documentation", label: "Documentation workspace", icon: FileText },
     ],
   },
   {
@@ -99,8 +102,9 @@ const MODULES: NavModule[] = [
     group: "Product Lifecycle",
     lifecycleNumber: 6,
     defaultOpen: false,
+    soon: true,
     items: [
-      { href: "/go-to-market", label: "Go To Market workspace", icon: Rocket, soon: true },
+      { href: "/go-to-market", label: "Go To Market workspace", icon: Rocket },
     ],
   },
   {
@@ -108,8 +112,9 @@ const MODULES: NavModule[] = [
     group: "Product Lifecycle",
     lifecycleNumber: 7,
     defaultOpen: false,
+    soon: true,
     items: [
-      { href: "/post-launch-monitoring", label: "Post Launch Monitoring workspace", icon: Activity, soon: true },
+      { href: "/post-launch-monitoring", label: "Post Launch Monitoring workspace", icon: Activity },
     ],
   },
   {
@@ -152,6 +157,11 @@ function NavModuleSection({
             </span>
           )}
           {module.label}
+          {module.soon && (
+            <span className="text-[10px] uppercase font-bold bg-primary/20 text-primary/80 border border-primary/30 px-1.5 py-0.5 rounded-full">
+              Soon
+            </span>
+          )}
         </span>
         <Chevron className="size-3.5 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/60 transition-colors shrink-0" />
       </button>
