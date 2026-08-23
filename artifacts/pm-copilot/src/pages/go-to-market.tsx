@@ -11,9 +11,11 @@ import {
   Flag,
   Megaphone,
   Network,
+  Plus,
   Rocket,
   Sparkles,
   Target,
+  Trash2,
   Users,
 } from "lucide-react";
 import {
@@ -49,6 +51,23 @@ const launchPhases = [
   ["Launch", "Coordinate release communications, channels, and launch ownership."],
   ["Post-launch", "Capture early feedback and prepare an outcome review."],
 ];
+const okrMeasurements = [
+  "MRR",
+  "ARR",
+  "ARPU",
+  "CLV/LTV",
+  "CAC",
+  "Conversion Rate",
+  "Churn Rate",
+  "NPS",
+  "CSAT",
+  "DAU",
+  "MAU",
+  "Feature Adoption Rate",
+  "Activation Rate",
+  "Retention",
+  "Task Success Rate",
+];
 
 type ActivityDraft = {
   activity: string;
@@ -57,6 +76,24 @@ type ActivityDraft = {
   owner: string;
   timing: string;
 };
+
+type KeyResultDraft = {
+  id: number;
+  title: string;
+  target: string;
+  measurement: string;
+  timeframe: string;
+  status: string;
+};
+
+const emptyKeyResult = (id: number): KeyResultDraft => ({
+  id,
+  title: "",
+  target: "",
+  measurement: "",
+  timeframe: "",
+  status: "Not started",
+});
 
 function SourceBadge({ children }: { children: string }) {
   return (
@@ -138,6 +175,9 @@ export default function GoToMarket() {
     owner: "",
     timing: "",
   });
+  const [objectiveTitle, setObjectiveTitle] = useState("");
+  const [objectiveDescription, setObjectiveDescription] = useState("");
+  const [keyResults, setKeyResults] = useState<KeyResultDraft[]>([emptyKeyResult(1)]);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
   const { data: opportunities = [] } = useListOpportunities({});
@@ -180,6 +220,12 @@ export default function GoToMarket() {
   const toggle = (value: string, setValues: React.Dispatch<React.SetStateAction<string[]>>) => {
     setValues((current) =>
       current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+    );
+  };
+
+  const updateKeyResult = (id: number, field: keyof Omit<KeyResultDraft, "id">, value: string) => {
+    setKeyResults((current) =>
+      current.map((keyResult) => (keyResult.id === id ? { ...keyResult, [field]: value } : keyResult)),
     );
   };
 
@@ -486,6 +532,140 @@ export default function GoToMarket() {
               ))}
             </div>
           )}
+          <div className="space-y-4 border-t pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="font-semibold">OKRs</h3>
+                <p className="text-sm text-muted-foreground">
+                  Define the intended outcomes for this launch.
+                </p>
+              </div>
+              <Badge variant="outline">PM decision · this session</Badge>
+            </div>
+
+            {opportunity && (
+              <div className="rounded-md border bg-muted/20 p-3 text-sm">
+                <span className="font-medium">Product Idea context: </span>
+                {opportunity.title}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="gtm-okr-objective-title">Objective title</Label>
+              <Input
+                id="gtm-okr-objective-title"
+                value={objectiveTitle}
+                onChange={(event) => setObjectiveTitle(event.target.value)}
+                placeholder={opportunity ? `Successfully launch ${opportunity.title}` : "Successfully launch a product outcome"}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gtm-okr-objective-description">Objective description</Label>
+              <Textarea
+                id="gtm-okr-objective-description"
+                value={objectiveDescription}
+                onChange={(event) => setObjectiveDescription(event.target.value)}
+                placeholder={opportunity?.businessValue || "Describe the outcome this launch should achieve"}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Key results</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setKeyResults((current) => [...current, emptyKeyResult(Date.now())])}
+                >
+                  <Plus className="size-4" />
+                  Add key result
+                </Button>
+              </div>
+              {keyResults.map((keyResult, index) => (
+                <div key={keyResult.id} className="space-y-3 rounded-md border bg-muted/10 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">Key Result {index + 1}</p>
+                    {keyResults.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground"
+                        aria-label={`Remove Key Result ${index + 1}`}
+                        onClick={() => setKeyResults((current) => current.filter((item) => item.id !== keyResult.id))}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`gtm-okr-key-result-title-${keyResult.id}`}>Key Result title</Label>
+                    <Input
+                      id={`gtm-okr-key-result-title-${keyResult.id}`}
+                      value={keyResult.title}
+                      onChange={(event) => updateKeyResult(keyResult.id, "title", event.target.value)}
+                      placeholder="Reach 35% feature adoption"
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor={`gtm-okr-target-${keyResult.id}`}>Target value</Label>
+                      <Input
+                        id={`gtm-okr-target-${keyResult.id}`}
+                        value={keyResult.target}
+                        onChange={(event) => updateKeyResult(keyResult.id, "target", event.target.value)}
+                        placeholder="35%"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Measurement / KPI</Label>
+                      <Select
+                        value={keyResult.measurement}
+                        onValueChange={(value) => updateKeyResult(keyResult.id, "measurement", value)}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select a KPI" /></SelectTrigger>
+                        <SelectContent>
+                          {okrMeasurements.map((measurement) => (
+                            <SelectItem key={measurement} value={measurement}>{measurement}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`gtm-okr-timeframe-${keyResult.id}`}>Timeframe</Label>
+                      <Input
+                        id={`gtm-okr-timeframe-${keyResult.id}`}
+                        value={keyResult.timeframe}
+                        onChange={(event) => updateKeyResult(keyResult.id, "timeframe", event.target.value)}
+                        placeholder="By end of Q3"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status / progress</Label>
+                      <Select
+                        value={keyResult.status}
+                        onValueChange={(value) => updateKeyResult(keyResult.id, "status", value)}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Not started">Not started</SelectItem>
+                          <SelectItem value="In progress">In progress</SelectItem>
+                          <SelectItem value="At risk">At risk</SelectItem>
+                          <SelectItem value="Complete">Complete</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Live progress will be available in Post Launch Monitoring.</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md border border-primary/20 bg-primary/[0.04] p-3 text-sm text-muted-foreground">
+              These OKRs define the outcomes expected from the launch. Post Launch Monitoring will later use the associated KPIs to track actual performance against these Key Results.
+            </div>
+          </div>
         </Section>
 
         <Section
