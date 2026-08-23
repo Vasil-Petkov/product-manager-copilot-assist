@@ -1,4 +1,4 @@
-import { BookOpen, BriefcaseBusiness, FileText, ListChecks } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, FileText, ListChecks, Megaphone, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -40,6 +40,18 @@ const GROUPS: DocumentationGroup[] = [
         name: "Use Case",
         what: "Describes how a user or other actor interacts with the product to achieve a specific goal.",
         why: "Clarifies the expected user interaction and behavior.",
+      },
+    ],
+  },
+  {
+    title: "Product Definition",
+    description: "Connect validated customer needs and product strategy to a clear definition of what should be built.",
+    icon: FileText,
+    items: [
+      {
+        name: "PRD — Product Requirements Document",
+        what: "A comprehensive product requirements document that connects the customer problem, validated evidence, product solution, scope, requirements, and success criteria.",
+        why: "Creates a shared product definition that connects strategy and discovery with delivery.",
       },
     ],
   },
@@ -87,6 +99,55 @@ const GROUPS: DocumentationGroup[] = [
         name: "Non-functional Requirements",
         what: "Describes qualities and constraints such as performance, security, reliability, scalability, and usability.",
         why: "Ensures the product meets important quality and operational expectations in addition to functional needs.",
+      },
+      {
+        name: "Technical Requirements",
+        what: "Defines the technical considerations, constraints, integrations, dependencies, security, performance, and other technical expectations for the product or feature.",
+        why: "Gives engineering and technical stakeholders the context needed to understand implementation requirements and constraints.",
+      },
+    ],
+  },
+  {
+    title: "Release & Communication",
+    description: "Prepare clear product updates and release communication for customers, stakeholders, and internal teams.",
+    icon: Megaphone,
+    items: [
+      {
+        name: "Release Notes",
+        what: "Summarizes what changed in a product release, including new capabilities, improvements, fixes, and relevant customer-facing information.",
+        why: "Communicates product changes clearly to customers, stakeholders, and internal teams.",
+      },
+      {
+        name: "Stakeholder Updates",
+        what: "Provides concise updates on product progress, decisions, risks, milestones, and upcoming work for relevant stakeholders.",
+        why: "Keeps stakeholders aligned without requiring the Product Manager to repeatedly prepare the same information manually.",
+      },
+    ],
+  },
+  {
+    title: "AI Documentation Intelligence",
+    description: "Future AI-assisted capabilities to help Product Managers improve documentation quality and completeness.",
+    icon: Sparkles,
+    items: [
+      {
+        name: "AI Documentation Reviewer",
+        what: "Reviews product documentation for clarity, completeness, consistency, and potential issues.",
+        why: "Helps Product Managers improve documentation quality before sharing it with stakeholders or delivery teams.",
+      },
+      {
+        name: "Gap Analysis",
+        what: "Identifies missing information, unanswered questions, incomplete requirements, and areas that need clarification.",
+        why: "Helps Product Managers identify documentation gaps before they become delivery problems.",
+      },
+      {
+        name: "Edge Case Detection",
+        what: "Identifies potential edge cases, exceptions, unusual scenarios, and overlooked user or system conditions.",
+        why: "Helps Product Managers discover scenarios that may otherwise be missed during requirements definition.",
+      },
+      {
+        name: "Requirement Quality Scoring",
+        what: "Evaluates requirements against quality criteria such as clarity, completeness, consistency, testability, and ambiguity.",
+        why: "Gives Product Managers an early indication of requirement quality and areas that need improvement.",
       },
     ],
   },
