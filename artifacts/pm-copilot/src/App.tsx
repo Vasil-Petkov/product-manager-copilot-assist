@@ -27,6 +27,7 @@ import Prioritization from './pages/prioritization/index';
 import Roadmap from './pages/roadmap';
 import Documentation from './pages/documentation';
 import GoToMarket from './pages/go-to-market';
+import PostLaunchMonitoring from './pages/post-launch-monitoring';
 import Settings from './pages/settings';
 import ComingSoon from './pages/coming-soon';
 
@@ -110,6 +111,7 @@ function Router() {
         <Route path="/roadmap" component={Roadmap} />
         <Route path="/documentation" component={Documentation} />
         <Route path="/go-to-market" component={GoToMarket} />
+        <Route path="/post-launch-monitoring" component={PostLaunchMonitoring} />
         <Route path="/meeting-intelligence"><ComingSoon title="Meeting Intelligence" description="Deep analysis of your customer calls." /></Route>
         <Route path="/analytics"><ComingSoon title="Analytics" description="Track feature usage and impact." /></Route>
         <Route path="/ai-advisor"><ComingSoon title="AI Advisor" description="Your strategic PM partner." /></Route>
