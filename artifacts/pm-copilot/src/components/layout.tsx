@@ -82,7 +82,6 @@ const MODULES: NavModule[] = [
     group: "Product Lifecycle",
     lifecycleNumber: 4,
     defaultOpen: false,
-    soon: true,
     items: [
       { href: "/roadmap", label: "Roadmap workspace", icon: MapIcon },
     ],
@@ -92,7 +91,6 @@ const MODULES: NavModule[] = [
     group: "Product Lifecycle",
     lifecycleNumber: 5,
     defaultOpen: false,
-    soon: true,
     items: [
       { href: "/documentation", label: "Documentation workspace", icon: FileText },
     ],
@@ -102,7 +100,6 @@ const MODULES: NavModule[] = [
     group: "Product Lifecycle",
     lifecycleNumber: 6,
     defaultOpen: false,
-    soon: true,
     items: [
       { href: "/go-to-market", label: "Go To Market workspace", icon: Rocket },
     ],
@@ -112,7 +109,6 @@ const MODULES: NavModule[] = [
     group: "Product Lifecycle",
     lifecycleNumber: 7,
     defaultOpen: false,
-    soon: true,
     items: [
       { href: "/post-launch-monitoring", label: "Post Launch Monitoring workspace", icon: Activity },
     ],

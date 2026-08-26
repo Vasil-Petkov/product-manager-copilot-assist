@@ -1,5 +1,4 @@
 import { BookOpen, BriefcaseBusiness, FileText, ListChecks, Megaphone, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type DocumentationItem = {
@@ -160,7 +159,6 @@ export default function Documentation() {
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <FileText className="size-8 text-primary" />
           Documentation
-          <Badge variant="secondary">SOON</Badge>
         </h1>
         <p className="text-muted-foreground max-w-2xl">
           A structured library of product and delivery documents to help teams align on what to build and why.
