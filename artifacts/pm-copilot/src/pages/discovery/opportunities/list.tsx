@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { useListOpportunities } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useListOpportunities, useUpdateOpportunity } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,31 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, Filter, Lightbulb, BrainCircuit } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Search, Plus, Filter, Lightbulb, BrainCircuit, MoreVertical } from "lucide-react";
 import { HelpTooltip } from "@/components/help-tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 interface SimilaritySummary {
@@ -32,12 +55,37 @@ const STATUS_COLORS = {
   archived: "bg-slate-500/10 text-slate-600 border-slate-500/20"
 };
 
+const ACTIVE_PRODUCT_IDEA_STATUSES = "new,under_review,ready_for_prioritization";
+
+function ColumnHeaderTooltip({ label, text }: { label: string; text: string }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span tabIndex={0}>{label}</span>
+        </TooltipTrigger>
+        <TooltipContent
+          side="bottom"
+          align="start"
+          className="max-w-[440px] space-y-2 normal-case font-normal leading-relaxed"
+        >
+          <p>{text}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 export default function ProductIdeasList() {
   const [status, setStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<{ id: number; title: string } | null>(null);
+  const queryClient = useQueryClient();
+  const updateOpportunity = useUpdateOpportunity();
+  const { toast } = useToast();
 
   const { data: ideas, isLoading } = useListOpportunities({
-    status: status === "all" ? undefined : status,
+    status: status === "all" ? ACTIVE_PRODUCT_IDEA_STATUSES : status,
     search: search || undefined
   });
   const { data: similaritySummary = {} } = useQuery<SimilaritySummaryByIdea>({
@@ -45,6 +93,31 @@ export default function ProductIdeasList() {
     queryFn: () => customFetch<SimilaritySummaryByIdea>("/api/product-ideas/similarity/summary"),
     staleTime: 30_000,
   });
+
+  const confirmArchive = () => {
+    if (!archiveTarget) return;
+
+    updateOpportunity.mutate(
+      { id: archiveTarget.id, data: { status: "archived" } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/opportunities"] });
+          toast({
+            title: "Product Idea archived",
+            description: `"${archiveTarget.title}" is now available from the Archived tab.`,
+          });
+          setArchiveTarget(null);
+        },
+        onError: () => {
+          toast({
+            title: "Could not archive Product Idea",
+            description: "Please try again.",
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  };
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto w-full space-y-6 animate-in fade-in">
@@ -104,12 +177,55 @@ export default function ProductIdeasList() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b">
               <tr>
-                <th className="px-6 py-4 font-medium">Product Idea</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Source</th>
-                <th className="px-6 py-4 font-medium">AI Confidence</th>
-                <th className="px-6 py-4 font-medium">Similarity</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                <th className="px-6 py-4 font-medium">
+                  <ColumnHeaderTooltip
+                    label="Product Idea"
+                    text="The product opportunity or idea captured from user feedback, meetings, research, or other sources."
+                  />
+                </th>
+                <th className="px-6 py-4 font-medium">
+                  <ColumnHeaderTooltip
+                    label="Status"
+                    text="Shows where the product idea currently stands in the discovery process, such as New, Under Review, Ready, or Archived."
+                  />
+                </th>
+                <th className="px-6 py-4 font-medium">
+                  <ColumnHeaderTooltip
+                    label="Source"
+                    text="Shows where the product idea came from, such as internal input, customer feedback, surveys, support, or meetings."
+                  />
+                </th>
+                <th className="px-6 py-4 font-medium">
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0}>AI Confidence</span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="bottom"
+                        align="start"
+                        className="max-w-[440px] space-y-2 normal-case font-normal leading-relaxed"
+                      >
+                        <p>
+                          Indicates how confident the AI is that its analysis, extraction, classification, or interpretation of this product idea is accurate based on the information available. A higher percentage means the AI has stronger confidence in its analysis, while a lower percentage means the result may require more human review. This score reflects the AI&apos;s confidence in the analysis — it does not indicate the likelihood that the product idea will be successful, valuable, or worth building.
+                        </p>
+                        <p>Not analyzed means that AI analysis has not yet been performed.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </th>
+                <th className="px-6 py-4 font-medium">
+                  <ColumnHeaderTooltip
+                    label="Similarity"
+                    text="Shows whether the AI found another product idea that is similar or potentially duplicated."
+                  />
+                </th>
+                <th className="px-6 py-4 font-medium text-right">
+                  <ColumnHeaderTooltip
+                    label="Actions"
+                    text="Available actions you can take for the product idea, such as opening and reviewing its details."
+                  />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -133,7 +249,12 @@ export default function ProductIdeasList() {
                 ideas?.map((idea) => (
                   <tr key={idea.id} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{idea.title}</div>
+                      <Link
+                        href={`/discovery/opportunities/${idea.id}`}
+                        className="block font-semibold text-foreground mb-1 cursor-pointer hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors"
+                      >
+                        {idea.title}
+                      </Link>
                       <div className="text-muted-foreground line-clamp-1 max-w-xl">{idea.description}</div>
                       <div className="flex gap-2 mt-2">
                         {idea.category && <Badge variant="secondary" className="text-[10px]">{idea.category.replace(/_/g, ' ')}</Badge>}
@@ -185,11 +306,31 @@ export default function ProductIdeasList() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/discovery/opportunities/${idea.id}`}>
-                          Open
-                        </Link>
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Product idea actions"
+                            title="Product idea actions"
+                          >
+                            <MoreVertical className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/discovery/opportunities/${idea.id}`}>
+                              Open/Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setArchiveTarget({ id: idea.id, title: idea.title })}
+                          >
+                            Archive
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))
@@ -198,6 +339,31 @@ export default function ProductIdeasList() {
           </table>
         </div>
       </Card>
+
+      <AlertDialog
+        open={archiveTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !updateOpportunity.isPending) setArchiveTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive this product idea?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move the product idea to Archived. You can review archived ideas from the Archived tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateOpportunity.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmArchive}
+              disabled={updateOpportunity.isPending}
+            >
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

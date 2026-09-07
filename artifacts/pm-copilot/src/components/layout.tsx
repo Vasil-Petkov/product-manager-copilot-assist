@@ -46,7 +46,7 @@ const MODULES: NavModule[] = [
     label: "Product Discovery",
     group: "Product Lifecycle",
     lifecycleNumber: 1,
-    defaultOpen: true,
+    defaultOpen: false,
     items: [
       { href: "/discovery",               label: "Discovery Dashboard", icon: Compass },
       { href: "/discovery/opportunities", label: "Product Ideas",       icon: Lightbulb },

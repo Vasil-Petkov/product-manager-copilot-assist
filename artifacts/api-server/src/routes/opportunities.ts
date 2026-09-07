@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, and, desc, SQL } from "drizzle-orm";
+import { eq, ilike, and, desc, inArray, SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { opportunitiesTable, signalsTable, feedbackTable } from "@workspace/db";
 import { z } from "zod";
@@ -44,7 +44,14 @@ router.get("/opportunities", requireAuth, async (req, res, next): Promise<void> 
     // Discovery list aligned with Validation's getOwnedOpportunity check so
     // every idea offered by the shared selector can be attached successfully.
     const conditions: SQL[] = [eq(opportunitiesTable.userId, req.user!.id)];
-    if (status) conditions.push(eq(opportunitiesTable.status, status));
+    if (status) {
+      const statuses = status.split(",").map((value) => value.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        conditions.push(eq(opportunitiesTable.status, statuses[0]!));
+      } else if (statuses.length > 1) {
+        conditions.push(inArray(opportunitiesTable.status, statuses));
+      }
+    }
     if (category) conditions.push(eq(opportunitiesTable.category, category));
     if (source_type) conditions.push(eq(opportunitiesTable.sourceType, source_type));
     if (sentiment) conditions.push(eq(opportunitiesTable.sentiment, sentiment));

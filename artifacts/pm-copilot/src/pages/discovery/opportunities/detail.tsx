@@ -19,6 +19,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Brain, ArrowLeft, Building2, User, Clock, BarChart, ExternalLink, Archive,
   FileEdit, CheckCircle2, Lightbulb, Layers, GitMerge, Users, Zap, MessageSquare,
   Plus, Trash2, Link2, Unlink, Activity, AlertTriangle, TrendingUp, ShieldCheck, Target,
@@ -83,6 +89,13 @@ const STATUS_COLORS: Record<string, string> = {
   archived: "bg-slate-500/10 text-slate-600 border-slate-500/20",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  new: "New",
+  under_review: "Under Review",
+  ready_for_prioritization: "Ready",
+  archived: "Archived",
+};
+
 const GRADE_COLORS: Record<string, string> = {
   A: "text-emerald-600 bg-emerald-50 border-emerald-200",
   B: "text-blue-600 bg-blue-50 border-blue-200",
@@ -114,6 +127,23 @@ const TIMELINE_ICONS: Record<string, React.ReactNode> = {
   status_changed: <Activity className="size-4 text-amber-500" />,
   evidence_added: <Layers className="size-4 text-blue-400" />,
 };
+
+function ButtonTooltip({ text, children }: { text: string; children: React.ReactElement }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent
+          side="bottom"
+          align="start"
+          className="max-w-[440px] space-y-2 normal-case font-normal leading-relaxed"
+        >
+          <p>{text}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -207,11 +237,14 @@ export default function ProductIdeaWorkspace() {
   };
 
   const handleStatusChange = (status: string) => {
+    if (update.isPending) return;
+
     update.mutate({ id, data: { status } as never }, {
       onSuccess: () => {
         toast({ title: "Status updated" });
         qc.invalidateQueries({ queryKey: getGetOpportunityQueryKey(id) });
         qc.invalidateQueries({ queryKey: ["workspace", id] });
+        qc.invalidateQueries({ queryKey: ["/api/opportunities"] });
         qc.invalidateQueries({ queryKey: ["product-ideas", "similarity-summary"] });
       },
     });
@@ -362,7 +395,7 @@ export default function ProductIdeaWorkspace() {
         <div className="space-y-3 flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className={STATUS_COLORS[opp.status] || ""}>
-              {opp.status.replace(/_/g, " ")}
+              {STATUS_LABELS[opp.status] ?? opp.status.replace(/_/g, " ")}
             </Badge>
             {opp.category && (
               <Badge variant="secondary">{opp.category.replace(/_/g, " ")}</Badge>
@@ -391,24 +424,49 @@ export default function ProductIdeaWorkspace() {
         </div>
 
         <div className="flex flex-wrap gap-2 shrink-0">
-          <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
-            <FileEdit className="size-4" /> Edit
-          </Button>
-          <Button size="sm" className="gap-2 bg-ai text-ai-foreground hover:bg-ai/90"
-            onClick={handleAnalyze} disabled={analyze.isPending}>
-            <Brain className="size-4" /> {analyze.isPending ? "Analyzing…" : "Run AI"}
-          </Button>
-          {opp.status !== "ready_for_prioritization" && (
-            <Button size="sm" variant="outline" className="gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-50"
-              onClick={() => handleStatusChange("ready_for_prioritization")}>
-              <CheckCircle2 className="size-4" /> Mark Ready
+          <ButtonTooltip text="Edit the product idea details, including its title, description, category, and other available information.">
+            <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
+              <FileEdit className="size-4" /> Edit
             </Button>
+          </ButtonTooltip>
+          <ButtonTooltip
+            text={analyze.isPending
+              ? "AI analysis is currently running. Please wait for it to finish."
+              : "Run AI analysis to evaluate the product idea and generate insights such as confidence, similarity, and other discovery signals."}
+          >
+            <Button size="sm" className="gap-2 bg-ai text-ai-foreground hover:bg-ai/90"
+              onClick={handleAnalyze} disabled={analyze.isPending}>
+              <Brain className="size-4" /> {analyze.isPending ? "Analyzing…" : "Run AI"}
+            </Button>
+          </ButtonTooltip>
+          {opp.status === "new" && (
+            <ButtonTooltip text="Start the review process for this product idea. This moves the idea from New to Under Review so you can evaluate its problem, evidence, AI insights, similarity, and overall opportunity.">
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={() => handleStatusChange("under_review")}
+                disabled={update.isPending}
+              >
+                <Activity className="size-4" />
+                {update.isPending ? "Starting Review…" : "Start Review"}
+              </Button>
+            </ButtonTooltip>
+          )}
+          {opp.status !== "new" && opp.status !== "ready_for_prioritization" && (
+            <ButtonTooltip text="Mark the product idea as Ready when it has been reviewed and is ready to move forward in the product discovery process.">
+              <Button size="sm" variant="outline" className="gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-50"
+                onClick={() => handleStatusChange("ready_for_prioritization")}>
+                <CheckCircle2 className="size-4" /> Mark Ready
+              </Button>
+            </ButtonTooltip>
           )}
           {opp.status !== "archived" && (
-            <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10"
-              onClick={() => handleStatusChange("archived")}>
-              <Archive className="size-4 mr-1" /> Archive
-            </Button>
+            <ButtonTooltip text="Archive this product idea when you no longer want it in the active discovery workflow. The idea will move to Archived.">
+              <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10"
+                onClick={() => handleStatusChange("archived")}>
+                <Archive className="size-4 mr-1" /> Archive
+              </Button>
+            </ButtonTooltip>
           )}
         </div>
       </header>
@@ -424,15 +482,17 @@ export default function ProductIdeaWorkspace() {
               AI recommends potential overlaps. You decide whether ideas stay separate or merge.
             </p>
           </div>
-          <Button
-            size="sm"
-            className="shrink-0 gap-2 bg-ai text-ai-foreground hover:bg-ai/90"
-            onClick={() => findSimilar.mutate()}
-            disabled={findSimilar.isPending}
-          >
-            <Brain className="size-4" />
-            {findSimilar.isPending ? "Finding…" : "Find Similar Ideas"}
-          </Button>
+          <ButtonTooltip text="Use AI to identify other product ideas that may overlap with or be similar to this idea, helping you detect potential duplicates or related opportunities.">
+            <Button
+              size="sm"
+              className="shrink-0 gap-2 bg-ai text-ai-foreground hover:bg-ai/90"
+              onClick={() => findSimilar.mutate()}
+              disabled={findSimilar.isPending}
+            >
+              <Brain className="size-4" />
+              {findSimilar.isPending ? "Finding…" : "Find Similar Ideas"}
+            </Button>
+          </ButtonTooltip>
         </CardHeader>
         {similarityResults !== null && (
           <CardContent className="space-y-3 border-t pt-4">
