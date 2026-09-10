@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Lightbulb, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { trackEvent } from "@/lib/analytics";
 
 export default function NewProductIdea() {
   const [, navigate] = useLocation();
@@ -62,6 +63,11 @@ export default function NewProductIdea() {
       }
 
       const idea = await res.json() as { id: number };
+      trackEvent("product_idea_created", {
+        source_type: form.sourceType,
+        category: form.category || "unspecified",
+        urgency: form.urgency || "unspecified",
+      });
       toast({ title: "Product Idea created", description: `"${form.title}" has been added.` });
       navigate(`/discovery/opportunities/${idea.id}`);
     } catch (err: unknown) {

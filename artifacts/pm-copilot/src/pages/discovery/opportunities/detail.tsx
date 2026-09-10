@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { trackEvent } from "@/lib/analytics";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -212,6 +213,10 @@ export default function ProductIdeaWorkspace() {
   const saveEdit = () => {
     update.mutate({ id, data: editData as never }, {
       onSuccess: () => {
+        trackEvent("product_idea_updated", {
+          location: "product_idea_detail",
+          fields_changed: Object.keys(editData).length,
+        });
         toast({ title: "Saved", description: "Product Idea updated." });
         qc.invalidateQueries({ queryKey: getGetOpportunityQueryKey(id) });
         qc.invalidateQueries({ queryKey: ["workspace", id] });
@@ -226,6 +231,7 @@ export default function ProductIdeaWorkspace() {
   const handleAnalyze = () => {
     analyze.mutate({ id }, {
       onSuccess: () => {
+        trackEvent("product_idea_ai_analyzed", { location: "product_idea_detail" });
         toast({ title: "Analysis complete", description: "AI has updated the analysis." });
         qc.invalidateQueries({ queryKey: getGetOpportunityQueryKey(id) });
         qc.invalidateQueries({ queryKey: ["workspace", id] });
@@ -238,9 +244,15 @@ export default function ProductIdeaWorkspace() {
 
   const handleStatusChange = (status: string) => {
     if (update.isPending) return;
+    const previousStatus = opp?.status ?? "unknown";
 
     update.mutate({ id, data: { status } as never }, {
       onSuccess: () => {
+        trackEvent("product_idea_status_changed", {
+          from_status: previousStatus,
+          to_status: status,
+          location: "product_idea_detail",
+        });
         toast({ title: "Status updated" });
         qc.invalidateQueries({ queryKey: getGetOpportunityQueryKey(id) });
         qc.invalidateQueries({ queryKey: ["workspace", id] });
@@ -257,6 +269,7 @@ export default function ProductIdeaWorkspace() {
         body: JSON.stringify({ content, author: "PM" }),
       }),
     onSuccess: () => {
+      trackEvent("product_idea_comment_added", { location: "product_idea_detail" });
       setNewComment("");
       qc.invalidateQueries({ queryKey: ["comments", id] });
       qc.invalidateQueries({ queryKey: ["timeline", id] });
@@ -273,6 +286,7 @@ export default function ProductIdeaWorkspace() {
     mutationFn: (meetingId: number) =>
       customFetch(`/api/product-ideas/${id}/link-meeting/${meetingId}`, { method: "POST" }),
     onSuccess: () => {
+      trackEvent("product_idea_meeting_linked", { location: "product_idea_detail" });
       setShowLinkMeeting(false);
       qc.invalidateQueries({ queryKey: ["workspace", id] });
       qc.invalidateQueries({ queryKey: ["timeline", id] });
@@ -290,6 +304,7 @@ export default function ProductIdeaWorkspace() {
     mutationFn: (competitorId: number) =>
       customFetch(`/api/product-ideas/${id}/link-competitor/${competitorId}`, { method: "POST" }),
     onSuccess: () => {
+      trackEvent("product_idea_competitor_linked", { location: "product_idea_detail" });
       setShowLinkCompetitor(false);
       qc.invalidateQueries({ queryKey: ["workspace", id] });
       qc.invalidateQueries({ queryKey: ["timeline", id] });
@@ -306,6 +321,10 @@ export default function ProductIdeaWorkspace() {
   const findSimilar = useMutation({
     mutationFn: () => customFetch<SimilarityResponse>(`/api/product-ideas/${id}/similarity`, { method: "POST" }),
     onSuccess: (data) => {
+      trackEvent("product_idea_similarity_checked", {
+        match_count: data.candidates.length,
+        location: "product_idea_detail",
+      });
       setSimilarityResults(data.candidates);
       toast({
         title: data.candidates.length ? "Similar ideas found" : "No strong matches found",
@@ -334,6 +353,10 @@ export default function ProductIdeaWorkspace() {
       }),
     onSuccess: (data) => {
       const currentWasArchived = data.primaryProductIdea.id !== id;
+      trackEvent("product_idea_merged", {
+        current_idea_archived: currentWasArchived,
+        location: "product_idea_detail",
+      });
       setSimilarityResults((results) => results?.filter((candidate) => candidate.candidateProductIdeaId !== mergeCandidate?.candidateProductIdeaId) ?? null);
       setMergeCandidate(null);
       setMergePrimaryId(null);
@@ -562,7 +585,13 @@ export default function ProductIdeaWorkspace() {
       </Card>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(tab) => {
+          setActiveTab(tab);
+          trackEvent("product_idea_section_selected", { section: tab });
+        }}
+      >
         <TabsList className="w-full justify-start overflow-x-auto border-b rounded-none bg-transparent h-auto p-0 gap-0">
           {[
             { value: "overview", label: "Overview", icon: <Lightbulb className="size-4" /> },
