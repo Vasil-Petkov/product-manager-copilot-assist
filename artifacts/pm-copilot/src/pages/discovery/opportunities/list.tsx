@@ -35,6 +35,7 @@ import { Search, Plus, Filter, Lightbulb, BrainCircuit, MoreVertical } from "luc
 import { HelpTooltip } from "@/components/help-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { trackEvent } from "@/lib/analytics";
 
 interface SimilaritySummary {
   analyzedAt: string;
@@ -79,7 +80,7 @@ function ColumnHeaderTooltip({ label, text }: { label: string; text: string }) {
 export default function ProductIdeasList() {
   const [status, setStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [archiveTarget, setArchiveTarget] = useState<{ id: number; title: string } | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<{ id: number; title: string; status: string } | null>(null);
   const queryClient = useQueryClient();
   const updateOpportunity = useUpdateOpportunity();
   const { toast } = useToast();
@@ -102,6 +103,11 @@ export default function ProductIdeasList() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["/api/opportunities"] });
+          trackEvent("product_idea_status_changed", {
+            from_status: archiveTarget.status,
+            to_status: "archived",
+            location: "product_ideas_list",
+          });
           toast({
             title: "Product Idea archived",
             description: `"${archiveTarget.title}" is now available from the Archived tab.`,
@@ -146,7 +152,14 @@ export default function ProductIdeasList() {
       </header>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-2 rounded-lg border shadow-sm">
-        <Tabs value={status} onValueChange={setStatus} className="w-full sm:w-auto overflow-x-auto">
+        <Tabs
+          value={status}
+          onValueChange={(nextStatus) => {
+            setStatus(nextStatus);
+            trackEvent("product_ideas_filter_selected", { status: nextStatus });
+          }}
+          className="w-full sm:w-auto overflow-x-auto"
+        >
           <TabsList className="bg-transparent h-10 p-1">
             <TabsTrigger value="all" className="data-[state=active]:bg-secondary">All</TabsTrigger>
             <TabsTrigger value="new" className="data-[state=active]:bg-secondary">New</TabsTrigger>
@@ -325,7 +338,7 @@ export default function ProductIdeasList() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
-                            onSelect={() => setArchiveTarget({ id: idea.id, title: idea.title })}
+                            onSelect={() => setArchiveTarget({ id: idea.id, title: idea.title, status: idea.status })}
                           >
                             Archive
                           </DropdownMenuItem>
