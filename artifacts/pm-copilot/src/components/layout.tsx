@@ -211,8 +211,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl">
             PM
           </div>
-          <span className="font-semibold text-sidebar-foreground tracking-tight text-lg">
-            Copilot Assist
+          <span className="font-semibold text-sidebar-foreground tracking-tight text-sm leading-tight">
+            Product Manager AI Assist
           </span>
         </div>
 

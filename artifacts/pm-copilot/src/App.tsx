@@ -60,7 +60,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         <div className="text-center space-y-6 max-w-sm px-6">
           <div className="space-y-2">
             <div className="size-12 rounded-xl bg-primary mx-auto flex items-center justify-center font-bold text-2xl text-primary-foreground">PM</div>
-            <h1 className="text-2xl font-bold tracking-tight">Copilot Assist</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Product Manager AI Assist</h1>
             <p className="text-muted-foreground text-sm">AI-powered product discovery for modern PMs.</p>
           </div>
           <button

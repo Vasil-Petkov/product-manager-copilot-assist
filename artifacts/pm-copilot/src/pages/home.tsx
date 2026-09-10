@@ -47,7 +47,7 @@ export default function Home() {
       <Card className="border-primary/20 shadow-sm">
         <CardHeader className="space-y-2">
           <CardTitle className="text-xl">Your Product Lifecycle</CardTitle>
-          <CardDescription>From idea to impact. Copilot Assist guides Product Managers through every step.</CardDescription>
+          <CardDescription>From idea to impact. Product Manager AI Assist guides Product Managers through every step.</CardDescription>
         </CardHeader>
         <CardContent>
           <ol className="flex flex-col items-stretch xl:flex-row xl:items-stretch">
@@ -93,7 +93,9 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-foreground leading-relaxed">{summary?.summary}</p>
+              <p className="text-foreground leading-relaxed">
+                {summary?.summary?.replace("PM Copilot Assist", "Product Manager AI Assist")}
+              </p>
               {summary?.urgentItems && summary.urgentItems.length > 0 && (
                 <div className="flex gap-2 bg-destructive/10 text-destructive p-3 rounded-md text-sm">
                   <ShieldAlert className="size-4 shrink-0 mt-0.5" />
