@@ -13,7 +13,8 @@
     "migrate:validation-phase2": "node ./scripts/run-validation-phase2-migration.mjs",
     "migrate:validation-experiments": "node ./scripts/run-validation-experiments-migration.mjs",
     "migrate:validation-results": "node ./scripts/run-validation-results-migration.mjs",
-    "migrate:roadmap": "node ./scripts/run-roadmap-migration.mjs"
+    "migrate:roadmap": "node ./scripts/run-roadmap-migration.mjs",
+    "migrate:documentation": "node ./scripts/run-documentation-migration.mjs"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

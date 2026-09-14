@@ -1559,6 +1559,132 @@ paths:
               schema:
                 $ref: "#/components/schemas/RoadmapProposal"
 
+  # --- Documentation ---
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documentation]
+      summary: List the authenticated user's product documents
+      parameters:
+        - name: productIdeaId
+          in: query
+          schema: { type: number }
+        - name: documentType
+          in: query
+          schema: { $ref: "#/components/schemas/DocumentType" }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/DocumentStatus" }
+      responses:
+        "200":
+          description: Documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Document" }
+  /documents/generate:
+    post:
+      operationId: generateDocument
+      tags: [documentation]
+      summary: Generate a document from product context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GenerateDocumentRequest" }
+      responses:
+        "201":
+          description: Generated document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+  /documents/context/{productIdeaId}/{documentType}:
+    get:
+      operationId: getDocumentContext
+      tags: [documentation]
+      summary: Get the sanitized Product Manager documentation context
+      parameters:
+        - { $ref: "#/components/parameters/ProductIdeaId" }
+        - { $ref: "#/components/parameters/DocumentTypePath" }
+      responses:
+        "200":
+          description: Exact sanitized context sent to the documentation AI
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentContext" }
+        "404": { description: Product Idea not found }
+  /documents/{id}:
+    get:
+      operationId: getDocument
+      tags: [documentation]
+      summary: Get a document
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+      responses:
+        "200":
+          description: Document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+        "404": { description: Not found }
+    patch:
+      operationId: updateDocument
+      tags: [documentation]
+      summary: Update a document draft
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateDocumentRequest" }
+      responses:
+        "200":
+          description: Updated document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+        "409": { description: Revision conflict or accepted document }
+  /documents/{id}/regenerate:
+    post:
+      operationId: regenerateDocument
+      tags: [documentation]
+      summary: Replace a non-accepted document with a new AI generation
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegenerateDocumentRequest" }
+      responses:
+        "200":
+          description: Regenerated document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+        "409": { description: Revision conflict or accepted document }
+  /documents/{id}/accept:
+    post:
+      operationId: acceptDocument
+      tags: [documentation]
+      summary: Accept a document as the official document
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AcceptDocumentRequest" }
+      responses:
+        "200":
+          description: Accepted document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+        "409": { description: Another official document already exists }
+
 components:
   parameters:
     Id:
@@ -1567,6 +1693,18 @@ components:
       required: true
       schema:
         type: number
+    ProductIdeaId:
+      name: productIdeaId
+      in: path
+      required: true
+      schema:
+        type: number
+    DocumentTypePath:
+      name: documentType
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/DocumentType"
     AuthorizationSessionHeader:
       name: Authorization
       in: header
@@ -1583,6 +1721,103 @@ components:
         type: string
 
   schemas:
+    DocumentStatus:
+      type: string
+      enum: [draft, ai_generated, in_review, accepted]
+    DocumentType:
+      type: string
+      enum: [mrd, brd, business_case, use_case, prd, initiative, epic, user_story, acceptance_criteria, definition_of_ready, definition_of_done, functional_requirements, nonfunctional_requirements, technical_requirements, release_notes, stakeholder_updates]
+    DocumentGenerationMetadata:
+      type: object
+      required: [promptVersion, model, generatedAt, contextSummary]
+      properties:
+        promptVersion: { type: string }
+        model: { type: string }
+        generatedAt: { type: string, format: date-time }
+        contextSummary: { type: string }
+    Document:
+      type: object
+      required: [id, productIdeaId, userId, documentType, status, title, content, generationMetadata, humanEdited, revision, acceptedAt, acceptedBy, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        productIdeaId: { type: number }
+        userId: { type: string }
+        documentType: { $ref: "#/components/schemas/DocumentType" }
+        status: { $ref: "#/components/schemas/DocumentStatus" }
+        title: { type: string }
+        content: { type: string }
+        generationMetadata:
+          oneOf:
+            - { $ref: "#/components/schemas/DocumentGenerationMetadata" }
+            - { type: "null" }
+        humanEdited: { type: boolean }
+        revision: { type: number, minimum: 1, multipleOf: 1 }
+        acceptedAt: { type: ["string", "null"], format: date-time }
+        acceptedBy: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    GenerateDocumentRequest:
+      type: object
+      required: [productIdeaId, documentType]
+      properties:
+        productIdeaId: { type: number }
+        documentType: { $ref: "#/components/schemas/DocumentType" }
+    UpdateDocumentRequest:
+      type: object
+      required: [expectedRevision]
+      properties:
+        expectedRevision: { type: number, minimum: 1, multipleOf: 1 }
+        title: { type: string, minLength: 1, maxLength: 500 }
+        content: { type: string, minLength: 1 }
+    RegenerateDocumentRequest:
+      type: object
+      required: [expectedRevision, confirmReplace]
+      properties:
+        expectedRevision: { type: number, minimum: 1, multipleOf: 1 }
+        confirmReplace: { type: boolean, const: true }
+    AcceptDocumentRequest:
+      type: object
+      required: [expectedRevision]
+      properties:
+        expectedRevision: { type: number, minimum: 1, multipleOf: 1 }
+    DocumentContext:
+      type: object
+      required: [productIdeaId, documentType, requiredSections, productIdea, evidenceSummary]
+      properties:
+        productIdeaId: { type: number }
+        documentType: { $ref: "#/components/schemas/DocumentType" }
+        requiredSections:
+          type: array
+          items: { type: string }
+        productIdea:
+          type: object
+          required: [title, description, category, sourceType, status, problemStatement, rootCause, customerProblem, suggestedSolution, businessValue, customerValue, estimatedCustomerImpact, estimatedBusinessImpact, dependencies, openQuestions, aiSummary, aiRecommendation]
+          properties:
+            title: { type: string }
+            description: { type: string }
+            category: { type: ["string", "null"] }
+            sourceType: { type: string }
+            status: { type: string }
+            problemStatement: { type: ["string", "null"] }
+            rootCause: { type: ["string", "null"] }
+            customerProblem: { type: ["string", "null"] }
+            suggestedSolution: { type: ["string", "null"] }
+            businessValue: { type: ["string", "null"] }
+            customerValue: { type: ["string", "null"] }
+            estimatedCustomerImpact: { type: ["string", "null"] }
+            estimatedBusinessImpact: { type: ["string", "null"] }
+            dependencies: { type: ["string", "null"] }
+            openQuestions: { type: array, items: { type: string } }
+            aiSummary: { type: ["string", "null"] }
+            aiRecommendation: { type: ["string", "null"] }
+        evidenceSummary:
+          type: object
+          required: [signalsCount, stakeholderFeedbackCount, linkedMeetingsCount, linkedCompetitorsCount]
+          properties:
+            signalsCount: { type: number, minimum: 0, multipleOf: 1 }
+            stakeholderFeedbackCount: { type: number, minimum: 0, multipleOf: 1 }
+            linkedMeetingsCount: { type: number, minimum: 0, multipleOf: 1 }
+            linkedCompetitorsCount: { type: number, minimum: 0, multipleOf: 1 }
     RoadmapStatus:
       type: string
       enum: [planned, in_progress, completed, at_risk, on_hold]
