@@ -13,6 +13,7 @@ import prioritizationRouter from "./prioritization";
 import validationRouter from "./validation";
 import roadmapRouter from "./roadmap";
 import openaiConversationsRouter from "./openai-conversations";
+import documentsRouter from "./documents";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(prioritizationRouter);
 router.use(validationRouter);
 router.use(roadmapRouter);
 router.use(openaiConversationsRouter);
+router.use(documentsRouter);
 
 export default router;

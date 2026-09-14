@@ -163,12 +163,16 @@ export interface ProductContext {
  *
  * @throws Error if the idea does not exist.
  */
-export async function buildProductContext(ideaId: number): Promise<ProductContext> {
+export async function buildProductContext(ideaId: number, userId?: string): Promise<ProductContext> {
   // 1. Load the core idea first (fail fast if not found)
   const [idea] = await db
     .select()
     .from(opportunitiesTable)
-    .where(eq(opportunitiesTable.id, ideaId));
+    .where(
+      userId
+        ? and(eq(opportunitiesTable.id, ideaId), eq(opportunitiesTable.userId, userId))
+        : eq(opportunitiesTable.id, ideaId),
+    );
 
   if (!idea) {
     throw new Error(`Product Idea ${ideaId} not found`);
@@ -236,13 +240,23 @@ export async function buildProductContext(ideaId: number): Promise<ProductContex
   const [linkedMeetingsRaw, linkedCompetitorsRaw, relatedIdeasRaw] = await Promise.all([
     meetingIds.length > 0
       ? db.select().from(meetingsTable).where(
-          or(...meetingIds.map((id) => eq(meetingsTable.id, id)))!
+          userId
+            ? and(
+              or(...meetingIds.map((id) => eq(meetingsTable.id, id)))!,
+              eq(meetingsTable.userId, userId),
+            )
+            : or(...meetingIds.map((id) => eq(meetingsTable.id, id)))!,
         )
       : Promise.resolve([]),
 
     competitorIds.length > 0
       ? db.select().from(competitorsTable).where(
-          or(...competitorIds.map((id) => eq(competitorsTable.id, id)))!
+          userId
+            ? and(
+              or(...competitorIds.map((id) => eq(competitorsTable.id, id)))!,
+              eq(competitorsTable.userId, userId),
+            )
+            : or(...competitorIds.map((id) => eq(competitorsTable.id, id)))!,
         )
       : Promise.resolve([]),
 
@@ -259,11 +273,17 @@ export async function buildProductContext(ideaId: number): Promise<ProductContex
           .where(
             and(
               eq(opportunitiesTable.category, idea.category),
+              ...(userId ? [eq(opportunitiesTable.userId, userId)] : []),
               // Exclude self
             )
           )
           .limit(6)
-      : Promise.resolve([]),
+      : Promise.resolve([] as Array<{
+        id: number;
+        title: string;
+        status: string;
+        category: string | null;
+      }>),
   ]);
 
   // 4. Build evidence summary

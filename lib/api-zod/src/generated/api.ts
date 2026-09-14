@@ -2853,3 +2853,295 @@ export const GenerateRoadmapProposalResponse = zod.object({
 })
 
 
+/**
+ * @summary List the authenticated user's product documents
+ */
+export const ListDocumentsQueryParams = zod.object({
+  "productIdeaId": zod.coerce.number().optional(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates']).optional(),
+  "status": zod.enum(['draft', 'ai_generated', 'in_review', 'accepted']).optional()
+})
+
+export const listDocumentsResponseRevisionMultipleOf = 1;
+
+
+
+export const ListDocumentsResponseItem = zod.object({
+  "id": zod.number(),
+  "productIdeaId": zod.number(),
+  "userId": zod.string(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates']),
+  "status": zod.enum(['draft', 'ai_generated', 'in_review', 'accepted']),
+  "title": zod.string(),
+  "content": zod.string(),
+  "generationMetadata": zod.union([zod.object({
+  "promptVersion": zod.string(),
+  "model": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "contextSummary": zod.string()
+}),zod.null()]),
+  "humanEdited": zod.boolean(),
+  "revision": zod.number().min(1).multipleOf(listDocumentsResponseRevisionMultipleOf),
+  "acceptedAt": zod.coerce.date().nullable(),
+  "acceptedBy": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListDocumentsResponse = zod.array(ListDocumentsResponseItem)
+
+
+/**
+ * @summary Generate a document from product context
+ */
+export const GenerateDocumentBody = zod.object({
+  "productIdeaId": zod.number(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates'])
+})
+
+export const generateDocumentResponseRevisionMultipleOf = 1;
+
+
+
+export const GenerateDocumentResponse = zod.object({
+  "id": zod.number(),
+  "productIdeaId": zod.number(),
+  "userId": zod.string(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates']),
+  "status": zod.enum(['draft', 'ai_generated', 'in_review', 'accepted']),
+  "title": zod.string(),
+  "content": zod.string(),
+  "generationMetadata": zod.union([zod.object({
+  "promptVersion": zod.string(),
+  "model": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "contextSummary": zod.string()
+}),zod.null()]),
+  "humanEdited": zod.boolean(),
+  "revision": zod.number().min(1).multipleOf(generateDocumentResponseRevisionMultipleOf),
+  "acceptedAt": zod.coerce.date().nullable(),
+  "acceptedBy": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get the sanitized Product Manager documentation context
+ */
+export const GetDocumentContextParams = zod.object({
+  "productIdeaId": zod.coerce.number(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates'])
+})
+
+export const getDocumentContextResponseEvidenceSummarySignalsCountMin = 0;
+export const getDocumentContextResponseEvidenceSummarySignalsCountMultipleOf = 1;
+
+export const getDocumentContextResponseEvidenceSummaryStakeholderFeedbackCountMin = 0;
+export const getDocumentContextResponseEvidenceSummaryStakeholderFeedbackCountMultipleOf = 1;
+
+export const getDocumentContextResponseEvidenceSummaryLinkedMeetingsCountMin = 0;
+export const getDocumentContextResponseEvidenceSummaryLinkedMeetingsCountMultipleOf = 1;
+
+export const getDocumentContextResponseEvidenceSummaryLinkedCompetitorsCountMin = 0;
+export const getDocumentContextResponseEvidenceSummaryLinkedCompetitorsCountMultipleOf = 1;
+
+
+
+export const GetDocumentContextResponse = zod.object({
+  "productIdeaId": zod.number(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates']),
+  "requiredSections": zod.array(zod.string()),
+  "productIdea": zod.object({
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.string().nullable(),
+  "sourceType": zod.string(),
+  "status": zod.string(),
+  "problemStatement": zod.string().nullable(),
+  "rootCause": zod.string().nullable(),
+  "customerProblem": zod.string().nullable(),
+  "suggestedSolution": zod.string().nullable(),
+  "businessValue": zod.string().nullable(),
+  "customerValue": zod.string().nullable(),
+  "estimatedCustomerImpact": zod.string().nullable(),
+  "estimatedBusinessImpact": zod.string().nullable(),
+  "dependencies": zod.string().nullable(),
+  "openQuestions": zod.array(zod.string()),
+  "aiSummary": zod.string().nullable(),
+  "aiRecommendation": zod.string().nullable()
+}),
+  "evidenceSummary": zod.object({
+  "signalsCount": zod.number().min(getDocumentContextResponseEvidenceSummarySignalsCountMin).multipleOf(getDocumentContextResponseEvidenceSummarySignalsCountMultipleOf),
+  "stakeholderFeedbackCount": zod.number().min(getDocumentContextResponseEvidenceSummaryStakeholderFeedbackCountMin).multipleOf(getDocumentContextResponseEvidenceSummaryStakeholderFeedbackCountMultipleOf),
+  "linkedMeetingsCount": zod.number().min(getDocumentContextResponseEvidenceSummaryLinkedMeetingsCountMin).multipleOf(getDocumentContextResponseEvidenceSummaryLinkedMeetingsCountMultipleOf),
+  "linkedCompetitorsCount": zod.number().min(getDocumentContextResponseEvidenceSummaryLinkedCompetitorsCountMin).multipleOf(getDocumentContextResponseEvidenceSummaryLinkedCompetitorsCountMultipleOf)
+})
+})
+
+
+/**
+ * @summary Get a document
+ */
+export const GetDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const getDocumentResponseRevisionMultipleOf = 1;
+
+
+
+export const GetDocumentResponse = zod.object({
+  "id": zod.number(),
+  "productIdeaId": zod.number(),
+  "userId": zod.string(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates']),
+  "status": zod.enum(['draft', 'ai_generated', 'in_review', 'accepted']),
+  "title": zod.string(),
+  "content": zod.string(),
+  "generationMetadata": zod.union([zod.object({
+  "promptVersion": zod.string(),
+  "model": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "contextSummary": zod.string()
+}),zod.null()]),
+  "humanEdited": zod.boolean(),
+  "revision": zod.number().min(1).multipleOf(getDocumentResponseRevisionMultipleOf),
+  "acceptedAt": zod.coerce.date().nullable(),
+  "acceptedBy": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a document draft
+ */
+export const UpdateDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateDocumentBodyExpectedRevisionMultipleOf = 1;
+
+export const updateDocumentBodyTitleMax = 500;
+
+
+
+
+export const UpdateDocumentBody = zod.object({
+  "expectedRevision": zod.number().min(1).multipleOf(updateDocumentBodyExpectedRevisionMultipleOf),
+  "title": zod.string().min(1).max(updateDocumentBodyTitleMax).optional(),
+  "content": zod.string().min(1).optional()
+})
+
+export const updateDocumentResponseRevisionMultipleOf = 1;
+
+
+
+export const UpdateDocumentResponse = zod.object({
+  "id": zod.number(),
+  "productIdeaId": zod.number(),
+  "userId": zod.string(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates']),
+  "status": zod.enum(['draft', 'ai_generated', 'in_review', 'accepted']),
+  "title": zod.string(),
+  "content": zod.string(),
+  "generationMetadata": zod.union([zod.object({
+  "promptVersion": zod.string(),
+  "model": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "contextSummary": zod.string()
+}),zod.null()]),
+  "humanEdited": zod.boolean(),
+  "revision": zod.number().min(1).multipleOf(updateDocumentResponseRevisionMultipleOf),
+  "acceptedAt": zod.coerce.date().nullable(),
+  "acceptedBy": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Replace a non-accepted document with a new AI generation
+ */
+export const RegenerateDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const regenerateDocumentBodyExpectedRevisionMultipleOf = 1;
+
+
+
+export const RegenerateDocumentBody = zod.object({
+  "expectedRevision": zod.number().min(1).multipleOf(regenerateDocumentBodyExpectedRevisionMultipleOf),
+  "confirmReplace": zod.literal(true)
+})
+
+export const regenerateDocumentResponseRevisionMultipleOf = 1;
+
+
+
+export const RegenerateDocumentResponse = zod.object({
+  "id": zod.number(),
+  "productIdeaId": zod.number(),
+  "userId": zod.string(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates']),
+  "status": zod.enum(['draft', 'ai_generated', 'in_review', 'accepted']),
+  "title": zod.string(),
+  "content": zod.string(),
+  "generationMetadata": zod.union([zod.object({
+  "promptVersion": zod.string(),
+  "model": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "contextSummary": zod.string()
+}),zod.null()]),
+  "humanEdited": zod.boolean(),
+  "revision": zod.number().min(1).multipleOf(regenerateDocumentResponseRevisionMultipleOf),
+  "acceptedAt": zod.coerce.date().nullable(),
+  "acceptedBy": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Accept a document as the official document
+ */
+export const AcceptDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const acceptDocumentBodyExpectedRevisionMultipleOf = 1;
+
+
+
+export const AcceptDocumentBody = zod.object({
+  "expectedRevision": zod.number().min(1).multipleOf(acceptDocumentBodyExpectedRevisionMultipleOf)
+})
+
+export const acceptDocumentResponseRevisionMultipleOf = 1;
+
+
+
+export const AcceptDocumentResponse = zod.object({
+  "id": zod.number(),
+  "productIdeaId": zod.number(),
+  "userId": zod.string(),
+  "documentType": zod.enum(['mrd', 'brd', 'business_case', 'use_case', 'prd', 'initiative', 'epic', 'user_story', 'acceptance_criteria', 'definition_of_ready', 'definition_of_done', 'functional_requirements', 'nonfunctional_requirements', 'technical_requirements', 'release_notes', 'stakeholder_updates']),
+  "status": zod.enum(['draft', 'ai_generated', 'in_review', 'accepted']),
+  "title": zod.string(),
+  "content": zod.string(),
+  "generationMetadata": zod.union([zod.object({
+  "promptVersion": zod.string(),
+  "model": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "contextSummary": zod.string()
+}),zod.null()]),
+  "humanEdited": zod.boolean(),
+  "revision": zod.number().min(1).multipleOf(acceptDocumentResponseRevisionMultipleOf),
+  "acceptedAt": zod.coerce.date().nullable(),
+  "acceptedBy": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+

@@ -5,6 +5,144 @@
  * Product Manager Copilot Assist API
  * OpenAPI spec version: 0.1.0
  */
+export type DocumentStatus = typeof DocumentStatus[keyof typeof DocumentStatus];
+
+
+export const DocumentStatus = {
+  draft: 'draft',
+  ai_generated: 'ai_generated',
+  in_review: 'in_review',
+  accepted: 'accepted',
+} as const;
+
+export type DocumentType = typeof DocumentType[keyof typeof DocumentType];
+
+
+export const DocumentType = {
+  mrd: 'mrd',
+  brd: 'brd',
+  business_case: 'business_case',
+  use_case: 'use_case',
+  prd: 'prd',
+  initiative: 'initiative',
+  epic: 'epic',
+  user_story: 'user_story',
+  acceptance_criteria: 'acceptance_criteria',
+  definition_of_ready: 'definition_of_ready',
+  definition_of_done: 'definition_of_done',
+  functional_requirements: 'functional_requirements',
+  nonfunctional_requirements: 'nonfunctional_requirements',
+  technical_requirements: 'technical_requirements',
+  release_notes: 'release_notes',
+  stakeholder_updates: 'stakeholder_updates',
+} as const;
+
+export interface DocumentGenerationMetadata {
+  promptVersion: string;
+  model: string;
+  generatedAt: string;
+  contextSummary: string;
+}
+
+export interface Document {
+  id: number;
+  productIdeaId: number;
+  userId: string;
+  documentType: DocumentType;
+  status: DocumentStatus;
+  title: string;
+  content: string;
+  generationMetadata: DocumentGenerationMetadata | null;
+  humanEdited: boolean;
+  /** @minimum 1 */
+  revision: number;
+  /** @nullable */
+  acceptedAt: string | null;
+  /** @nullable */
+  acceptedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GenerateDocumentRequest {
+  productIdeaId: number;
+  documentType: DocumentType;
+}
+
+export interface UpdateDocumentRequest {
+  /** @minimum 1 */
+  expectedRevision: number;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  title?: string;
+  /** @minLength 1 */
+  content?: string;
+}
+
+export interface RegenerateDocumentRequest {
+  /** @minimum 1 */
+  expectedRevision: number;
+  confirmReplace: true;
+}
+
+export interface AcceptDocumentRequest {
+  /** @minimum 1 */
+  expectedRevision: number;
+}
+
+export type DocumentContextProductIdea = {
+  title: string;
+  description: string;
+  /** @nullable */
+  category: string | null;
+  sourceType: string;
+  status: string;
+  /** @nullable */
+  problemStatement: string | null;
+  /** @nullable */
+  rootCause: string | null;
+  /** @nullable */
+  customerProblem: string | null;
+  /** @nullable */
+  suggestedSolution: string | null;
+  /** @nullable */
+  businessValue: string | null;
+  /** @nullable */
+  customerValue: string | null;
+  /** @nullable */
+  estimatedCustomerImpact: string | null;
+  /** @nullable */
+  estimatedBusinessImpact: string | null;
+  /** @nullable */
+  dependencies: string | null;
+  openQuestions: string[];
+  /** @nullable */
+  aiSummary: string | null;
+  /** @nullable */
+  aiRecommendation: string | null;
+};
+
+export type DocumentContextEvidenceSummary = {
+  /** @minimum 0 */
+  signalsCount: number;
+  /** @minimum 0 */
+  stakeholderFeedbackCount: number;
+  /** @minimum 0 */
+  linkedMeetingsCount: number;
+  /** @minimum 0 */
+  linkedCompetitorsCount: number;
+};
+
+export interface DocumentContext {
+  productIdeaId: number;
+  documentType: DocumentType;
+  requiredSections: string[];
+  productIdea: DocumentContextProductIdea;
+  evidenceSummary: DocumentContextEvidenceSummary;
+}
+
 export type RoadmapStatus = typeof RoadmapStatus[keyof typeof RoadmapStatus];
 
 
@@ -1523,5 +1661,11 @@ export type GetOpenaiConversation404 = {
 
 export type DeleteOpenaiConversation404 = {
   error: string;
+};
+
+export type ListDocumentsParams = {
+productIdeaId?: number;
+documentType?: DocumentType;
+status?: DocumentStatus;
 };
 

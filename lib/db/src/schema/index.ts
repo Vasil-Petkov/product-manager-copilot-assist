@@ -14,3 +14,4 @@ export * from "./messages";
 export * from "./idea-comments";
 export * from "./idea-timeline";
 export * from "./idea-relations";
+export * from "./documents";
