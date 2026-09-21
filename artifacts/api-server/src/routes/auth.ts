@@ -125,7 +125,7 @@ async function upsertUser(claims: Record<string, unknown>) {
 router.get('/auth/user', (req: Request, res: Response) => {
   res.json(
     GetCurrentAuthUserResponse.parse({
-      user: req.isAuthenticated() ? req.user : null,
+      user: req.isDemoSession() ? null : req.isAuthenticated() ? req.user : null,
     }),
   );
 });

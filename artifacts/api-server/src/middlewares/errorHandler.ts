@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
-import { logger } from "../lib/logger";
+import { logger } from "../lib/logger.ts";
 
 export class AppError extends Error {
   constructor(
@@ -31,6 +31,12 @@ export class ValidationError extends AppError {
 export class UnauthorizedError extends AppError {
   constructor(message = "Unauthorized") {
     super(401, message, "UNAUTHORIZED");
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = "Forbidden") {
+    super(403, message, "FORBIDDEN");
   }
 }
 

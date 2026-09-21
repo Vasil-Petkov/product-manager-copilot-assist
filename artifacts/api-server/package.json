@@ -7,6 +7,7 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "pnpm --filter @workspace/db run migrate:validation-phase2 && pnpm --filter @workspace/db run migrate:validation-experiments && pnpm --filter @workspace/db run migrate:validation-results && pnpm --filter @workspace/db run migrate:roadmap && pnpm --filter @workspace/db run migrate:documentation && node --enable-source-maps ./dist/index.mjs",
+    "test": "node --experimental-transform-types --test src/tests/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

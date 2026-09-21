@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import { authMiddleware } from "./middlewares/authMiddleware";
+import { demoSessionMiddleware } from "./middlewares/demoSession";
 import router from "./routes";
 import { errorHandler } from "./middlewares/errorHandler";
 import { logger } from "./lib/logger";
@@ -33,6 +34,7 @@ app.use(cors({ credentials: true, origin: true }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(demoSessionMiddleware);
 app.use(authMiddleware);
 
 app.use("/api", router);
