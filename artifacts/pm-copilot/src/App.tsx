@@ -7,7 +7,7 @@ import NotFound from '@/pages/not-found';
 import { AppLayout } from './components/layout';
 import { useAuth } from '@workspace/replit-auth-web';
 import { AccessSelection } from './demo/access-selection';
-import { installDemoApi } from './demo/demo-api';
+import { DemoApiCleanup, installDemoApi } from './demo/demo-api';
 
 import Home from './pages/home';
 import DiscoveryDashboard from './pages/discovery/dashboard';
@@ -83,12 +83,18 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function Router({
   demoMode = false,
   onExitDemo,
+  demoExitError,
 }: {
   demoMode?: boolean;
-  onExitDemo?: () => void;
+  onExitDemo?: () => void | Promise<void>;
+  demoExitError?: string | null;
 }) {
   return (
-    <AppLayout demoMode={demoMode} onExitDemo={onExitDemo}>
+    <AppLayout
+      demoMode={demoMode}
+      onExitDemo={onExitDemo}
+      demoExitError={demoExitError}
+    >
       <Switch>
         <Route path="/" component={Home} />
         
@@ -136,33 +142,70 @@ function App() {
     const stored = window.sessionStorage.getItem('pm-copilot-access-mode');
     return stored === 'demo' || stored === 'full' ? stored : 'selection';
   });
-  const [demoCleanup, setDemoCleanup] = useState<(() => void) | null>(() => {
+  const [demoCleanup, setDemoCleanup] = useState<DemoApiCleanup | null>(() => {
     const stored = window.sessionStorage.getItem('pm-copilot-access-mode');
     return stored === 'demo' ? installDemoApi() : null;
   });
+  const [demoStarting, setDemoStarting] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [demoExitError, setDemoExitError] = useState<string | null>(null);
 
-  const chooseDemo = () => {
-    const cleanup = installDemoApi();
-    setDemoCleanup(() => cleanup);
-    window.sessionStorage.setItem('pm-copilot-access-mode', 'demo');
-    queryClient.clear();
-    setAccessMode('demo');
+  const chooseDemo = async () => {
+    if (demoStarting) return;
+
+    setAccessError(null);
+    setDemoExitError(null);
+    setDemoStarting(true);
+    try {
+      const response = await window.fetch('/api/demo/session', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Demo session request failed with HTTP ${response.status}`);
+      }
+
+      const cleanup = installDemoApi();
+      setDemoCleanup(() => cleanup);
+      window.sessionStorage.setItem('pm-copilot-access-mode', 'demo');
+      queryClient.clear();
+      setAccessMode('demo');
+    } catch {
+      setAccessError('Public Demo is temporarily unavailable. Please try again.');
+    } finally {
+      setDemoStarting(false);
+    }
   };
 
   const chooseFullWorkspace = () => {
     demoCleanup?.();
     setDemoCleanup(null);
+    setAccessError(null);
+    setDemoExitError(null);
     window.sessionStorage.setItem('pm-copilot-access-mode', 'full');
     queryClient.clear();
     setAccessMode('full');
   };
 
-  const exitDemo = () => {
-    demoCleanup?.();
-    setDemoCleanup(null);
-    window.sessionStorage.removeItem('pm-copilot-access-mode');
-    queryClient.clear();
-    setAccessMode('selection');
+  const exitDemo = async () => {
+    const cleanup = demoCleanup;
+    try {
+      const response = await (cleanup?.originalFetch ?? window.fetch)('/api/demo/session/exit', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Demo session exit failed with HTTP ${response.status}`);
+      }
+
+      cleanup?.();
+      setDemoCleanup(null);
+      window.sessionStorage.removeItem('pm-copilot-access-mode');
+      queryClient.clear();
+      setAccessMode('selection');
+    } catch {
+      setDemoExitError('Unable to exit Demo Mode. Please try again.');
+    }
   };
 
   return (
@@ -173,9 +216,15 @@ function App() {
             <AccessSelection
               onChooseDemo={chooseDemo}
               onChooseFull={chooseFullWorkspace}
+              demoStarting={demoStarting}
+              error={accessError}
             />
           ) : accessMode === 'demo' ? (
-            <Router demoMode onExitDemo={exitDemo} />
+            <Router
+              demoMode
+              onExitDemo={exitDemo}
+              demoExitError={demoExitError}
+            />
           ) : (
             <AuthGate>
               <Router />

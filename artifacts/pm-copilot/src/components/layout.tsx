@@ -200,10 +200,12 @@ export function AppLayout({
   children,
   demoMode = false,
   onExitDemo,
+  demoExitError,
 }: {
   children: React.ReactNode;
   demoMode?: boolean;
-  onExitDemo?: () => void;
+  onExitDemo?: () => void | Promise<void>;
+  demoExitError?: string | null;
 }) {
   const [location] = useLocation();
   const [openModules, setOpenModules] = useState<Record<string, boolean>>(
@@ -282,7 +284,9 @@ export function AppLayout({
       </aside>
 
       <main className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto bg-background">
-        {demoMode && onExitDemo && <DemoBanner onExit={onExitDemo} />}
+        {demoMode && onExitDemo && (
+          <DemoBanner onExit={onExitDemo} error={demoExitError} />
+        )}
         {children}
       </main>
     </div>

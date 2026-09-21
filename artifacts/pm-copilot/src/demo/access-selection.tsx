@@ -5,9 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export function AccessSelection({
   onChooseDemo,
   onChooseFull,
+  demoStarting = false,
+  error,
 }: {
-  onChooseDemo: () => void;
+  onChooseDemo: () => void | Promise<void>;
   onChooseFull: () => void;
+  demoStarting?: boolean;
+  error?: string | null;
 }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
@@ -44,9 +48,10 @@ export function AccessSelection({
                 <li>• No registration</li>
                 <li>• Fictional demo data only</li>
               </ul>
-              <Button className="w-full" onClick={onChooseDemo}>
-                Public Demo <ArrowRight className="ml-2 size-4" />
+              <Button className="w-full" onClick={onChooseDemo} disabled={demoStarting}>
+                {demoStarting ? "Starting Demo…" : "Public Demo"} <ArrowRight className="ml-2 size-4" />
               </Button>
+              {error && <p className="text-sm text-destructive">{error}</p>}
             </CardContent>
           </Card>
 

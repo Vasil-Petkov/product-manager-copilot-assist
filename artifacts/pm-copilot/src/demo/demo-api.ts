@@ -9,6 +9,10 @@ import {
 
 type DemoState = ReturnType<typeof createDemoState>;
 
+export type DemoApiCleanup = (() => void) & {
+  originalFetch: typeof window.fetch;
+};
+
 const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), {
     status,
@@ -289,7 +293,9 @@ export function installDemoApi() {
     return json(Array.isArray(state.opportunities) ? [] : {});
   };
 
-  return () => {
+  const cleanup = (() => {
     window.fetch = originalFetch;
-  };
+  }) as DemoApiCleanup;
+  cleanup.originalFetch = originalFetch;
+  return cleanup;
 }
