@@ -2,9 +2,12 @@ import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useState } from 'react';
 import NotFound from '@/pages/not-found';
 import { AppLayout } from './components/layout';
 import { useAuth } from '@workspace/replit-auth-web';
+import { AccessSelection } from './demo/access-selection';
+import { installDemoApi } from './demo/demo-api';
 
 import Home from './pages/home';
 import DiscoveryDashboard from './pages/discovery/dashboard';
@@ -77,9 +80,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function Router() {
+function Router({
+  demoMode = false,
+  onExitDemo,
+}: {
+  demoMode?: boolean;
+  onExitDemo?: () => void;
+}) {
   return (
-    <AppLayout>
+    <AppLayout demoMode={demoMode} onExitDemo={onExitDemo}>
       <Switch>
         <Route path="/" component={Home} />
         
@@ -123,13 +132,55 @@ function Router() {
 }
 
 function App() {
+  const [accessMode, setAccessMode] = useState<'selection' | 'demo' | 'full'>(() => {
+    const stored = window.sessionStorage.getItem('pm-copilot-access-mode');
+    return stored === 'demo' || stored === 'full' ? stored : 'selection';
+  });
+  const [demoCleanup, setDemoCleanup] = useState<(() => void) | null>(() => {
+    const stored = window.sessionStorage.getItem('pm-copilot-access-mode');
+    return stored === 'demo' ? installDemoApi() : null;
+  });
+
+  const chooseDemo = () => {
+    const cleanup = installDemoApi();
+    setDemoCleanup(() => cleanup);
+    window.sessionStorage.setItem('pm-copilot-access-mode', 'demo');
+    queryClient.clear();
+    setAccessMode('demo');
+  };
+
+  const chooseFullWorkspace = () => {
+    demoCleanup?.();
+    setDemoCleanup(null);
+    window.sessionStorage.setItem('pm-copilot-access-mode', 'full');
+    queryClient.clear();
+    setAccessMode('full');
+  };
+
+  const exitDemo = () => {
+    demoCleanup?.();
+    setDemoCleanup(null);
+    window.sessionStorage.removeItem('pm-copilot-access-mode');
+    queryClient.clear();
+    setAccessMode('selection');
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <AuthGate>
-            <Router />
-          </AuthGate>
+          {accessMode === 'selection' ? (
+            <AccessSelection
+              onChooseDemo={chooseDemo}
+              onChooseFull={chooseFullWorkspace}
+            />
+          ) : accessMode === 'demo' ? (
+            <Router demoMode onExitDemo={exitDemo} />
+          ) : (
+            <AuthGate>
+              <Router />
+            </AuthGate>
+          )}
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

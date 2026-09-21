@@ -7,6 +7,7 @@ import {
   BookOpen, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DemoBanner } from "../demo/demo-banner";
 
 type NavItem = {
   href: string;
@@ -195,7 +196,15 @@ function NavModuleSection({
   );
 }
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export function AppLayout({
+  children,
+  demoMode = false,
+  onExitDemo,
+}: {
+  children: React.ReactNode;
+  demoMode?: boolean;
+  onExitDemo?: () => void;
+}) {
   const [location] = useLocation();
   const [openModules, setOpenModules] = useState<Record<string, boolean>>(
     () => Object.fromEntries(MODULES.map((m) => [m.label, m.defaultOpen]))
@@ -273,6 +282,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto bg-background">
+        {demoMode && onExitDemo && <DemoBanner onExit={onExitDemo} />}
         {children}
       </main>
     </div>
