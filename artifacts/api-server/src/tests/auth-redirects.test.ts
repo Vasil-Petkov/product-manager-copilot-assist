@@ -61,11 +61,20 @@ test("OIDC redirects retain library parameters but enforce the discovered HTTPS 
     "https://evil.invalid/authorize", "http://identity.example.com/authorize",
     "https://identity.example.com/wrong", "https://user@identity.example.com/authorize",
     "https://identity.example.com/authorize#fragment",
+    "https://identity.example.com.evil.invalid/authorize",
+    "https://identity.example.com/authorize/extra",
+    "https://identity.example.com/%2fauthorize",
   ]) {
     assert.throws(() => redirectToOidcEndpoint(res, new URL(target), config.serverMetadata().authorization_endpoint));
   }
   assert.throws(() => redirectToOidcEndpoint(res, login, undefined));
   assert.throws(() => redirectToOidcEndpoint(res, new URL("http://identity.example.com/authorize"), "http://identity.example.com/authorize"));
+  // Never forward a caller-controlled href, even when the other URL properties
+  // appear valid. Build the destination's authority/path from discovery.
+  Object.defineProperty(login, "href", { value: "https://evil.invalid/phishing" });
+  redirectToOidcEndpoint(res, login, config.serverMetadata().authorization_endpoint);
+  assert.equal(new URL(location).origin, "https://identity.example.com");
+  assert.equal(new URL(location).pathname, "/authorize");
 });
 
 test("HTTP redirect Location stays same-origin for attacker-controlled return paths", async () => {
