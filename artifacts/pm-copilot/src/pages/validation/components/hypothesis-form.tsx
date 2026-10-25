@@ -38,7 +38,7 @@ import {
 import { Link } from "wouter";
 
 const formSchema = z.object({
-  opportunityId: z.coerce.number().min(1, "Product Idea is required"),
+  opportunityId: z.coerce.number<number>().min(1, "Product Idea is required"),
   hypothesisType: z.nativeEnum(HypothesisType),
   statement: z.string().min(5, "Statement is required (at least 5 characters)"),
   assumption: z.string().nullable().optional(),
