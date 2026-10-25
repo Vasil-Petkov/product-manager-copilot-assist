@@ -2,10 +2,12 @@ import { pgTable, text, serial, timestamp, boolean, integer } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { opportunitiesTable } from "./opportunities";
+import { usersTable } from "./auth";
 
 export const signalsTable = pgTable("signals", {
   id: serial("id").primaryKey(),
   content: text("content").notNull(),
+  userId: text("user_id").references(() => usersTable.id, { onDelete: "set null" }),
   sourceType: text("source_type").notNull(),
   sourcePlatform: text("source_platform"),
   author: text("author"),

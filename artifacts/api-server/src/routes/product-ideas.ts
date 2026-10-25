@@ -21,6 +21,9 @@ import { validate } from "../middlewares/validate";
 import { AppError, NotFoundError } from "../middlewares/errorHandler";
 import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
 
+import { parseRouteInteger } from "../lib/route-params";
+import { ownedFeedback, ownedSignal, ownedHypothesis, requireOwnedIdea } from "../lib/ownership";
+
 const router: IRouter = Router();
 
 // ─── Internal Timeline Helper ─────────────────────────────────────────────────
@@ -47,10 +50,10 @@ export async function recordTimeline(
 
 router.get("/product-ideas/:id/workspace", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const ctx = await buildProductContext(id);
+    const ctx = await buildProductContext(id, req.user!.id);
 
     res.json({
       idea: { ...ctx.idea, tags: ctx.idea.tags ?? [] },
@@ -77,9 +80,10 @@ const createCommentSchema = z.object({
 
 router.get("/product-ideas/:id/comments", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
+    await requireOwnedIdea(id, req.user!.id);
     const comments = await db.select().from(ideaCommentsTable)
       .where(eq(ideaCommentsTable.ideaId, id))
       .orderBy(desc(ideaCommentsTable.createdAt));
@@ -94,10 +98,11 @@ router.post(
   validate(createCommentSchema),
   async (req, res, next): Promise<void> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseRouteInteger(req.params.id);
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof createCommentSchema>;
+      await requireOwnedIdea(id, req.user!.id);
 
       const [comment] = await db.insert(ideaCommentsTable).values({
         ideaId: id,
@@ -114,12 +119,13 @@ router.post(
 
 router.delete("/product-ideas/:id/comments/:commentId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const commentId = parseInt(req.params.commentId, 10);
+    const id = parseRouteInteger(req.params.id);
+    const commentId = parseRouteInteger(req.params.commentId);
     if (isNaN(id) || isNaN(commentId)) throw new AppError(400, "Invalid id");
 
+    await requireOwnedIdea(id, req.user!.id);
     const [deleted] = await db.delete(ideaCommentsTable)
-      .where(eq(ideaCommentsTable.id, commentId))
+      .where(and(eq(ideaCommentsTable.id, commentId), eq(ideaCommentsTable.ideaId, id)))
       .returning();
 
     if (!deleted) throw new NotFoundError("Comment");
@@ -131,9 +137,10 @@ router.delete("/product-ideas/:id/comments/:commentId", requireAuth, async (req,
 
 router.get("/product-ideas/:id/timeline", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
+    await requireOwnedIdea(id, req.user!.id);
     const events = await db.select().from(ideaTimelineTable)
       .where(eq(ideaTimelineTable.ideaId, id))
       .orderBy(desc(ideaTimelineTable.createdAt));
@@ -146,10 +153,10 @@ router.get("/product-ideas/:id/timeline", requireAuth, async (req, res, next): P
 
 router.get("/product-ideas/:id/health", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const ctx = await buildProductContext(id);
+    const ctx = await buildProductContext(id, req.user!.id);
     res.json(ctx.health);
   } catch (err) { next(err); }
 });
@@ -158,12 +165,13 @@ router.get("/product-ideas/:id/health", requireAuth, async (req, res, next): Pro
 
 router.post("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const ideaId = parseInt(req.params.id, 10);
-    const meetingId = parseInt(req.params.meetingId, 10);
+    const ideaId = parseRouteInteger(req.params.id);
+    const meetingId = parseRouteInteger(req.params.meetingId);
     if (isNaN(ideaId) || isNaN(meetingId)) throw new AppError(400, "Invalid id");
+    await requireOwnedIdea(ideaId, req.user!.id);
 
     const [meeting] = await db.select({ title: meetingsTable.title })
-      .from(meetingsTable).where(eq(meetingsTable.id, meetingId));
+      .from(meetingsTable).where(and(eq(meetingsTable.id, meetingId), eq(meetingsTable.userId, req.user!.id)));
     if (!meeting) throw new NotFoundError("Meeting");
 
     // Upsert (ignore duplicate)
@@ -179,12 +187,16 @@ router.post("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (re
 
 router.delete("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const ideaId = parseInt(req.params.id, 10);
-    const meetingId = parseInt(req.params.meetingId, 10);
+    const ideaId = parseRouteInteger(req.params.id);
+    const meetingId = parseRouteInteger(req.params.meetingId);
     if (isNaN(ideaId) || isNaN(meetingId)) throw new AppError(400, "Invalid id");
+    await requireOwnedIdea(ideaId, req.user!.id);
+    const [meeting] = await db.select({ id: meetingsTable.id }).from(meetingsTable)
+      .where(and(eq(meetingsTable.id, meetingId), eq(meetingsTable.userId, req.user!.id)));
+    if (!meeting) throw new NotFoundError("Meeting");
 
     await db.delete(ideaMeetingsTable)
-      .where(eq(ideaMeetingsTable.ideaId, ideaId));
+      .where(and(eq(ideaMeetingsTable.ideaId, ideaId), eq(ideaMeetingsTable.meetingId, meetingId)));
 
     res.json({ unlinked: true });
   } catch (err) { next(err); }
@@ -194,12 +206,13 @@ router.delete("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (
 
 router.post("/product-ideas/:id/link-competitor/:competitorId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const ideaId = parseInt(req.params.id, 10);
-    const competitorId = parseInt(req.params.competitorId, 10);
+    const ideaId = parseRouteInteger(req.params.id);
+    const competitorId = parseRouteInteger(req.params.competitorId);
     if (isNaN(ideaId) || isNaN(competitorId)) throw new AppError(400, "Invalid id");
+    await requireOwnedIdea(ideaId, req.user!.id);
 
     const [competitor] = await db.select({ name: competitorsTable.name })
-      .from(competitorsTable).where(eq(competitorsTable.id, competitorId));
+      .from(competitorsTable).where(and(eq(competitorsTable.id, competitorId), eq(competitorsTable.userId, req.user!.id)));
     if (!competitor) throw new NotFoundError("Competitor");
 
     await db.insert(ideaCompetitorsTable)
@@ -214,12 +227,16 @@ router.post("/product-ideas/:id/link-competitor/:competitorId", requireAuth, asy
 
 router.delete("/product-ideas/:id/link-competitor/:competitorId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const ideaId = parseInt(req.params.id, 10);
-    const competitorId = parseInt(req.params.competitorId, 10);
+    const ideaId = parseRouteInteger(req.params.id);
+    const competitorId = parseRouteInteger(req.params.competitorId);
     if (isNaN(ideaId) || isNaN(competitorId)) throw new AppError(400, "Invalid id");
+    await requireOwnedIdea(ideaId, req.user!.id);
+    const [competitor] = await db.select({ id: competitorsTable.id }).from(competitorsTable)
+      .where(and(eq(competitorsTable.id, competitorId), eq(competitorsTable.userId, req.user!.id)));
+    if (!competitor) throw new NotFoundError("Competitor");
 
     await db.delete(ideaCompetitorsTable)
-      .where(eq(ideaCompetitorsTable.ideaId, ideaId));
+      .where(and(eq(ideaCompetitorsTable.ideaId, ideaId), eq(ideaCompetitorsTable.competitorId, competitorId)));
 
     res.json({ unlinked: true });
   } catch (err) { next(err); }
@@ -623,7 +640,7 @@ router.post("/product-ideas/merge", requireAuth, validate(mergeIdeasSchema), asy
       ] = await Promise.all([
         tx.update(validationHypotheses)
           .set({ opportunityId: keep.id })
-          .where(eq(validationHypotheses.opportunityId, merge.id))
+          .where(and(eq(validationHypotheses.opportunityId, merge.id), ownedHypothesis(req.user!.id)))
           .returning({ id: validationHypotheses.id }),
         tx.update(prioritizationScoresTable)
           .set({ opportunityId: keep.id })
@@ -631,11 +648,11 @@ router.post("/product-ideas/merge", requireAuth, validate(mergeIdeasSchema), asy
           .returning({ id: prioritizationScoresTable.id }),
         tx.update(signalsTable)
           .set({ opportunityId: keep.id })
-          .where(eq(signalsTable.opportunityId, merge.id))
+          .where(and(eq(signalsTable.opportunityId, merge.id), ownedSignal(req.user!.id)))
           .returning({ id: signalsTable.id }),
         tx.update(feedbackTable)
           .set({ opportunityId: keep.id })
-          .where(eq(feedbackTable.opportunityId, merge.id))
+          .where(and(eq(feedbackTable.opportunityId, merge.id), ownedFeedback(req.user!.id)))
           .returning({ id: feedbackTable.id }),
         tx.update(ideaCommentsTable)
           .set({ ideaId: keep.id })
@@ -647,11 +664,13 @@ router.post("/product-ideas/merge", requireAuth, validate(mergeIdeasSchema), asy
           .returning({ id: ideaTimelineTable.id }),
         tx.update(ideaMeetingsTable)
           .set({ ideaId: keep.id })
-          .where(eq(ideaMeetingsTable.ideaId, merge.id))
+          .where(and(eq(ideaMeetingsTable.ideaId, merge.id),
+            inArray(ideaMeetingsTable.meetingId, tx.select({ id: meetingsTable.id }).from(meetingsTable).where(eq(meetingsTable.userId, req.user!.id)))))
           .returning({ id: ideaMeetingsTable.id }),
         tx.update(ideaCompetitorsTable)
           .set({ ideaId: keep.id })
-          .where(eq(ideaCompetitorsTable.ideaId, merge.id))
+          .where(and(eq(ideaCompetitorsTable.ideaId, merge.id),
+            inArray(ideaCompetitorsTable.competitorId, tx.select({ id: competitorsTable.id }).from(competitorsTable).where(eq(competitorsTable.userId, req.user!.id)))))
           .returning({ id: ideaCompetitorsTable.id }),
         ...(primaryAnalysis ? [] : [
           tx.update(prioritizationAnalysisTable)
@@ -719,11 +738,11 @@ router.get("/product-ideas/search", requireAuth, async (req, res, next): Promise
         category: opportunitiesTable.category,
         urgency: opportunitiesTable.urgency,
       }).from(opportunitiesTable)
-        .where(or(
+        .where(and(eq(opportunitiesTable.userId, req.user!.id), or(
           ilike(opportunitiesTable.title, `%${q}%`),
           ilike(opportunitiesTable.description, `%${q}%`),
           ilike(opportunitiesTable.aiSummary, `%${q}%`),
-        ))
+        )))
         .orderBy(desc(opportunitiesTable.createdAt))
         .limit(20),
 
@@ -732,7 +751,7 @@ router.get("/product-ideas/search", requireAuth, async (req, res, next): Promise
         title: meetingsTable.title,
         meetingDate: meetingsTable.meetingDate,
       }).from(meetingsTable)
-        .where(ilike(meetingsTable.title, `%${q}%`))
+        .where(and(eq(meetingsTable.userId, req.user!.id), ilike(meetingsTable.title, `%${q}%`)))
         .orderBy(desc(meetingsTable.meetingDate))
         .limit(10),
     ]);

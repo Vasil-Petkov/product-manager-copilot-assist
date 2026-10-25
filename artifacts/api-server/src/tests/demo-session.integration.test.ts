@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import http from "node:http";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import { count, eq } from "drizzle-orm";
 import {
   aiInsightsTable,
@@ -18,6 +18,7 @@ import {
   messages,
   meetingsTable,
   opportunitiesTable,
+  pool,
   prioritizationAnalysisTable,
   prioritizationScoresTable,
   roadmapInitiativesTable,
@@ -29,6 +30,11 @@ import {
   validationHypotheses,
 } from "@workspace/db";
 import app from "../app.ts";
+
+// The integration suite owns its pool; otherwise Node's test process stays open.
+after(async () => {
+  await pool.end();
+});
 
 type RequestOptions = {
   method?: string;

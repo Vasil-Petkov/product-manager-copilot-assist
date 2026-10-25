@@ -3,15 +3,16 @@ name: Sprint 2.6 Architecture Decisions
 description: Key decisions and gotchas from Sprint 2.6 stabilization — auth, Context Engine, Zod, FK migrations, response shapes.
 ---
 
-## Zod in api-server routes
-- api-server uses Zod v3; import from "zod" (not "zod/v4")
-- "zod" must be added to api-server's package.json dependencies
-- esbuild bundles zod inline — it is NOT in the external list
+## Validator compatibility
+Use Zod v4 for validation, including transitive consumers; the earlier decision
+to retain v3 and prohibit OpenAPI email/URI formats for compatibility is obsolete.
 
-## OpenAPI codegen — format: email/uri
-- **Never** add format: email or format: uri to OpenAPI schemas
-- Orval generates z.email() / z.url() (Zod v4 only) — breaks typecheck for Zod v3
-- Fix: use plain type: string without format annotation
+**Why:** The collection-validation memory exhaustion advisory has no patched v3
+release. Retaining v3 for codegen compatibility would leave the security issue open.
+
+**How to apply:** Do not reintroduce v3 to resolve schema or form typing problems.
+Keep form resolvers compatible with v4 and test existing request coercion and
+structured validation errors when changing validation dependencies.
 
 ## replit-auth-web lib — import.meta.env
 - lib/replit-auth-web has no vite devDependency, so vite/client types are unavailable

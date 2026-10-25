@@ -2,3 +2,6 @@
 - [Sprint 2.6 arch decisions](sprint-2-6-arch.md) — auth, Context Engine, zod/codegen quirks, FK migration, and response shape rules.
 - [GitHub branch updates](github-branch-updates.md) — when Git push credentials fail, the installed GitHub connection can update an existing branch through the Git database API.
 - [Git branch rules](git-branch-rules.md) — Prioritization module work goes to feature/prioritization only; never push to main directly.
+- [Node test resolution](node-test-resolution.md) — native type stripping does not resolve this workspace’s bundler-style imports; use a declared test loader.
+- [Ownership test safety](ownership-test-safety.md) — isolate destructive fixtures in a fresh cluster; static scans do not prove cross-user data isolation.
+- [Legacy ownership policy](legacy-ownership-policy.md) — preserve unknown owners; parent relationships may authorize evidence, but never guess or silently backfill ownership.

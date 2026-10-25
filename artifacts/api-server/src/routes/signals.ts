@@ -7,6 +7,9 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 
+import { parseRouteInteger } from "../lib/route-params";
+import { ownedSignal } from "../lib/ownership";
+
 const router: IRouter = Router();
 
 const createSignalSchema = z.object({
@@ -40,15 +43,12 @@ router.get("/signals", requireAuth, async (req, res, next): Promise<void> => {
     const take = Math.min(parseInt(limit, 10) || 50, 200);
     const skip = parseInt(offset, 10) || 0;
 
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [ownedSignal(req.user!.id)];
     if (source_type) conditions.push(eq(signalsTable.sourceType, source_type));
     if (processed !== undefined) conditions.push(eq(signalsTable.processed, processed === "true"));
 
-    const signals = conditions.length > 0
-      ? await db.select().from(signalsTable).where(and(...conditions))
-          .orderBy(signalsTable.createdAt).limit(take).offset(skip)
-      : await db.select().from(signalsTable)
-          .orderBy(signalsTable.createdAt).limit(take).offset(skip);
+    const signals = await db.select().from(signalsTable).where(and(...conditions))
+      .orderBy(signalsTable.createdAt).limit(take).offset(skip);
 
     res.json(signals);
   } catch (err) { next(err); }
@@ -65,6 +65,7 @@ router.post(
       const body = req.body as z.infer<typeof createSignalSchema>;
 
       const [signal] = await db.insert(signalsTable).values({
+        userId: req.user!.id,
         content: body.content,
         sourceType: body.sourceType,
         sourcePlatform: body.sourcePlatform ?? null,
@@ -92,7 +93,7 @@ router.post(
       const [updatedSignal] = await db
         .update(signalsTable)
         .set({ processed: true, opportunityId: opp!.id })
-        .where(eq(signalsTable.id, signal!.id))
+        .where(and(eq(signalsTable.id, signal!.id), eq(signalsTable.userId, req.user!.id)))
         .returning();
 
       res.status(201).json({
@@ -107,10 +108,10 @@ router.post(
 
 router.delete("/signals/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const [deleted] = await db.delete(signalsTable).where(eq(signalsTable.id, id)).returning();
+    const [deleted] = await db.delete(signalsTable).where(and(eq(signalsTable.id, id), ownedSignal(req.user!.id))).returning();
     if (!deleted) throw new AppError(404, "Signal not found");
     res.sendStatus(204);
   } catch (err) { next(err); }
@@ -135,6 +136,7 @@ router.post(
         const srcType = (typeof s === "object" ? s.sourceType : null) ?? sourceType ?? "other";
 
         const [signal] = await db.insert(signalsTable).values({
+          userId: req.user!.id,
           content,
           sourceType: srcType,
           sourcePlatform: typeof s === "object" ? s.sourcePlatform ?? null : null,
@@ -154,12 +156,14 @@ router.post(
           userId: req.user!.id,
         }).returning();
 
-        await db.update(signalsTable)
+        const [updatedSignal] = await db.update(signalsTable)
           .set({ opportunityId: opp!.id })
-          .where(eq(signalsTable.id, signal!.id));
+          .where(and(eq(signalsTable.id, signal!.id), eq(signalsTable.userId, req.user!.id)))
+          .returning();
+        if (!updatedSignal) throw new AppError(409, "Signal changed during import");
 
         opportunitiesCreated++;
-        insertedSignals.push(signal!);
+        insertedSignals.push(updatedSignal);
       }
 
       res.status(201).json({

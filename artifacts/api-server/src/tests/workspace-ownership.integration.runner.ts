@@ -1,94 +1,39 @@
-import { spawn } from "node:child_process";
-import { once } from "node:events";
+import { createOwnershipTestDatabase, runTestCommand } from "./workspace-ownership.cleanup.ts";
 
-import {
-  cleanupOwnershipFixtures,
-  verifyOwnershipFixturesAbsent,
-} from "./workspace-ownership.cleanup.ts";
-
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must point to the isolated disposable database used by workspace ownership integration checks.",
-  );
-}
-
-const { pool } = await import("@workspace/db");
-
-type ChildResult = {
-  code: number | null;
-  signal: NodeJS.Signals | null;
-};
-
+const abort = new AbortController();
 let interruptedBy: NodeJS.Signals | undefined;
-let child: ReturnType<typeof spawn> | undefined;
-
-const signalExitCode = (signal: NodeJS.Signals): number =>
-  signal === "SIGINT" ? 130 : signal === "SIGTERM" ? 143 : 1;
-
-const forwardSignal = (signal: NodeJS.Signals) => {
-  interruptedBy ??= signal;
-  if (child && child.exitCode === null) {
-    child.kill(signal);
-  }
+const interrupt = (signal: NodeJS.Signals) => {
+  interruptedBy = signal;
+  abort.abort();
 };
+const onInt = () => interrupt("SIGINT");
+const onTerm = () => interrupt("SIGTERM");
+process.once("SIGINT", onInt);
+process.once("SIGTERM", onTerm);
 
-process.on("SIGINT", forwardSignal);
-process.on("SIGTERM", forwardSignal);
-
-let childResult: ChildResult = { code: 1, signal: null };
-let cleanupError: unknown;
-
+let database: Awaited<ReturnType<typeof createOwnershipTestDatabase>> | undefined;
 try {
-  // Remove fixtures from any prior run before starting. This also keeps an
-  // interrupted run from affecting the next test's workspace totals.
-  await cleanupOwnershipFixtures(pool);
-  await verifyOwnershipFixturesAbsent(pool);
-
-  child = spawn(
-    process.execPath,
-    [
-      "--import",
-      "tsx",
-      "--test",
-      "src/tests/workspace-ownership.integration.test.ts",
-      "src/tests/demo-session.integration.test.ts",
-    ],
-    {
-      cwd: process.cwd(),
-      env: process.env,
-      stdio: "inherit",
-    },
-  );
-
-  const [code, signal] = await once(child, "exit");
-  childResult = {
-    code: (code as number | null) ?? null,
-    signal: signal as NodeJS.Signals | null,
-  };
+  database = await createOwnershipTestDatabase(abort.signal);
+  // --force is used only on the brand-new, disposable database above.
+  await runTestCommand("pnpm", [
+    "--filter", "@workspace/db", "exec", "drizzle-kit", "push", "--force",
+  ], database.env, abort.signal);
+  await runTestCommand(process.execPath, [
+    "--import", "tsx", "--test", "--test-concurrency=1",
+    "src/tests/demo-session.integration.test.ts",
+    "src/tests/workspace-ownership.integration.test.ts",
+    "src/tests/workspace-features.integration.test.ts",
+  ], database.env, abort.signal);
+} catch (error) {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode = interruptedBy === "SIGINT" ? 130 : interruptedBy === "SIGTERM" ? 143 : 1;
 } finally {
   try {
-    if (child && child.exitCode === null) {
-      child.kill("SIGTERM");
-      await once(child, "exit");
-    }
-    await cleanupOwnershipFixtures(pool);
-    await verifyOwnershipFixturesAbsent(pool);
+    await database?.dispose();
   } catch (error) {
-    cleanupError = error;
-  } finally {
-    process.off("SIGINT", forwardSignal);
-    process.off("SIGTERM", forwardSignal);
-    await pool.end();
+    process.stderr.write(`Disposable database cleanup failed: ${String(error)}\n`);
+    process.exitCode = 1;
   }
-}
-
-if (cleanupError) {
-  console.error(cleanupError);
-  process.exitCode = 1;
-} else if (interruptedBy) {
-  process.exitCode = signalExitCode(interruptedBy);
-} else if (childResult.signal) {
-  process.exitCode = 1;
-} else {
-  process.exitCode = childResult.code ?? 1;
+  process.off("SIGINT", onInt);
+  process.off("SIGTERM", onTerm);
 }

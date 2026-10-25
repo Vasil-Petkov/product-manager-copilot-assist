@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { meetingsTable, opportunitiesTable } from "@workspace/db";
 import { z } from "zod";
@@ -8,6 +8,8 @@ import { validate } from "../middlewares/validate";
 import { AppError, NotFoundError } from "../middlewares/errorHandler";
 import { recordTimeline } from "./product-ideas";
 import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
+
+import { parseRouteInteger } from "../lib/route-params";
 
 const router: IRouter = Router();
 
@@ -30,6 +32,7 @@ router.get("/meetings", requireAuth, async (req, res, next): Promise<void> => {
     const skip = parseInt(offset, 10) || 0;
 
     const meetings = await db.select().from(meetingsTable)
+      .where(eq(meetingsTable.userId, req.user!.id))
       .orderBy(desc(meetingsTable.meetingDate)).limit(take).offset(skip);
 
     res.json(meetings.map((m) => ({
@@ -73,10 +76,10 @@ router.post(
 
 router.get("/meetings/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, id));
+    const [meeting] = await db.select().from(meetingsTable).where(and(eq(meetingsTable.id, id), eq(meetingsTable.userId, req.user!.id)));
     if (!meeting) throw new NotFoundError("Meeting");
 
     res.json({
@@ -96,7 +99,7 @@ router.patch(
   validate(updateMeetingSchema),
   async (req, res, next): Promise<void> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseRouteInteger(req.params.id);
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof updateMeetingSchema>;
@@ -109,7 +112,7 @@ router.patch(
 
       const [updated] = await db.update(meetingsTable)
         .set(updateData as never)
-        .where(eq(meetingsTable.id, id))
+        .where(and(eq(meetingsTable.id, id), eq(meetingsTable.userId, req.user!.id)))
         .returning();
 
       if (!updated) throw new NotFoundError("Meeting");
@@ -126,10 +129,10 @@ router.patch(
 
 router.delete("/meetings/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const [deleted] = await db.delete(meetingsTable).where(eq(meetingsTable.id, id)).returning();
+    const [deleted] = await db.delete(meetingsTable).where(and(eq(meetingsTable.id, id), eq(meetingsTable.userId, req.user!.id))).returning();
     if (!deleted) throw new NotFoundError("Meeting");
     res.sendStatus(204);
   } catch (err) { next(err); }
@@ -139,10 +142,10 @@ router.delete("/meetings/:id", requireAuth, async (req, res, next): Promise<void
 
 router.post("/meetings/:id/analyze", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, id));
+    const [meeting] = await db.select().from(meetingsTable).where(and(eq(meetingsTable.id, id), eq(meetingsTable.userId, req.user!.id)));
     if (!meeting) throw new NotFoundError("Meeting");
 
     const { openai } = await import("@workspace/integrations-openai-ai-server");
@@ -252,7 +255,7 @@ Extract the following from this meeting. Return valid JSON:
         opportunitiesExtracted: String(createdOpps.length),
         extractedInsights,
       })
-      .where(eq(meetingsTable.id, id))
+      .where(and(eq(meetingsTable.id, id), eq(meetingsTable.userId, req.user!.id)))
       .returning();
 
     res.json({

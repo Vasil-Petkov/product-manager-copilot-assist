@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { competitorsTable, competitorReportsTable } from "@workspace/db";
 import { z } from "zod";
 import { requireAuth } from "../middlewares/requireAuth";
 import { validate } from "../middlewares/validate";
 import { AppError, NotFoundError } from "../middlewares/errorHandler";
+import { parseRouteInteger } from "../lib/route-params";
 
 const router: IRouter = Router();
 
@@ -28,6 +29,7 @@ router.get("/competitors", requireAuth, async (req, res, next): Promise<void> =>
     const skip = parseInt(offset, 10) || 0;
 
     const competitors = await db.select().from(competitorsTable)
+      .where(eq(competitorsTable.userId, req.user!.id))
       .orderBy(desc(competitorsTable.createdAt)).limit(take).offset(skip);
 
     res.json(competitors);
@@ -61,11 +63,11 @@ router.post(
 
 router.get("/competitors/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [competitor] = await db.select().from(competitorsTable)
-      .where(eq(competitorsTable.id, id));
+      .where(and(eq(competitorsTable.id, id), eq(competitorsTable.userId, req.user!.id)));
     if (!competitor) throw new NotFoundError("Competitor");
 
     res.json(competitor);
@@ -80,7 +82,7 @@ router.patch(
   validate(updateCompetitorSchema),
   async (req, res, next): Promise<void> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseRouteInteger(req.params.id);
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof updateCompetitorSchema>;
@@ -93,7 +95,7 @@ router.patch(
 
       const [updated] = await db.update(competitorsTable)
         .set(updateData as never)
-        .where(eq(competitorsTable.id, id))
+        .where(and(eq(competitorsTable.id, id), eq(competitorsTable.userId, req.user!.id)))
         .returning();
 
       if (!updated) throw new NotFoundError("Competitor");
@@ -106,11 +108,11 @@ router.patch(
 
 router.delete("/competitors/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [deleted] = await db.delete(competitorsTable)
-      .where(eq(competitorsTable.id, id))
+      .where(and(eq(competitorsTable.id, id), eq(competitorsTable.userId, req.user!.id)))
       .returning();
     if (!deleted) throw new NotFoundError("Competitor");
     res.sendStatus(204);
@@ -121,11 +123,11 @@ router.delete("/competitors/:id", requireAuth, async (req, res, next): Promise<v
 
 router.post("/competitors/:id/analyze", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [competitor] = await db.select().from(competitorsTable)
-      .where(eq(competitorsTable.id, id));
+      .where(and(eq(competitorsTable.id, id), eq(competitorsTable.userId, req.user!.id)));
     if (!competitor) throw new NotFoundError("Competitor");
 
     const { openai } = await import("@workspace/integrations-openai-ai-server");
@@ -191,7 +193,7 @@ Provide a competitive analysis. Return JSON:
       latestAnalysis: analysis.summary as string,
       lastAnalyzedAt: new Date(),
       threatLevel: analysis.threatLevel as string ?? "medium",
-    }).where(eq(competitorsTable.id, id));
+    }).where(and(eq(competitorsTable.id, id), eq(competitorsTable.userId, req.user!.id)));
 
     res.json({ competitor: { ...competitor, latestAnalysis: analysis.summary }, report });
   } catch (err) { next(err); }
@@ -201,9 +203,12 @@ Provide a competitive analysis. Return JSON:
 
 router.get("/competitors/:id/reports", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
+    const [owner] = await db.select({ id: competitorsTable.id }).from(competitorsTable)
+      .where(and(eq(competitorsTable.id, id), eq(competitorsTable.userId, req.user!.id)));
+    if (!owner) throw new NotFoundError("Competitor");
     const reports = await db.select().from(competitorReportsTable)
       .where(eq(competitorReportsTable.competitorId, id))
       .orderBy(desc(competitorReportsTable.createdAt));

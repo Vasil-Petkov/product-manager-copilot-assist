@@ -60,6 +60,7 @@ import {
 import { requireAuth } from "../middlewares/requireAuth";
 import { AppError, NotFoundError, ValidationError } from "../middlewares/errorHandler";
 import { getValidationMethod, validationMethods } from "../lib/validation-methods";
+import { ownedExperiment, ownedHypothesis, ownedFeedback, ownedSignal } from "../lib/ownership";
 
 const router: IRouter = Router();
 
@@ -376,7 +377,7 @@ function buildPrioritizationContext(
   };
 }
 
-async function loadProductIdeaContexts(opportunities: Opportunity[]) {
+async function loadProductIdeaContexts(opportunities: Opportunity[], userId: string) {
   const opportunityIds = opportunities.map((opportunity) => opportunity.id);
   if (opportunityIds.length === 0) return new Map<number, ReturnType<typeof createContext>>();
 
@@ -396,7 +397,7 @@ async function loadProductIdeaContexts(opportunities: Opportunity[]) {
         count: sql<number>`count(*)::int`,
       })
       .from(signalsTable)
-      .where(inArray(signalsTable.opportunityId, opportunityIds))
+      .where(and(inArray(signalsTable.opportunityId, opportunityIds), ownedSignal(userId)))
       .groupBy(signalsTable.opportunityId),
     db
       .select({
@@ -404,7 +405,7 @@ async function loadProductIdeaContexts(opportunities: Opportunity[]) {
         count: sql<number>`count(*)::int`,
       })
       .from(feedbackTable)
-      .where(inArray(feedbackTable.opportunityId, opportunityIds))
+      .where(and(inArray(feedbackTable.opportunityId, opportunityIds), ownedFeedback(userId)))
       .groupBy(feedbackTable.opportunityId),
   ]);
 
@@ -472,7 +473,7 @@ async function getOwnedHypothesis(hypothesisId: number, userId: string) {
     .where(
       and(
         eq(validationHypotheses.id, hypothesisId),
-        eq(validationHypotheses.userId, userId),
+        ownedHypothesis(userId),
       ),
     );
   return hypothesis;
@@ -485,7 +486,7 @@ async function getOwnedExperiment(experimentId: number, userId: string) {
     .where(
       and(
         eq(validationExperiments.id, experimentId),
-        eq(validationExperiments.userId, userId),
+        ownedExperiment(userId),
       ),
     );
   return experiment;
@@ -504,7 +505,7 @@ async function enrichHypotheses(hypotheses: Hypothesis[], userId: string) {
         eq(opportunitiesTable.userId, userId),
       ),
     );
-  const contextMap = await loadProductIdeaContexts(opportunities);
+  const contextMap = await loadProductIdeaContexts(opportunities, userId);
 
   return hypotheses.flatMap((hypothesis) => {
     const productIdea = contextMap.get(hypothesis.opportunityId);
@@ -554,7 +555,7 @@ async function enrichExperiments(experiments: Experiment[], userId: string) {
       .where(
         and(
           inArray(validationHypotheses.id, hypothesisIds),
-          eq(validationHypotheses.userId, userId),
+          ownedHypothesis(userId),
         ),
       ),
     db
@@ -627,7 +628,7 @@ router.get(
         .from(validationHypotheses)
         .where(
           and(
-            eq(validationHypotheses.userId, req.user!.id),
+            ownedHypothesis(req.user!.id),
             isNull(validationHypotheses.archivedAt),
           ),
         ),
@@ -636,7 +637,7 @@ router.get(
         .from(validationExperiments)
         .where(
           and(
-            eq(validationExperiments.userId, req.user!.id),
+            ownedExperiment(req.user!.id),
             isNull(validationExperiments.archivedAt),
           ),
         ),
@@ -668,7 +669,7 @@ router.get(
       .from(opportunitiesTable)
       .where(eq(opportunitiesTable.userId, req.user!.id))
       .orderBy(desc(opportunitiesTable.updatedAt));
-    const contextMap = await loadProductIdeaContexts(opportunities);
+    const contextMap = await loadProductIdeaContexts(opportunities, req.user!.id);
 
     res.json(
       ListValidationProductIdeasResponse.parse(
@@ -690,7 +691,7 @@ router.get(
       ...req.query,
       includeArchived: normalizedIncludeArchived,
     });
-    const conditions: SQL[] = [eq(validationHypotheses.userId, req.user!.id)];
+    const conditions: SQL[] = [ownedHypothesis(req.user!.id)];
     if (!query.includeArchived) conditions.push(isNull(validationHypotheses.archivedAt));
     if (query.status) conditions.push(eq(validationHypotheses.status, query.status));
     if (query.hypothesisType) {
@@ -946,7 +947,7 @@ router.patch(
       .where(
         and(
           eq(validationHypotheses.id, id),
-          eq(validationHypotheses.userId, req.user!.id),
+          ownedHypothesis(req.user!.id),
         ),
       )
       .returning();
@@ -1007,7 +1008,7 @@ router.post(
         .where(
           and(
             eq(validationHypotheses.id, id),
-            eq(validationHypotheses.userId, req.user!.id),
+            ownedHypothesis(req.user!.id),
           ),
         )
         .returning();
@@ -1018,7 +1019,7 @@ router.post(
         .where(
           and(
             eq(validationExperiments.hypothesisId, id),
-            eq(validationExperiments.userId, req.user!.id),
+            ownedExperiment(req.user!.id),
             isNull(validationExperiments.archivedAt),
           ),
         );
@@ -1045,7 +1046,7 @@ router.get(
       includeArchived: normalizedIncludeArchived,
     });
 
-    const conditions: SQL[] = [eq(validationExperiments.userId, req.user!.id)];
+    const conditions: SQL[] = [ownedExperiment(req.user!.id)];
     if (!query.includeArchived) {
       conditions.push(
         isNull(validationExperiments.archivedAt),
@@ -1064,7 +1065,7 @@ router.get(
         validationHypotheses,
         and(
           eq(validationHypotheses.id, validationExperiments.hypothesisId),
-          eq(validationHypotheses.userId, req.user!.id),
+          ownedHypothesis(req.user!.id),
         ),
       )
       .where(and(...conditions))
@@ -1097,7 +1098,7 @@ router.post(
         .where(
           and(
             eq(validationHypotheses.id, body.hypothesisId),
-            eq(validationHypotheses.userId, req.user!.id),
+            ownedHypothesis(req.user!.id),
           ),
         )
         .for("update");
@@ -1235,7 +1236,7 @@ router.patch(
       .where(
         and(
           eq(validationExperiments.id, id),
-          eq(validationExperiments.userId, req.user!.id),
+          ownedExperiment(req.user!.id),
           eq(validationExperiments.status, current.status),
           isNull(validationExperiments.archivedAt),
           exists(
@@ -1245,7 +1246,7 @@ router.patch(
               .where(
                 and(
                   eq(validationHypotheses.id, current.hypothesisId),
-                  eq(validationHypotheses.userId, req.user!.id),
+                  ownedHypothesis(req.user!.id),
                   isNull(validationHypotheses.archivedAt),
                 ),
               ),
@@ -1512,7 +1513,7 @@ router.post(
       .where(
         and(
           eq(validationExperiments.id, id),
-          eq(validationExperiments.userId, req.user!.id),
+          ownedExperiment(req.user!.id),
         ),
       )
       .returning();

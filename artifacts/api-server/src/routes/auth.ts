@@ -7,6 +7,13 @@ import {
 import { db, usersTable } from '@workspace/db';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import * as oidc from 'openid-client';
+import {
+  getSafeReturnTo,
+  getTrustedAppOrigin,
+  redirectToLocalPath,
+  redirectToOidcEndpoint,
+} from '../lib/auth-redirects';
+import { AppError } from '../middlewares/errorHandler';
 
 import {
   clearSession,
@@ -25,10 +32,18 @@ const OIDC_COOKIE_TTL = 10 * 60 * 1000;
 const router: IRouter = Router();
 
 function getOrigin(req: Request): string {
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host =
-    req.headers['x-forwarded-host'] || req.headers['host'] || 'localhost';
-  return `${proto}://${host}`;
+  const allowedHosts = [
+    ...(process.env.REPLIT_DOMAINS ?? '').split(','),
+    ...(process.env.NODE_ENV !== 'production' ? [process.env.REPLIT_DEV_DOMAIN ?? ''] : []),
+  ].filter(Boolean);
+  try {
+    return getTrustedAppOrigin(
+      req.headers['x-forwarded-host'] ?? req.headers.host,
+      allowedHosts,
+    );
+  } catch {
+    throw new AppError(400, 'Untrusted authentication origin');
+  }
 }
 
 function setSessionCookie(res: Response, sid: string) {
@@ -49,17 +64,6 @@ function setOidcCookie(res: Response, name: string, value: string) {
     path: '/',
     maxAge: OIDC_COOKIE_TTL,
   });
-}
-
-function getSafeReturnTo(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    !value.startsWith('/') ||
-    value.startsWith('//')
-  ) {
-    return '/';
-  }
-  return value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -131,8 +135,8 @@ router.get('/auth/user', (req: Request, res: Response) => {
 });
 
 router.get('/login', async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
+  const config = await getOidcConfig();
 
   const returnTo = getSafeReturnTo(req.query.returnTo);
 
@@ -156,14 +160,14 @@ router.get('/login', async (req: Request, res: Response) => {
   setOidcCookie(res, 'state', state);
   setOidcCookie(res, 'return_to', returnTo);
 
-  res.redirect(redirectTo.href);
+  redirectToOidcEndpoint(res, redirectTo, config.serverMetadata().authorization_endpoint);
 });
 
 // Query params are not validated because the OIDC provider may include
 // parameters not expressed in the schema.
 router.get('/callback', async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
+  const config = await getOidcConfig();
 
   const codeVerifier = req.cookies?.code_verifier;
   const nonce = req.cookies?.nonce;
@@ -174,9 +178,8 @@ router.get('/callback', async (req: Request, res: Response) => {
     return;
   }
 
-  const currentUrl = new URL(
-    `${callbackUrl}?${new URL(req.url, `http://${req.headers.host}`).searchParams}`,
-  );
+  const currentUrl = new URL(callbackUrl);
+  currentUrl.search = new URL(req.originalUrl, callbackUrl).search;
 
   let tokens: oidc.TokenEndpointResponse & oidc.TokenEndpointResponseHelpers;
   try {
@@ -222,12 +225,12 @@ router.get('/callback', async (req: Request, res: Response) => {
 
   const sid = await createSession(sessionData);
   setSessionCookie(res, sid);
-  res.redirect(returnTo);
+  redirectToLocalPath(res, returnTo);
 });
 
 router.get('/logout', async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
   const origin = getOrigin(req);
+  const config = await getOidcConfig();
   const returnTo = getSafeReturnTo(req.query.returnTo);
   const postLogoutRedirectUrl = new URL(returnTo, `${origin}/`).href;
 
@@ -239,7 +242,7 @@ router.get('/logout', async (req: Request, res: Response) => {
     post_logout_redirect_uri: postLogoutRedirectUrl,
   });
 
-  res.redirect(endSessionUrl.href);
+  redirectToOidcEndpoint(res, endSessionUrl, config.serverMetadata().end_session_endpoint);
 });
 
 router.post(

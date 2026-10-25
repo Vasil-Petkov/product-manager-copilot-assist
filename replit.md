@@ -33,7 +33,7 @@ AI-powered product management copilot. Captures signals from customer feedback, 
 - **Context Engine is backend-only** — no UI; internal service gathers all Product Idea context before AI calls.
 - **Auth is Replit Auth (OIDC)** — modular so it can be replaced with Clerk/Auth0 later.
 - **`userId` FK is nullable** on all entity tables — preserves backward compatibility with pre-auth data.
-- **Codegen**: avoid `format: email` / `format: uri` in OpenAPI schemas — generates `z.email()` / `z.url()` (Zod v4 only), project uses Zod v3.
+- **Validation**: use the patched Zod v4 runtime across the workspace; form resolvers must support v4. Generated schemas and Drizzle schemas share that runtime.
 - **Text→integer migrations**: done with raw SQL USING cast before `drizzle-kit push` (drizzle-kit cannot auto-cast text→integer).
 
 ## Running the project

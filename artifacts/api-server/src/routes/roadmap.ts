@@ -33,6 +33,7 @@ import {
 import { requireAuth } from "../middlewares/requireAuth";
 import { AppError, NotFoundError } from "../middlewares/errorHandler";
 import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
+import { ownedExperiment, ownedRoadmapItem, ownedRoadmapMilestone, safeInitiativeDeletion } from "../lib/ownership";
 
 const router: IRouter = Router();
 
@@ -102,12 +103,12 @@ async function listRoadmap(userId: string) {
       .where(eq(roadmapInitiativesTable.userId, userId))
       .orderBy(asc(roadmapInitiativesTable.createdAt)),
     db.select().from(roadmapMilestonesTable)
-      .where(eq(roadmapMilestonesTable.userId, userId))
+      .where(ownedRoadmapMilestone(userId))
       .orderBy(asc(roadmapMilestonesTable.date)),
     db.select({ item: roadmapItemsTable, idea: opportunitiesTable })
       .from(roadmapItemsTable)
       .innerJoin(opportunitiesTable, eq(roadmapItemsTable.opportunityId, opportunitiesTable.id))
-      .where(and(eq(roadmapItemsTable.userId, userId), eq(opportunitiesTable.userId, userId)))
+      .where(ownedRoadmapItem(userId))
       .orderBy(asc(roadmapItemsTable.startDate)),
   ]);
 
@@ -173,10 +174,11 @@ router.patch("/roadmap/initiatives/:id", requireAuth, async (req, res, next): Pr
 
 router.delete("/roadmap/initiatives/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
+    await ensureOwnedInitiative(asId(req.params.id), req.user!.id);
     const [initiative] = await db.delete(roadmapInitiativesTable)
-      .where(and(eq(roadmapInitiativesTable.id, asId(req.params.id)), eq(roadmapInitiativesTable.userId, req.user!.id)))
+      .where(and(eq(roadmapInitiativesTable.id, asId(req.params.id)), eq(roadmapInitiativesTable.userId, req.user!.id), safeInitiativeDeletion(req.user!.id)))
       .returning();
-    if (!initiative) throw new NotFoundError("Initiative");
+    if (!initiative) throw new AppError(409, "Inconsistent legacy ownership needs review before deletion", "OWNERSHIP_REVIEW_REQUIRED");
     DeleteRoadmapInitiativeResponse.parse(undefined);
     res.sendStatus(204);
   } catch (err) { next(err); }
@@ -213,7 +215,7 @@ router.patch("/roadmap/items/:id", requireAuth, async (req, res, next): Promise<
     const body = itemUpdate.parse(UpdateRoadmapItemBody.parse(req.body));
     if (!Object.keys(body).length) throw new AppError(400, "No roadmap item fields to update");
     const [current] = await db.select().from(roadmapItemsTable)
-      .where(and(eq(roadmapItemsTable.id, itemId), eq(roadmapItemsTable.userId, req.user!.id)));
+      .where(and(eq(roadmapItemsTable.id, itemId), ownedRoadmapItem(req.user!.id)));
     if (!current) throw new NotFoundError("Roadmap item");
     const startDate = body.startDate ?? current.startDate;
     const endDate = body.endDate ?? current.endDate;
@@ -228,7 +230,8 @@ router.patch("/roadmap/items/:id", requireAuth, async (req, res, next): Promise<
       if (assigned) throw new AppError(409, "This Product Idea is already on the roadmap");
     }
     const [item] = await db.update(roadmapItemsTable).set(body)
-      .where(eq(roadmapItemsTable.id, itemId)).returning();
+      .where(and(eq(roadmapItemsTable.id, itemId), ownedRoadmapItem(req.user!.id))).returning();
+    if (!item) throw new NotFoundError("Roadmap item");
     res.json(UpdateRoadmapItemResponse.parse(asJson(item)));
   } catch (err) { next(err); }
 });
@@ -236,7 +239,7 @@ router.patch("/roadmap/items/:id", requireAuth, async (req, res, next): Promise<
 router.delete("/roadmap/items/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
     const [item] = await db.delete(roadmapItemsTable)
-      .where(and(eq(roadmapItemsTable.id, asId(req.params.id)), eq(roadmapItemsTable.userId, req.user!.id)))
+      .where(and(eq(roadmapItemsTable.id, asId(req.params.id)), ownedRoadmapItem(req.user!.id)))
       .returning();
     if (!item) throw new NotFoundError("Roadmap item");
     DeleteRoadmapItemResponse.parse(undefined);
@@ -265,7 +268,7 @@ router.patch("/roadmap/milestones/:id", requireAuth, async (req, res, next): Pro
     if (!Object.keys(body).length) throw new AppError(400, "No milestone fields to update");
     await ensureOwnedInitiative(body.initiativeId, req.user!.id);
     const [milestone] = await db.update(roadmapMilestonesTable).set(body)
-      .where(and(eq(roadmapMilestonesTable.id, asId(req.params.id)), eq(roadmapMilestonesTable.userId, req.user!.id)))
+      .where(and(eq(roadmapMilestonesTable.id, asId(req.params.id)), ownedRoadmapMilestone(req.user!.id)))
       .returning();
     if (!milestone) throw new NotFoundError("Milestone");
     res.json(UpdateRoadmapMilestoneResponse.parse(asJson(milestone)));
@@ -275,7 +278,7 @@ router.patch("/roadmap/milestones/:id", requireAuth, async (req, res, next): Pro
 router.delete("/roadmap/milestones/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
     const [milestone] = await db.delete(roadmapMilestonesTable)
-      .where(and(eq(roadmapMilestonesTable.id, asId(req.params.id)), eq(roadmapMilestonesTable.userId, req.user!.id)))
+      .where(and(eq(roadmapMilestonesTable.id, asId(req.params.id)), ownedRoadmapMilestone(req.user!.id)))
       .returning();
     if (!milestone) throw new NotFoundError("Milestone");
     DeleteRoadmapMilestoneResponse.parse(undefined);
@@ -298,7 +301,7 @@ router.post("/roadmap/proposal", requireAuth, async (req, res, next): Promise<vo
         ? db.select({ experiment: validationExperiments, hypothesis: validationHypotheses })
           .from(validationExperiments)
           .innerJoin(validationHypotheses, eq(validationExperiments.hypothesisId, validationHypotheses.id))
-          .where(and(eq(validationExperiments.userId, req.user!.id), inArray(validationHypotheses.opportunityId, ideaIds)))
+          .where(and(ownedExperiment(req.user!.id), inArray(validationHypotheses.opportunityId, ideaIds)))
         : Promise.resolve([]),
     ]);
     const riceByIdea = new Map<number, number | null>();
@@ -323,7 +326,7 @@ router.post("/roadmap/proposal", requireAuth, async (req, res, next): Promise<vo
     try {
       const contexts = await Promise.all(ideas.map(async (idea) => ({
         id: idea.id,
-        context: formatContextForPrompt(await buildProductContext(idea.id)),
+        context: formatContextForPrompt(await buildProductContext(idea.id, req.user!.id)),
         riceScore: riceByIdea.get(idea.id) ?? null,
         validation: validationByIdea.get(idea.id) ?? [],
       })));

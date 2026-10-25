@@ -15,7 +15,12 @@ export function validate<T>(
     try {
       const parsed = schema.parse(req[part]);
       // Replace the raw data with the parsed (coerced/stripped) version
-      (req as Record<string, unknown>)[part] = parsed;
+      Object.defineProperty(req, part, {
+        value: parsed,
+        configurable: true,
+        enumerable: true,
+        writable: true,
+      });
       next();
     } catch (err) {
       next(err);

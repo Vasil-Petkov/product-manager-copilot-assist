@@ -43,14 +43,14 @@ import {
 
 const formSchema = z.object({
   name: z.string().min(1, "Experiment name is required").max(300),
-  hypothesisId: z.coerce.number().min(1, "Hypothesis is required"),
+  hypothesisId: z.coerce.number<number>().min(1, "Hypothesis is required"),
   methodKey: z.string().min(1, "Method is required"),
   setup: z.string().optional(),
   targetAudience: z.string().optional(),
   successMeasures: z.string().optional(),
   plannedStartDate: z.string().optional(),
   plannedEndDate: z.string().optional(),
-  status: z.enum(["draft", "planned"]).default("draft"),
+  status: z.enum(["draft", "planned"]),
 });
 
 type FormValues = z.infer<typeof formSchema>;
