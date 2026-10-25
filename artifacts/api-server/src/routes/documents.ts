@@ -30,6 +30,7 @@ import { AppError, NotFoundError, ValidationError } from "../middlewares/errorHa
 import { buildProductContext } from "../services/contextEngine";
 import { generateDocument } from "../services/documentGeneration";
 import { buildDocumentationAiContext } from "../services/documentationContext";
+import { ownedDocument } from "../lib/ownership";
 
 const router: IRouter = Router();
 
@@ -41,7 +42,7 @@ async function getOwnedDocument(id: number, userId: string): Promise<DbDocument 
   const [document] = await db
     .select()
     .from(documentsTable)
-    .where(and(eq(documentsTable.id, id), eq(documentsTable.userId, userId)));
+    .where(and(eq(documentsTable.id, id), ownedDocument(userId)));
   return document;
 }
 
@@ -53,7 +54,7 @@ async function getOwnedProductIdea(id: number, userId: string) {
   return idea;
 }
 
-async function getAcceptedDocument(productIdeaId: number, documentType: string): Promise<DbDocument | undefined> {
+async function getAcceptedDocument(productIdeaId: number, documentType: string, userId: string): Promise<DbDocument | undefined> {
   const [document] = await db
     .select()
     .from(documentsTable)
@@ -61,6 +62,7 @@ async function getAcceptedDocument(productIdeaId: number, documentType: string):
       eq(documentsTable.productIdeaId, productIdeaId),
       eq(documentsTable.documentType, documentType),
       eq(documentsTable.status, "accepted"),
+      ownedDocument(userId),
     ))
     .limit(1);
   return document;
@@ -89,7 +91,7 @@ async function getOwnedDocumentationContext(productIdeaId: number, documentType:
 router.get("/documents", requireAuth, async (req, res, next): Promise<void> => {
   try {
     const query = ListDocumentsQueryParams.parse(req.query);
-    const conditions = [eq(documentsTable.userId, req.user!.id)];
+    const conditions = [ownedDocument(req.user!.id)];
     if (query.productIdeaId !== undefined) conditions.push(eq(documentsTable.productIdeaId, query.productIdeaId));
     if (query.documentType) conditions.push(eq(documentsTable.documentType, query.documentType));
     if (query.status) conditions.push(eq(documentsTable.status, query.status));
@@ -177,7 +179,7 @@ router.patch("/documents/:id", requireAuth, async (req, res, next): Promise<void
       .set({ ...values, revision: sql`${documentsTable.revision} + 1` })
       .where(and(
         eq(documentsTable.id, id),
-        eq(documentsTable.userId, req.user!.id),
+        ownedDocument(req.user!.id),
         ne(documentsTable.status, "accepted"),
         eq(documentsTable.revision, body.expectedRevision),
       ))
@@ -212,7 +214,7 @@ router.post("/documents/:id/regenerate", requireAuth, async (req, res, next): Pr
       })
       .where(and(
         eq(documentsTable.id, id),
-        eq(documentsTable.userId, req.user!.id),
+        ownedDocument(req.user!.id),
         ne(documentsTable.status, "accepted"),
         eq(documentsTable.revision, body.expectedRevision),
       ))
@@ -242,7 +244,7 @@ router.post("/documents/:id/accept", requireAuth, async (req, res, next): Promis
       }
       throw new AppError(409, "Document was already accepted at a different revision", "DOCUMENT_CONFLICT");
     }
-    const acceptedDocument = await getAcceptedDocument(existing.productIdeaId, existing.documentType);
+    const acceptedDocument = await getAcceptedDocument(existing.productIdeaId, existing.documentType, req.user!.id);
     if (acceptedDocument) {
       throw new AppError(409, "An accepted document already exists for this Product Idea and type", "DUPLICATE_ACCEPTED_DOCUMENT");
     }
@@ -257,7 +259,7 @@ router.post("/documents/:id/accept", requireAuth, async (req, res, next): Promis
         })
         .where(and(
           eq(documentsTable.id, id),
-          eq(documentsTable.userId, req.user!.id),
+          ownedDocument(req.user!.id),
           ne(documentsTable.status, "accepted"),
            eq(documentsTable.revision, body.expectedRevision),
         ))

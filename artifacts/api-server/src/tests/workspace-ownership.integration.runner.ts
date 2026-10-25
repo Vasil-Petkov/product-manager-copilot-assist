@@ -22,6 +22,7 @@ try {
     "--import", "tsx", "--test", "--test-concurrency=1",
     "src/tests/demo-session.integration.test.ts",
     "src/tests/workspace-ownership.integration.test.ts",
+    "src/tests/workspace-features.integration.test.ts",
   ], database.env, abort.signal);
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);

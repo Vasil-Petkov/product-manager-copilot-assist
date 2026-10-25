@@ -10,6 +10,7 @@ import { recordTimeline } from "./product-ideas";
 import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
 
 import { parseRouteInteger } from "../lib/route-params";
+import { requireOwnedIdea, safeIdeaDeletion } from "../lib/ownership";
 
 const router: IRouter = Router();
 
@@ -191,15 +192,17 @@ router.delete("/opportunities/:id", requireAuth, async (req, res, next): Promise
     const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
+    await requireOwnedIdea(id, req.user!.id);
     const [deleted] = await db
       .delete(opportunitiesTable)
       .where(and(
         eq(opportunitiesTable.id, id),
         eq(opportunitiesTable.userId, req.user!.id),
+        safeIdeaDeletion(req.user!.id),
       ))
       .returning();
 
-    if (!deleted) throw new NotFoundError("Product Idea");
+    if (!deleted) throw new AppError(409, "Inconsistent legacy ownership needs review before deletion", "OWNERSHIP_REVIEW_REQUIRED");
     res.sendStatus(204);
   } catch (err) { next(err); }
 });
@@ -220,7 +223,7 @@ router.post("/opportunities/:id/analyze", requireAuth, async (req, res, next): P
     if (!ownedIdea) throw new NotFoundError("Product Idea");
 
     // 1. Build full product context before calling AI
-    const ctx = await buildProductContext(id);
+    const ctx = await buildProductContext(id, req.user!.id);
     const contextStr = formatContextForPrompt(ctx);
 
     const { openai } = await import("@workspace/integrations-openai-ai-server");
@@ -287,7 +290,7 @@ Return only valid JSON, no markdown.`,
         estimatedBusinessImpact: typeof aiResult.estimatedBusinessImpact === "string" ? aiResult.estimatedBusinessImpact : null,
         healthScore: ctx.health.score,
       })
-      .where(eq(opportunitiesTable.id, id))
+      .where(and(eq(opportunitiesTable.id, id), eq(opportunitiesTable.userId, req.user!.id)))
       .returning();
 
     await recordTimeline(id, "ai_analyzed", "AI analysis completed using full product context", {

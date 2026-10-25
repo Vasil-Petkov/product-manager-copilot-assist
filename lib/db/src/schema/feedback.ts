@@ -2,12 +2,14 @@ import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { opportunitiesTable } from "./opportunities";
+import { usersTable } from "./auth";
 
 export const feedbackTable = pgTable("stakeholder_feedback", {
   id: serial("id").primaryKey(),
   department: text("department").notNull(),
   stakeholderName: text("stakeholder_name").notNull(),
   description: text("description").notNull(),
+  userId: text("user_id").references(() => usersTable.id, { onDelete: "set null" }),
   customerImpact: text("customer_impact"),
   businessContext: text("business_context"),
   urgency: text("urgency"),

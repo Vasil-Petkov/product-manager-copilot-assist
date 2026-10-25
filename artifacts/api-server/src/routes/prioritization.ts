@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   prioritizationScoresTable,
@@ -7,6 +7,7 @@ import {
   opportunitiesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
+import { ownedIdeaIds } from "../lib/ownership";
 
 const router: IRouter = Router();
 
@@ -141,7 +142,7 @@ router.post("/prioritization/score", requireAuth, async (req, res, next): Promis
     const [ownedOpportunity] = await db
       .select({ id: opportunitiesTable.id, userId: opportunitiesTable.userId })
       .from(opportunitiesTable)
-      .where(eq(opportunitiesTable.id, opportunityId));
+      .where(and(eq(opportunitiesTable.id, opportunityId), eq(opportunitiesTable.userId, req.user!.id)));
     if (!ownedOpportunity || ownedOpportunity.userId !== req.user!.id) {
       res.status(404).json({ error: "Opportunity not found" });
       return;
@@ -176,12 +177,13 @@ router.patch("/prioritization/:id", requireAuth, async (req, res, next): Promise
       if (req.body[field] !== undefined) updateData[field] = req.body[field];
     }
 
-    const [current] = await db.select().from(prioritizationScoresTable).where(eq(prioritizationScoresTable.id, id));
+    const [current] = await db.select().from(prioritizationScoresTable)
+      .where(and(eq(prioritizationScoresTable.id, id), inArray(prioritizationScoresTable.opportunityId, ownedIdeaIds(req.user!.id))));
     if (!current) { res.status(404).json({ error: "Not found" }); return; }
     const [ownedOpportunity] = await db
       .select({ id: opportunitiesTable.id, userId: opportunitiesTable.userId })
       .from(opportunitiesTable)
-      .where(eq(opportunitiesTable.id, current.opportunityId));
+      .where(and(eq(opportunitiesTable.id, current.opportunityId), eq(opportunitiesTable.userId, req.user!.id)));
     if (!ownedOpportunity || ownedOpportunity.userId !== req.user!.id) {
       res.status(404).json({ error: "Not found" });
       return;
@@ -194,7 +196,8 @@ router.patch("/prioritization/:id", requireAuth, async (req, res, next): Promise
       updateData.riceScore = parseFloat(((reach * impact * (conf / 100)) / effort).toFixed(2));
     }
 
-    const [updated] = await db.update(prioritizationScoresTable).set(updateData as never).where(eq(prioritizationScoresTable.id, id)).returning();
+    const [updated] = await db.update(prioritizationScoresTable).set(updateData as never)
+      .where(and(eq(prioritizationScoresTable.id, id), inArray(prioritizationScoresTable.opportunityId, ownedIdeaIds(req.user!.id)))).returning();
     if (!updated) { res.status(404).json({ error: "Not found" }); return; }
     res.json(updated);
   } catch (err) { next(err); }
@@ -231,7 +234,7 @@ router.post("/prioritization/analyze/:opportunityId", requireAuth, async (req, r
     const [opp] = await db
       .select()
       .from(opportunitiesTable)
-      .where(eq(opportunitiesTable.id, oppId));
+      .where(and(eq(opportunitiesTable.id, oppId), eq(opportunitiesTable.userId, req.user!.id)));
     if (!opp || opp.userId !== req.user!.id) {
       res.status(404).json({ error: "Opportunity not found" });
       return;
@@ -324,7 +327,7 @@ Return exactly this structure (keep all string values under 120 chars):
 router.get("/prioritization/executive-recommendation", requireAuth, async (req, res, next): Promise<void> => {
   try {
     const analyses = await db.select().from(prioritizationAnalysisTable)
-      .where(isNotNull(prioritizationAnalysisTable.analyzedAt));
+      .where(and(isNotNull(prioritizationAnalysisTable.analyzedAt), inArray(prioritizationAnalysisTable.opportunityId, ownedIdeaIds(req.user!.id))));
     const opps = await db
       .select()
       .from(opportunitiesTable)
@@ -356,10 +359,10 @@ router.post("/prioritization/compare", requireAuth, async (req, res, next): Prom
     if (!idA || !idB) { res.status(400).json({ error: "idA and idB are required" }); return; }
 
     const [[oppA], [oppB], [analysisA], [analysisB]] = await Promise.all([
-      db.select().from(opportunitiesTable).where(eq(opportunitiesTable.id, idA)),
-      db.select().from(opportunitiesTable).where(eq(opportunitiesTable.id, idB)),
-      db.select().from(prioritizationAnalysisTable).where(eq(prioritizationAnalysisTable.opportunityId, idA)),
-      db.select().from(prioritizationAnalysisTable).where(eq(prioritizationAnalysisTable.opportunityId, idB)),
+      db.select().from(opportunitiesTable).where(and(eq(opportunitiesTable.id, idA), eq(opportunitiesTable.userId, req.user!.id))),
+      db.select().from(opportunitiesTable).where(and(eq(opportunitiesTable.id, idB), eq(opportunitiesTable.userId, req.user!.id))),
+      db.select().from(prioritizationAnalysisTable).where(and(eq(prioritizationAnalysisTable.opportunityId, idA), inArray(prioritizationAnalysisTable.opportunityId, ownedIdeaIds(req.user!.id)))),
+      db.select().from(prioritizationAnalysisTable).where(and(eq(prioritizationAnalysisTable.opportunityId, idB), inArray(prioritizationAnalysisTable.opportunityId, ownedIdeaIds(req.user!.id)))),
     ]);
 
     if (

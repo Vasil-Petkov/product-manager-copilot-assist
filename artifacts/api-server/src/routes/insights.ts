@@ -2,12 +2,14 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { aiInsightsTable, opportunitiesTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
+import { eq } from "drizzle-orm";
+import { replaceOwnedInsights } from "../services/ownedInsights";
 
 const router: IRouter = Router();
 
 router.get("/insights", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const insights = await db.select().from(aiInsightsTable).orderBy(aiInsightsTable.createdAt);
+    const insights = await db.select().from(aiInsightsTable).where(eq(aiInsightsTable.userId, req.user!.id)).orderBy(aiInsightsTable.createdAt);
     res.json(
       insights.map((i) => ({
         ...i,
@@ -19,7 +21,7 @@ router.get("/insights", requireAuth, async (req, res, next): Promise<void> => {
 
 router.get("/insights/trending", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const opps = await db.select().from(opportunitiesTable).orderBy(opportunitiesTable.createdAt).limit(20);
+    const opps = await db.select().from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)).orderBy(opportunitiesTable.createdAt).limit(20);
 
     const categories = new Map<string, number>();
     const sourceTypes = new Map<string, number>();
@@ -63,7 +65,7 @@ router.get("/insights/trending", requireAuth, async (req, res, next): Promise<vo
 
 router.post("/insights/generate", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const opps = await db.select().from(opportunitiesTable).limit(20);
+    const opps = await db.select().from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)).limit(20);
     const { openai } = await import("@workspace/integrations-openai-ai-server");
 
     const oppSummary = opps.map((o, i) =>
@@ -102,19 +104,7 @@ Return only valid JSON array, no markdown.`,
       ];
     }
 
-    await db.delete(aiInsightsTable);
-
-    const inserted = await db.insert(aiInsightsTable).values(
-      newInsights.slice(0, 6).map((i) => ({
-        type: i.type,
-        title: i.title,
-        content: i.content,
-        relatedOpportunityIds: (i.relatedOpportunityIndexes ?? [])
-          .filter((idx) => idx < opps.length)
-          .map((idx) => String(opps[idx]!.id)),
-        confidence: i.confidence ?? 0.75,
-      }))
-    ).returning();
+    const inserted = await replaceOwnedInsights(req.user!.id, newInsights, opps.map(idea => idea.id));
 
     res.json(inserted.map((i) => ({ ...i, relatedOpportunityIds: i.relatedOpportunityIds.map(Number) })));
   } catch (err) { next(err); }

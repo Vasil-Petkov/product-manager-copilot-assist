@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { conversations as conversationsTable, messages as messagesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -10,21 +10,21 @@ import { parseRouteInteger } from "../lib/route-params";
 const router: IRouter = Router();
 
 router.get("/openai/conversations", requireAuth, async (req, res, next): Promise<void> => {
-  const rows = await db.select().from(conversationsTable).orderBy(conversationsTable.createdAt);
+  const rows = await db.select().from(conversationsTable).where(eq(conversationsTable.userId, req.user!.id)).orderBy(conversationsTable.createdAt);
   res.json(rows);
 });
 
 router.post("/openai/conversations", requireAuth, async (req, res, next): Promise<void> => {
   const { title } = req.body;
   if (!title) { res.status(400).json({ error: "title is required" }); return; }
-  const [conv] = await db.insert(conversationsTable).values({ title }).returning();
+  const [conv] = await db.insert(conversationsTable).values({ title, userId: req.user!.id }).returning();
   res.status(201).json(conv!);
 });
 
 router.get("/openai/conversations/:id", requireAuth, async (req, res, next): Promise<void> => {
   const id = parseRouteInteger(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, id));
+  const [conv] = await db.select().from(conversationsTable).where(and(eq(conversationsTable.id, id), eq(conversationsTable.userId, req.user!.id)));
   if (!conv) { res.status(404).json({ error: "Not found" }); return; }
   const msgs = await db.select().from(messagesTable).where(eq(messagesTable.conversationId, id)).orderBy(messagesTable.createdAt);
   res.json({ ...conv, messages: msgs });
@@ -33,7 +33,7 @@ router.get("/openai/conversations/:id", requireAuth, async (req, res, next): Pro
 router.delete("/openai/conversations/:id", requireAuth, async (req, res, next): Promise<void> => {
   const id = parseRouteInteger(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [deleted] = await db.delete(conversationsTable).where(eq(conversationsTable.id, id)).returning();
+  const [deleted] = await db.delete(conversationsTable).where(and(eq(conversationsTable.id, id), eq(conversationsTable.userId, req.user!.id))).returning();
   if (!deleted) { res.status(404).json({ error: "Not found" }); return; }
   res.sendStatus(204);
 });
@@ -41,6 +41,9 @@ router.delete("/openai/conversations/:id", requireAuth, async (req, res, next): 
 router.get("/openai/conversations/:id/messages", requireAuth, async (req, res, next): Promise<void> => {
   const id = parseRouteInteger(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [conv] = await db.select({ id: conversationsTable.id }).from(conversationsTable)
+    .where(and(eq(conversationsTable.id, id), eq(conversationsTable.userId, req.user!.id)));
+  if (!conv) { res.status(404).json({ error: "Not found" }); return; }
   const msgs = await db.select().from(messagesTable).where(eq(messagesTable.conversationId, id)).orderBy(messagesTable.createdAt);
   res.json(msgs);
 });
@@ -52,7 +55,7 @@ router.post("/openai/conversations/:id/messages", requireAuth, async (req, res, 
   const { content } = req.body;
   if (!content) { res.status(400).json({ error: "content is required" }); return; }
 
-  const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, id));
+  const [conv] = await db.select().from(conversationsTable).where(and(eq(conversationsTable.id, id), eq(conversationsTable.userId, req.user!.id)));
   if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
 
   // Save user message

@@ -82,8 +82,8 @@ before(async () => {
   const { default: app } = await import("../app.ts");
   server = http.createServer(app).listen(0, "127.0.0.1");
   await once(server, "listening");
-  // Create conversations through the authenticated API, not by assigning
-  // hypothetical owner columns that are absent in the current schema.
+  // Create through the authenticated API so these tests verify server-assigned
+  // ownership rather than assuming that fixture-supplied owners are enforced.
   const conversationA = await request("/openai/conversations", "POST", { title: "Private conversation A" }, fixture.sidA);
   const conversationB = await request("/openai/conversations", "POST", { title: "Private conversation B" });
   assert.equal(conversationA.status, 201);

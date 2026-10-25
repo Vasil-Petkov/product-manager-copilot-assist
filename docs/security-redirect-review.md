@@ -34,10 +34,10 @@ trusted. PKCE, state, nonce, and ID-token validation are unchanged.
 ## Validation
 
 - Full workspace TypeScript check passed.
-- Redirect, demo-session, request-validation, and route-parameter regression
-  tests pass. The restored ownership suite exposes application isolation
-  failures; see the ownership coverage review below. A passing SAST scan is
-  not proof of workspace isolation.
+- API: **47 passed, zero failed or skipped** (15 unit/cleanup checks plus 32
+  database-backed integration checks). The original ownership assertions are
+  unchanged and all eleven previously failing cases now pass.
+- Frontend demo tests: **2 passed, zero failed**.
 - Frontend demo tests passed: 2 tests.
 - API, PM Copilot, and component-preview production builds passed. The PM
   Copilot build still emits non-fatal sourcemap, Zod annotation, and bundle-size
@@ -79,23 +79,59 @@ exercise this behavior. No fixture-prefix SQL deletion can affect user data.
 PostgreSQL `initdb` and `pg_ctl` must be on PATH; missing tooling fails explicitly,
 with no fallback to the application database.
 
-The tests create two users and real sessions, seed independent records, and
-exercise authenticated list/read/update/delete APIs. Coverage includes
-opportunities, competitors, meetings, feedback, signals, product-workspace
-aggregation, conversations created through authenticated APIs, and disclosure
-of legacy unassigned insights. Demo database tests now run on this same
-disposable target. This is real runtime coverage, not the historical
-source-text/regex assertions.
+Tests exercise actual Express routes, real sessions, and independent users.
+The original matrix covers opportunities, competitors, meetings, feedback,
+signals, workspace aggregation, conversations, and unassigned insights. The
+additional feature suite covers:
 
-The ownership run currently has **4 passes and 11 failures** (including two
-passing demo tests). Failures demonstrate cross-owner list/read/delete access,
-cross-owner workspace aggregation, globally shared conversations, and legacy
-insight disclosure. Opportunity list/access isolation passes.
+- Validation hypothesis/experiment lists, detail, mutations, creation,
+  duplication, archival, summary counts, and unauthorized AI work.
+- Document lists, detail, edits, acceptance, generation context, regeneration
+  guards, and inconsistent parent ownership.
+- Roadmap initiatives, items, milestones, cross-owner links and mutations,
+  and the legitimate owner's create/update/delete lifecycle.
+- Context assembly, linked meetings/competitors, comments, search, dashboard
+  aggregates, conversation messages, and early rejection of unauthorized AI
+  requests without starting a stream.
+- Owner spoofing, standalone feedback linking/detachment, single/bulk signal
+  ingestion, and insight persistence preserving other users' and legacy data.
+- Byte-for-byte preservation of foreign and ownerless fixture rows after
+  denied requests. Invalid legacy parent links cannot become accessible through
+  a cascade or SET NULL operation.
 
-The full historical validation/roadmap/document/AI ownership matrix has not
-been restored here. Expanding that coverage and repairing the missing
-application ownership implementation remain outstanding. Conversations and AI
-insights lack persistent owner fields in the current schema; legacy records
-cannot safely be assigned to users by guessing. The failing tests are
-intentional evidence of unresolved application behavior, not suppressed or
-skipped checks. This branch should not be described as fully security-validated.
+No assertion was removed or weakened; no authorization check is mocked. AI
+provider inference and full browser OAuth completion are not part of these
+tests. Generation persistence and the actual context/authorization boundaries
+are tested without making paid model calls.
+
+## Ownership policy and schema application
+
+The current product uses the authenticated user's ID as its workspace boundary.
+All ownership comes from the server-side session, never request body fields.
+Lists and aggregates filter in SQL; detail and mutation operations scope by both
+ID and ownership. Unauthorized IDs return 404. Validation, documents, and roadmap
+entities must agree with the ownership of their entire parent chain.
+
+Four additive, nullable FK columns store owners for conversations, AI insights,
+feedback, and signals. Existing values are **not** backfilled, guessed from
+activity, assigned to the current user, or deleted. New records have the
+authenticated owner.
+
+Ownerless opportunities, competitors, meetings, conversations, insights, and
+unlinked evidence remain hidden. Feedback/signals with no explicit owner may
+inherit authorization from an existing, owned Product Idea FK; this is a child
+relationship check, not an ownership assignment. An explicit evidence owner
+must agree with the parent. Conflicting ownership denies access to both users.
+Standalone new feedback remains supported because it has an explicit owner.
+
+Detaching legacy feedback without an explicit owner returns 409 pending an
+ownership review; it does not silently assign one. Deleting an owned idea or
+initiative also returns 409 if cascading would mutate a differently owned
+child. Such inconsistencies need reviewed administrative remediation, not
+automatic repair.
+
+The four columns were applied through the normal **development** schema push.
+No production DDL, startup DDL, owner-backfill script, or deployment hook was
+added. Before these code changes run in production, the additive columns must
+be included through the supported Publish schema flow. This PR work does not
+publish the app or change the live database.

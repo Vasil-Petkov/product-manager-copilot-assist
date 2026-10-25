@@ -25,6 +25,7 @@ import {
   prioritizationScoresTable,
 } from "@workspace/db";
 import { eq, desc, and, ilike, or } from "drizzle-orm";
+import { ownedFeedback, ownedSignal, requireOwnedIdea } from "../lib/ownership";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,20 +164,10 @@ export interface ProductContext {
  *
  * @throws Error if the idea does not exist.
  */
-export async function buildProductContext(ideaId: number, userId?: string): Promise<ProductContext> {
+export async function buildProductContext(ideaId: number, userId: string): Promise<ProductContext> {
   // 1. Load the core idea first (fail fast if not found)
-  const [idea] = await db
-    .select()
-    .from(opportunitiesTable)
-    .where(
-      userId
-        ? and(eq(opportunitiesTable.id, ideaId), eq(opportunitiesTable.userId, userId))
-        : eq(opportunitiesTable.id, ideaId),
-    );
-
-  if (!idea) {
-    throw new Error(`Product Idea ${ideaId} not found`);
-  }
+  if (!userId) throw new Error("Product context requires an authenticated owner");
+  const idea = await requireOwnedIdea(ideaId, userId);
 
   // 2. Fan out all remaining queries in parallel
   const [
@@ -197,14 +188,14 @@ export async function buildProductContext(ideaId: number, userId?: string): Prom
     db
       .select()
       .from(signalsTable)
-      .where(eq(signalsTable.opportunityId, ideaId))
+      .where(and(eq(signalsTable.opportunityId, ideaId), ownedSignal(userId)))
       .orderBy(desc(signalsTable.createdAt)),
 
     // Stakeholder feedback referencing this idea
     db
       .select()
       .from(feedbackTable)
-      .where(eq(feedbackTable.opportunityId, ideaId))
+      .where(and(eq(feedbackTable.opportunityId, ideaId), ownedFeedback(userId)))
       .orderBy(desc(feedbackTable.createdAt)),
 
     // Timeline events
@@ -230,7 +221,7 @@ export async function buildProductContext(ideaId: number, userId?: string): Prom
       .limit(1),
 
     // All AI insights
-    db.select().from(aiInsightsTable).orderBy(desc(aiInsightsTable.createdAt)),
+    db.select().from(aiInsightsTable).where(eq(aiInsightsTable.userId, userId)).orderBy(desc(aiInsightsTable.createdAt)),
   ]);
 
   // 3. Resolve linked meetings and competitors in parallel
@@ -240,23 +231,19 @@ export async function buildProductContext(ideaId: number, userId?: string): Prom
   const [linkedMeetingsRaw, linkedCompetitorsRaw, relatedIdeasRaw] = await Promise.all([
     meetingIds.length > 0
       ? db.select().from(meetingsTable).where(
-          userId
-            ? and(
+          and(
               or(...meetingIds.map((id) => eq(meetingsTable.id, id)))!,
               eq(meetingsTable.userId, userId),
-            )
-            : or(...meetingIds.map((id) => eq(meetingsTable.id, id)))!,
+            ),
         )
       : Promise.resolve([]),
 
     competitorIds.length > 0
       ? db.select().from(competitorsTable).where(
-          userId
-            ? and(
+          and(
               or(...competitorIds.map((id) => eq(competitorsTable.id, id)))!,
               eq(competitorsTable.userId, userId),
-            )
-            : or(...competitorIds.map((id) => eq(competitorsTable.id, id)))!,
+            ),
         )
       : Promise.resolve([]),
 
@@ -273,7 +260,7 @@ export async function buildProductContext(ideaId: number, userId?: string): Prom
           .where(
             and(
               eq(opportunitiesTable.category, idea.category),
-              ...(userId ? [eq(opportunitiesTable.userId, userId)] : []),
+              eq(opportunitiesTable.userId, userId),
               // Exclude self
             )
           )

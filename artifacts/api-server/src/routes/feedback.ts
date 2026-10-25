@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { feedbackTable } from "@workspace/db";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { validate } from "../middlewares/validate";
 import { AppError, NotFoundError } from "../middlewares/errorHandler";
 
 import { parseRouteInteger } from "../lib/route-params";
+import { ownedFeedback, requireOwnedIdea } from "../lib/ownership";
 
 const router: IRouter = Router();
 
@@ -30,6 +31,7 @@ router.get("/feedback", requireAuth, async (req, res, next): Promise<void> => {
     const skip = parseInt(offset, 10) || 0;
 
     const feedback = await db.select().from(feedbackTable)
+      .where(ownedFeedback(req.user!.id))
       .orderBy(desc(feedbackTable.createdAt)).limit(take).offset(skip);
 
     res.json(feedback);
@@ -43,7 +45,9 @@ router.post(
   async (req, res, next): Promise<void> => {
     try {
       const body = req.body as z.infer<typeof createFeedbackSchema>;
+      if (body.opportunityId != null) await requireOwnedIdea(body.opportunityId, req.user!.id);
       const [fb] = await db.insert(feedbackTable).values({
+        userId: req.user!.id,
         department: body.department,
         stakeholderName: body.stakeholderName,
         description: body.description,
@@ -63,7 +67,7 @@ router.get("/feedback/:id", requireAuth, async (req, res, next): Promise<void> =
     const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const [fb] = await db.select().from(feedbackTable).where(eq(feedbackTable.id, id));
+    const [fb] = await db.select().from(feedbackTable).where(and(eq(feedbackTable.id, id), ownedFeedback(req.user!.id)));
     if (!fb) throw new NotFoundError("Feedback");
     res.json(fb);
   } catch (err) { next(err); }
@@ -79,6 +83,15 @@ router.patch(
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof updateFeedbackSchema>;
+      if (body.opportunityId != null) await requireOwnedIdea(body.opportunityId, req.user!.id);
+      if (body.opportunityId === null) {
+        const [existing] = await db.select().from(feedbackTable)
+          .where(and(eq(feedbackTable.id, id), ownedFeedback(req.user!.id)));
+        if (!existing) throw new NotFoundError("Feedback");
+        if (existing.userId !== req.user!.id) {
+          throw new AppError(409, "Legacy feedback needs an explicit ownership review before detaching");
+        }
+      }
       const updateData: Record<string, unknown> = {};
       const fields = ["department", "stakeholderName", "description", "customerImpact", "businessContext", "urgency", "opportunityId"] as const;
       for (const f of fields) {
@@ -87,7 +100,7 @@ router.patch(
 
       const [updated] = await db.update(feedbackTable)
         .set(updateData as never)
-        .where(eq(feedbackTable.id, id))
+        .where(and(eq(feedbackTable.id, id), ownedFeedback(req.user!.id)))
         .returning();
 
       if (!updated) throw new NotFoundError("Feedback");
@@ -101,7 +114,7 @@ router.delete("/feedback/:id", requireAuth, async (req, res, next): Promise<void
     const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
-    const [deleted] = await db.delete(feedbackTable).where(eq(feedbackTable.id, id)).returning();
+    const [deleted] = await db.delete(feedbackTable).where(and(eq(feedbackTable.id, id), ownedFeedback(req.user!.id))).returning();
     if (!deleted) throw new NotFoundError("Feedback");
     res.sendStatus(204);
   } catch (err) { next(err); }

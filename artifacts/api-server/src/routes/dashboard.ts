@@ -7,8 +7,9 @@ import {
   meetingsTable,
   aiInsightsTable,
 } from "@workspace/db";
-import { eq, count, desc } from "drizzle-orm";
+import { eq, count, desc, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
+import { ownedSignal } from "../lib/ownership";
 
 const router: IRouter = Router();
 
@@ -26,20 +27,20 @@ router.get("/dashboard/stats", requireAuth, async (req, res, next): Promise<void
     recentMeetings,
     categoryBreakdown,
   ] = await Promise.all([
-    db.select({ total: count() }).from(opportunitiesTable),
-    db.select({ total: count() }).from(opportunitiesTable).where(eq(opportunitiesTable.status, "new")),
-    db.select({ total: count() }).from(opportunitiesTable).where(eq(opportunitiesTable.status, "ready_for_prioritization")),
-    db.select({ total: count() }).from(signalsTable),
-    db.select({ total: count() }).from(competitorsTable),
-    db.select({ total: count() }).from(meetingsTable).where(eq(meetingsTable.analyzed, true)),
-    db.select({ sourceType: opportunitiesTable.sourceType, count: count() }).from(opportunitiesTable).groupBy(opportunitiesTable.sourceType),
-    db.select({ sentiment: opportunitiesTable.sentiment, count: count() }).from(opportunitiesTable).groupBy(opportunitiesTable.sentiment),
+    db.select({ total: count() }).from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)),
+    db.select({ total: count() }).from(opportunitiesTable).where(and(eq(opportunitiesTable.userId, req.user!.id), eq(opportunitiesTable.status, "new"))),
+    db.select({ total: count() }).from(opportunitiesTable).where(and(eq(opportunitiesTable.userId, req.user!.id), eq(opportunitiesTable.status, "ready_for_prioritization"))),
+    db.select({ total: count() }).from(signalsTable).where(ownedSignal(req.user!.id)),
+    db.select({ total: count() }).from(competitorsTable).where(eq(competitorsTable.userId, req.user!.id)),
+    db.select({ total: count() }).from(meetingsTable).where(and(eq(meetingsTable.userId, req.user!.id), eq(meetingsTable.analyzed, true))),
+    db.select({ sourceType: opportunitiesTable.sourceType, count: count() }).from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)).groupBy(opportunitiesTable.sourceType),
+    db.select({ sentiment: opportunitiesTable.sentiment, count: count() }).from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)).groupBy(opportunitiesTable.sentiment),
     // Newest opportunities first
     db.select({ id: opportunitiesTable.id, title: opportunitiesTable.title, category: opportunitiesTable.category, status: opportunitiesTable.status, urgency: opportunitiesTable.urgency, sourceType: opportunitiesTable.sourceType, sentiment: opportunitiesTable.sentiment, confidenceScore: opportunitiesTable.confidenceScore, createdAt: opportunitiesTable.createdAt })
-      .from(opportunitiesTable).orderBy(desc(opportunitiesTable.createdAt)).limit(10),
-    db.select({ title: meetingsTable.title, analyzed: meetingsTable.analyzed }).from(meetingsTable).orderBy(desc(meetingsTable.meetingDate)).limit(5),
+      .from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)).orderBy(desc(opportunitiesTable.createdAt)).limit(10),
+    db.select({ title: meetingsTable.title, analyzed: meetingsTable.analyzed }).from(meetingsTable).where(eq(meetingsTable.userId, req.user!.id)).orderBy(desc(meetingsTable.meetingDate)).limit(5),
     // Category breakdown for pain points vs feature requests
-    db.select({ category: opportunitiesTable.category, count: count() }).from(opportunitiesTable).groupBy(opportunitiesTable.category),
+    db.select({ category: opportunitiesTable.category, count: count() }).from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)).groupBy(opportunitiesTable.category),
   ]);
 
   // Real top requests — feature_request + improvement categories, by most recent
@@ -94,10 +95,10 @@ router.get("/dashboard/stats", requireAuth, async (req, res, next): Promise<void
 
 router.get("/dashboard/daily-summary", requireAuth, async (req, res, next): Promise<void> => {
   const [recentInsights, allOpps, urgentOpps, recentMeetings] = await Promise.all([
-    db.select().from(aiInsightsTable).orderBy(desc(aiInsightsTable.createdAt)).limit(5),
-    db.select({ total: count() }).from(opportunitiesTable),
-    db.select().from(opportunitiesTable).where(eq(opportunitiesTable.urgency, "high")).orderBy(desc(opportunitiesTable.createdAt)).limit(5),
-    db.select().from(meetingsTable).orderBy(desc(meetingsTable.meetingDate)).limit(3),
+    db.select().from(aiInsightsTable).where(eq(aiInsightsTable.userId, req.user!.id)).orderBy(desc(aiInsightsTable.createdAt)).limit(5),
+    db.select({ total: count() }).from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)),
+    db.select().from(opportunitiesTable).where(and(eq(opportunitiesTable.userId, req.user!.id), eq(opportunitiesTable.urgency, "high"))).orderBy(desc(opportunitiesTable.createdAt)).limit(5),
+    db.select().from(meetingsTable).where(eq(meetingsTable.userId, req.user!.id)).orderBy(desc(meetingsTable.meetingDate)).limit(3),
   ]);
 
   const total = allOpps[0]?.total ?? 0;
