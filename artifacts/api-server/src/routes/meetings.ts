@@ -9,6 +9,8 @@ import { AppError, NotFoundError } from "../middlewares/errorHandler";
 import { recordTimeline } from "./product-ideas";
 import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
 
+import { parseRouteInteger } from "../lib/route-params";
+
 const router: IRouter = Router();
 
 const createMeetingSchema = z.object({
@@ -73,7 +75,7 @@ router.post(
 
 router.get("/meetings/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, id));
@@ -96,7 +98,7 @@ router.patch(
   validate(updateMeetingSchema),
   async (req, res, next): Promise<void> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseRouteInteger(req.params.id);
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof updateMeetingSchema>;
@@ -126,7 +128,7 @@ router.patch(
 
 router.delete("/meetings/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [deleted] = await db.delete(meetingsTable).where(eq(meetingsTable.id, id)).returning();
@@ -139,7 +141,7 @@ router.delete("/meetings/:id", requireAuth, async (req, res, next): Promise<void
 
 router.post("/meetings/:id/analyze", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [meeting] = await db.select().from(meetingsTable).where(eq(meetingsTable.id, id));

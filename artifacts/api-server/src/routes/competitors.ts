@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireAuth } from "../middlewares/requireAuth";
 import { validate } from "../middlewares/validate";
 import { AppError, NotFoundError } from "../middlewares/errorHandler";
+import { parseRouteInteger } from "../lib/route-params";
 
 const router: IRouter = Router();
 
@@ -61,7 +62,7 @@ router.post(
 
 router.get("/competitors/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [competitor] = await db.select().from(competitorsTable)
@@ -80,7 +81,7 @@ router.patch(
   validate(updateCompetitorSchema),
   async (req, res, next): Promise<void> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseRouteInteger(req.params.id);
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof updateCompetitorSchema>;
@@ -106,7 +107,7 @@ router.patch(
 
 router.delete("/competitors/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [deleted] = await db.delete(competitorsTable)
@@ -121,7 +122,7 @@ router.delete("/competitors/:id", requireAuth, async (req, res, next): Promise<v
 
 router.post("/competitors/:id/analyze", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [competitor] = await db.select().from(competitorsTable)
@@ -201,7 +202,7 @@ Provide a competitive analysis. Return JSON:
 
 router.get("/competitors/:id/reports", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const reports = await db.select().from(competitorReportsTable)

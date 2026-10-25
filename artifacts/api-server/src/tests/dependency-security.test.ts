@@ -62,6 +62,24 @@ test("request validation still replaces parsed bodies and forwards structured er
   assert.equal(calls, 2);
 });
 
+test("validation replaces Express 5 getter-only query properties with parsed data", async () => {
+  const app = express();
+  app.get("/", validate(z.object({ limit: z.coerce.number().int() }), "query"), (req, res) => {
+    res.json(req.query);
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/?limit=12&extra=removed`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { limit: 12 });
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 test("compressed bodies with trailing bytes do not crash Express", async () => {
   const app = express();
   app.use(express.json());

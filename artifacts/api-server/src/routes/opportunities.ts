@@ -9,6 +9,8 @@ import { NotFoundError, AppError } from "../middlewares/errorHandler";
 import { recordTimeline } from "./product-ideas";
 import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
 
+import { parseRouteInteger } from "../lib/route-params";
+
 const router: IRouter = Router();
 
 // ─── Validation Schemas ──────────────────────────────────────────────────────
@@ -103,7 +105,7 @@ router.post(
 
 router.get("/opportunities/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [opp] = await db.select().from(opportunitiesTable).where(and(
@@ -144,7 +146,7 @@ router.patch(
   validate(updateOpportunitySchema),
   async (req, res, next): Promise<void> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseRouteInteger(req.params.id);
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof updateOpportunitySchema>;
@@ -186,7 +188,7 @@ router.patch(
 
 router.delete("/opportunities/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [deleted] = await db
@@ -206,7 +208,7 @@ router.delete("/opportunities/:id", requireAuth, async (req, res, next): Promise
 
 router.post("/opportunities/:id/analyze", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [ownedIdea] = await db.select({ id: opportunitiesTable.id })

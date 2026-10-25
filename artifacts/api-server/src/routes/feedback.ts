@@ -7,6 +7,8 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { validate } from "../middlewares/validate";
 import { AppError, NotFoundError } from "../middlewares/errorHandler";
 
+import { parseRouteInteger } from "../lib/route-params";
+
 const router: IRouter = Router();
 
 const createFeedbackSchema = z.object({
@@ -58,7 +60,7 @@ router.post(
 
 router.get("/feedback/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [fb] = await db.select().from(feedbackTable).where(eq(feedbackTable.id, id));
@@ -73,7 +75,7 @@ router.patch(
   validate(updateFeedbackSchema),
   async (req, res, next): Promise<void> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseRouteInteger(req.params.id);
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof updateFeedbackSchema>;
@@ -96,7 +98,7 @@ router.patch(
 
 router.delete("/feedback/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [deleted] = await db.delete(feedbackTable).where(eq(feedbackTable.id, id)).returning();

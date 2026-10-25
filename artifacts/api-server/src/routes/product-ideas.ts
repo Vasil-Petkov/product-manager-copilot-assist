@@ -21,6 +21,8 @@ import { validate } from "../middlewares/validate";
 import { AppError, NotFoundError } from "../middlewares/errorHandler";
 import { buildProductContext, formatContextForPrompt } from "../services/contextEngine";
 
+import { parseRouteInteger } from "../lib/route-params";
+
 const router: IRouter = Router();
 
 // ─── Internal Timeline Helper ─────────────────────────────────────────────────
@@ -47,7 +49,7 @@ export async function recordTimeline(
 
 router.get("/product-ideas/:id/workspace", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const ctx = await buildProductContext(id);
@@ -77,7 +79,7 @@ const createCommentSchema = z.object({
 
 router.get("/product-ideas/:id/comments", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const comments = await db.select().from(ideaCommentsTable)
@@ -94,7 +96,7 @@ router.post(
   validate(createCommentSchema),
   async (req, res, next): Promise<void> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseRouteInteger(req.params.id);
       if (isNaN(id)) throw new AppError(400, "Invalid id");
 
       const body = req.body as z.infer<typeof createCommentSchema>;
@@ -114,8 +116,8 @@ router.post(
 
 router.delete("/product-ideas/:id/comments/:commentId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const commentId = parseInt(req.params.commentId, 10);
+    const id = parseRouteInteger(req.params.id);
+    const commentId = parseRouteInteger(req.params.commentId);
     if (isNaN(id) || isNaN(commentId)) throw new AppError(400, "Invalid id");
 
     const [deleted] = await db.delete(ideaCommentsTable)
@@ -131,7 +133,7 @@ router.delete("/product-ideas/:id/comments/:commentId", requireAuth, async (req,
 
 router.get("/product-ideas/:id/timeline", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const events = await db.select().from(ideaTimelineTable)
@@ -146,7 +148,7 @@ router.get("/product-ideas/:id/timeline", requireAuth, async (req, res, next): P
 
 router.get("/product-ideas/:id/health", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const ctx = await buildProductContext(id);
@@ -158,8 +160,8 @@ router.get("/product-ideas/:id/health", requireAuth, async (req, res, next): Pro
 
 router.post("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const ideaId = parseInt(req.params.id, 10);
-    const meetingId = parseInt(req.params.meetingId, 10);
+    const ideaId = parseRouteInteger(req.params.id);
+    const meetingId = parseRouteInteger(req.params.meetingId);
     if (isNaN(ideaId) || isNaN(meetingId)) throw new AppError(400, "Invalid id");
 
     const [meeting] = await db.select({ title: meetingsTable.title })
@@ -179,8 +181,8 @@ router.post("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (re
 
 router.delete("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const ideaId = parseInt(req.params.id, 10);
-    const meetingId = parseInt(req.params.meetingId, 10);
+    const ideaId = parseRouteInteger(req.params.id);
+    const meetingId = parseRouteInteger(req.params.meetingId);
     if (isNaN(ideaId) || isNaN(meetingId)) throw new AppError(400, "Invalid id");
 
     await db.delete(ideaMeetingsTable)
@@ -194,8 +196,8 @@ router.delete("/product-ideas/:id/link-meeting/:meetingId", requireAuth, async (
 
 router.post("/product-ideas/:id/link-competitor/:competitorId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const ideaId = parseInt(req.params.id, 10);
-    const competitorId = parseInt(req.params.competitorId, 10);
+    const ideaId = parseRouteInteger(req.params.id);
+    const competitorId = parseRouteInteger(req.params.competitorId);
     if (isNaN(ideaId) || isNaN(competitorId)) throw new AppError(400, "Invalid id");
 
     const [competitor] = await db.select({ name: competitorsTable.name })
@@ -214,8 +216,8 @@ router.post("/product-ideas/:id/link-competitor/:competitorId", requireAuth, asy
 
 router.delete("/product-ideas/:id/link-competitor/:competitorId", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const ideaId = parseInt(req.params.id, 10);
-    const competitorId = parseInt(req.params.competitorId, 10);
+    const ideaId = parseRouteInteger(req.params.id);
+    const competitorId = parseRouteInteger(req.params.competitorId);
     if (isNaN(ideaId) || isNaN(competitorId)) throw new AppError(400, "Invalid id");
 
     await db.delete(ideaCompetitorsTable)

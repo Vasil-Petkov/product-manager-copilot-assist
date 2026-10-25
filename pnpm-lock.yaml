@@ -228,6 +228,9 @@ importers:
       thread-stream:
         specifier: 3.1.0
         version: 3.1.0
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
 
   artifacts/mockup-sandbox:
     devDependencies:

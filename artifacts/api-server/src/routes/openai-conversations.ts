@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { requireAuth } from "../middlewares/requireAuth";
 
+import { parseRouteInteger } from "../lib/route-params";
+
 const router: IRouter = Router();
 
 router.get("/openai/conversations", requireAuth, async (req, res, next): Promise<void> => {
@@ -20,7 +22,7 @@ router.post("/openai/conversations", requireAuth, async (req, res, next): Promis
 });
 
 router.get("/openai/conversations/:id", requireAuth, async (req, res, next): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseRouteInteger(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, id));
   if (!conv) { res.status(404).json({ error: "Not found" }); return; }
@@ -29,7 +31,7 @@ router.get("/openai/conversations/:id", requireAuth, async (req, res, next): Pro
 });
 
 router.delete("/openai/conversations/:id", requireAuth, async (req, res, next): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseRouteInteger(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const [deleted] = await db.delete(conversationsTable).where(eq(conversationsTable.id, id)).returning();
   if (!deleted) { res.status(404).json({ error: "Not found" }); return; }
@@ -37,14 +39,14 @@ router.delete("/openai/conversations/:id", requireAuth, async (req, res, next): 
 });
 
 router.get("/openai/conversations/:id/messages", requireAuth, async (req, res, next): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseRouteInteger(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const msgs = await db.select().from(messagesTable).where(eq(messagesTable.conversationId, id)).orderBy(messagesTable.createdAt);
   res.json(msgs);
 });
 
 router.post("/openai/conversations/:id/messages", requireAuth, async (req, res, next): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseRouteInteger(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const { content } = req.body;

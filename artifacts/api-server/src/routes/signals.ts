@@ -7,6 +7,8 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 
+import { parseRouteInteger } from "../lib/route-params";
+
 const router: IRouter = Router();
 
 const createSignalSchema = z.object({
@@ -107,7 +109,7 @@ router.post(
 
 router.delete("/signals/:id", requireAuth, async (req, res, next): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseRouteInteger(req.params.id);
     if (isNaN(id)) throw new AppError(400, "Invalid id");
 
     const [deleted] = await db.delete(signalsTable).where(eq(signalsTable.id, id)).returning();
