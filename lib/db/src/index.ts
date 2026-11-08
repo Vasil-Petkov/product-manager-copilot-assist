@@ -11,6 +11,17 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Isolate request-protection work from long-running application queries.
+// Bounded acquisition and statement timeouts make store outages fail closed.
+export const rateLimitPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 4,
+  connectionTimeoutMillis: 2000,
+  statement_timeout: 2000,
+  query_timeout: 3000,
+  idleTimeoutMillis: 30_000,
+  allowExitOnIdle: true,
+});
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";

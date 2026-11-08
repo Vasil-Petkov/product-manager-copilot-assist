@@ -4,6 +4,7 @@ import {
   deleteDemoSession,
   DEMO_SESSION_COOKIE,
   getDemoSession,
+  DemoCapacityError,
 } from "../lib/demoSession.ts";
 
 const router: IRouter = Router();
@@ -18,7 +19,13 @@ const demoCookieOptions = {
 router.post("/demo/session", (req: Request, res: Response) => {
   deleteDemoSession(req.cookies?.[DEMO_SESSION_COOKIE] as string | undefined);
 
-  const sessionId = createDemoSession();
+  let sessionId: string;
+  try { sessionId = createDemoSession(); } catch (error) {
+    if (!(error instanceof DemoCapacityError)) throw error;
+    res.setHeader("Retry-After", "60");
+    res.status(429).json({ error: "Demo is temporarily at capacity. Please retry later." });
+    return;
+  }
   res.cookie(DEMO_SESSION_COOKIE, sessionId, demoCookieOptions);
   res.status(201).json({ active: true });
 });
