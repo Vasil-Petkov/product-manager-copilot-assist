@@ -11,13 +11,23 @@ import { readSecurityConfig } from "./lib/security-config";
 import { securityCors } from "./middlewares/security-cors";
 import { securityRateLimit } from "./middlewares/security-rate-limit";
 import { PostgresRateLimitStore } from "./lib/rate-limit-store";
+import { csrfProtection } from "./middlewares/csrf";
+import { browserHeaders } from "../../../lib/browser-security/headers.mjs";
+import { recordSecurityEvent, setSecurityMetricSink } from "./lib/security-events";
 
 const app: Express = express();
 const security = readSecurityConfig();
 const counterSecret = process.env.SESSION_SECRET ?? "";
 const rateStore = new PostgresRateLimitStore(rateLimitPool);
-const reportStoreFailure = () => logger.warn({ event: "rate_store_unavailable" }, "Request protection unavailable");
+const reportStoreFailure = () => recordSecurityEvent("rate_store_unavailable");
+setSecurityMetricSink((event) => logger.info(event, "Security counters; notification alerts are not configured"));
+app.disable("x-powered-by");
 app.set("trust proxy", security.isTrustedProxy);
+app.use((_req, res, next) => {
+  for (const [name, value] of Object.entries(browserHeaders(process.env.NODE_ENV === "production"))) res.setHeader(name, value);
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 app.use(
   pinoHttp({
@@ -46,6 +56,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(demoSessionMiddleware);
 app.use(authMiddleware);
+app.use("/api", csrfProtection(counterSecret).guard);
 app.use("/api", securityRateLimit(rateStore, security.policies, "authenticated", counterSecret, reportStoreFailure));
 
 app.use("/api", router);

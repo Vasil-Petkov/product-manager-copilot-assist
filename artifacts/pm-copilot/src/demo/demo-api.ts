@@ -48,6 +48,7 @@ function buildOpportunityDetail(state: DemoState, id: number) {
   const opportunity = state.opportunities.find((item) => item.id === id) ?? state.opportunities[0];
   return {
     ...opportunity,
+    idea: opportunity,
     evidence: {
       customerRequestCount: state.signals.filter((item) => item.opportunityId === opportunity.id).length,
       stakeholderMentions: state.feedback.filter((item) => item.opportunityId === opportunity.id).length,
@@ -55,9 +56,14 @@ function buildOpportunityDetail(state: DemoState, id: number) {
       competitorReferences: opportunity.id === 102 ? 2 : 0,
       socialMentions: 1,
       exampleQuotes: state.signals.filter((item) => item.opportunityId === opportunity.id).map((item) => item.content),
+      feedbackQuotes: state.feedback.filter((item) => item.opportunityId === opportunity.id).map((item) => item.description),
       sourceLinks: ["https://example.invalid/demo-source"],
     },
     relatedSignals: state.signals.filter((item) => item.opportunityId === opportunity.id),
+    relatedFeedback: state.feedback.filter((item) => item.opportunityId === opportunity.id),
+    linkedMeetings: opportunity.id === 101 ? state.meetings.filter((item) => item.id === 401) : [],
+    linkedCompetitors: opportunity.id === 102 ? state.competitors.slice(0, 2) : [],
+    commentCount: 1,
   };
 }
 
@@ -110,6 +116,8 @@ export function installDemoApi() {
     const body = await requestBody(input, init);
 
     if (path === "/api/auth/user") return json({ user: demoUser });
+    // No server/DB bootstrap when protected API mutations are local fixtures.
+    if (path === "/api/auth/csrf") return json({ csrfToken: "demo-local-only" });
     if (path === "/api/healthz") return json({ status: "ok" });
     if (path === "/api/dashboard/stats") {
       return json({

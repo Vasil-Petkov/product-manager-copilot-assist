@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev": "export NODE_ENV=development && pnpm run build && node --enable-source-maps ./dist/index.mjs",
     "build": "node ./build.mjs",
     "start": "pnpm --filter @workspace/db run migrate:validation-phase2 && pnpm --filter @workspace/db run migrate:validation-experiments && pnpm --filter @workspace/db run migrate:validation-results && pnpm --filter @workspace/db run migrate:roadmap && pnpm --filter @workspace/db run migrate:documentation && node --enable-source-maps ./dist/index.mjs",
     "test": "pnpm run test:unit && pnpm run test:integration",
-    "test:unit": "node --import tsx --test src/tests/auth-redirects.test.ts src/tests/demo-session.test.ts src/tests/dependency-security.test.ts src/tests/workspace-ownership.cleanup.test.ts src/tests/security-hardening.test.ts",
+    "test:unit": "node --import tsx --test src/tests/auth-redirects.test.ts src/tests/demo-session.test.ts src/tests/dependency-security.test.ts src/tests/workspace-ownership.cleanup.test.ts src/tests/security-hardening.test.ts src/tests/browser-security.test.ts",
     "test:integration": "node --import tsx src/tests/workspace-ownership.integration.runner.ts",
     "test:dependencies": "node --import tsx --test src/tests/dependency-security.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

@@ -1,6 +1,20 @@
+test("CSRF-aware Demo mutation stays local without bootstrap/backend persistence", async () => {
+  const cleanup = installDemoApi();
+  const before = backendCalls;
+  try {
+    const response = await csrfFetch("/api/opportunities", { method: "POST", body: JSON.stringify({ title: "CSRF local fixture" }) }, window.fetch);
+    assert.ok(response.ok);
+    const created = await response.json();
+    const workspace = await (await window.fetch(`/api/product-ideas/${created.id}/workspace`)).json();
+    assert.equal(workspace.idea.id, created.id);
+    for (const values of [workspace.evidence.exampleQuotes, workspace.evidence.feedbackQuotes, workspace.evidence.sourceLinks, workspace.linkedMeetings, workspace.linkedCompetitors]) assert.ok(Array.isArray(values));
+    assert.equal(backendCalls, before);
+  } finally { cleanup(); }
+});
 import assert from "node:assert/strict";
 import test from "node:test";
 import { installDemoApi } from "./demo-api.ts";
+import { csrfFetch } from "../../../../lib/api-client-react/src/csrf.ts";
 
 const originalBackendFetch = async () => {
   backendCalls += 1;

@@ -15,3 +15,14 @@ boundaries that real two-user API checks expose.
 regression tests before claiming workspace isolation. Dispose only the
 runner-created cluster. Do not weaken failing assertions to obtain a green
 check, and do not infer legacy record owners during remediation.
+
+For disposable browser servers launched through a package-manager wrapper,
+request graceful shutdown from the actual fixture process and confirm database
+disposal; do not assume stopping the wrapper ran the fixture's finally block.
+
+**Why:** Stopping a wrapped background browser fixture left its state file
+behind without the expected disposal log, despite the processes being stopped.
+
+**How to apply:** Keep fixture lifecycle management separate from managed app
+workflows, terminate the fixture process gracefully, and verify shutdown before
+removing temporary test credentials or declaring cleanup complete.

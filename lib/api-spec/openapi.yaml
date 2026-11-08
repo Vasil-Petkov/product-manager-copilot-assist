@@ -88,11 +88,27 @@ paths:
       responses:
         '302':
           description: Redirect to the returnTo path on success or /api/login on failure.
+  /auth/csrf:
+    get:
+      tags: [Auth]
+      operationId: getBrowserCsrfToken
+      summary: Issue a no-store, session-bound browser CSRF token
+      responses:
+        '200':
+          description: Token for X-CSRF-Token or the logout confirmation form.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [csrfToken]
+                properties:
+                  csrfToken:
+                    type: string
   /logout:
     get:
       tags: [Auth]
       operationId: logoutBrowserSession
-      summary: Clear the session and begin OIDC logout
+      summary: Show a confirmation form without clearing the session
       parameters:
         - $ref: '#/components/parameters/AuthorizationSessionHeader'
         - $ref: '#/components/parameters/SessionCookie'
@@ -103,8 +119,27 @@ paths:
             type: string
             default: /
       responses:
+        '200':
+          description: CSRF-protected sign-out confirmation.
+          content:
+            text/html:
+              schema:
+                type: string
+    post:
+      tags: [Auth]
+      operationId: confirmBrowserLogout
+      summary: Clear the session and begin OIDC logout after CSRF verification
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BrowserLogoutForm'
+      responses:
         '302':
           description: Redirect to the OIDC provider logout URL.
+        '403':
+          description: Missing or invalid browser CSRF proof.
   /mobile-auth/token-exchange:
     post:
       tags: [Auth]
@@ -1721,6 +1756,14 @@ components:
         type: string
 
   schemas:
+    BrowserLogoutForm:
+      type: object
+      required: [_csrf]
+      properties:
+        _csrf:
+          type: string
+        returnTo:
+          type: string
     DocumentStatus:
       type: string
       enum: [draft, ai_generated, in_review, accepted]

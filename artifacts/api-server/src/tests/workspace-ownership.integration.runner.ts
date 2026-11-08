@@ -36,6 +36,7 @@ try {
     "src/tests/workspace-ownership.integration.test.ts",
     "src/tests/workspace-features.integration.test.ts",
     "src/tests/security-rate-store.integration.test.ts",
+    "src/tests/csrf.integration.test.ts",
   ], testEnv, abort.signal);
   await runTestCommand(process.execPath, [
     "--import", "tsx", "--test", "src/tests/security-http.integration.test.ts",

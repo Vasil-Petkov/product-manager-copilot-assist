@@ -3,14 +3,15 @@ import { isIP } from "node:net";
 import type { RequestHandler } from "express";
 import type { PolicyName, RatePolicy } from "../lib/security-config.ts";
 import type { Bucket, RateLimitStore } from "../lib/rate-limit-store.ts";
+import { recordSecurityEvent } from "../lib/security-events.ts";
 
 export function policyFor(method: string, path: string): PolicyName | undefined {
   if (method === "HEAD") method = "GET";
   // Express routing is case-insensitive and tolerates a terminal slash.
   path = path.toLowerCase().replace(/\/+$/, "");
-  if (method === "GET" && path === "/auth/user") return "authRead";
+  if (method === "GET" && ["/auth/user", "/auth/csrf"].includes(path)) return "authRead";
   if ((method === "GET" && ["/login", "/callback", "/logout"].includes(path))
-    || (method === "POST" && ["/mobile-auth/token-exchange", "/mobile-auth/logout"].includes(path))) return "auth";
+    || (method === "POST" && ["/logout", "/mobile-auth/token-exchange", "/mobile-auth/logout"].includes(path))) return "auth";
   if (path === "/demo/session" && method === "POST") return "demoCreate";
   if (path === "/demo/session" && method === "GET") return "demoRead";
   if (path === "/demo/session/exit" && method === "POST") return "demoExit";
@@ -46,6 +47,7 @@ export function securityRateLimit(
     if (privatePolicy && (req.isDemoSession() || !req.user || !req.isAuthenticated())) return next();
     const ip = req.ip;
     if (!ip || !isIP(ip)) {
+      unavailable();
       res.setHeader("Retry-After", "30");
       res.status(503).json({ error: "Request protection unavailable" });
       return;
@@ -56,11 +58,13 @@ export function securityRateLimit(
     try {
       const result = await store.consume(buckets);
       if (!result.allowed) {
+        recordSecurityEvent("rate_limited", name);
         res.setHeader("Retry-After", String(result.retryAfter));
         res.setHeader("Cache-Control", "no-store");
         res.status(429).json({ error: "Too many requests. Please retry later." });
         return;
       }
+      recordSecurityEvent("rate_allowed", name);
       next();
     } catch {
       // Never fail open or log query parameters/DB credentials on store failure.

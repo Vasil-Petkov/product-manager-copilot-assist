@@ -7,6 +7,7 @@ import {
 import { db, usersTable } from '@workspace/db';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import * as oidc from 'openid-client';
+import { csrfProtection } from '../middlewares/csrf';
 import {
   getSafeReturnTo,
   getTrustedAppOrigin,
@@ -228,10 +229,27 @@ router.get('/callback', async (req: Request, res: Response) => {
   redirectToLocalPath(res, returnTo);
 });
 
-router.get('/logout', async (req: Request, res: Response) => {
+router.get('/auth/csrf', (req: Request, res: Response) => {
+  res.json({ csrfToken: csrfProtection(process.env.SESSION_SECRET ?? '').issue(req, res) });
+});
+
+// GET/HEAD must never delete a session or initiate provider logout.
+// Existing logout links remain valid, but require an explicit protected POST.
+router.get('/logout', (req: Request, res: Response) => {
+  const token = csrfProtection(process.env.SESSION_SECRET ?? '').issue(req, res);
+  const returnTo = getSafeReturnTo(req.query.returnTo);
+  const escape = (value: string) => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Confirm sign out</title></head>
+<body><main><h1>Sign out?</h1><p>Your session will remain active until you confirm.</p>
+<form action="/api/logout" method="post"><input type="hidden" name="_csrf" value="${escape(token)}">
+<input type="hidden" name="returnTo" value="${escape(returnTo)}"><button type="submit">Sign out</button></form>
+<a href="/">Cancel</a></main></body></html>`);
+});
+
+router.post('/logout', async (req: Request, res: Response) => {
   const origin = getOrigin(req);
   const config = await getOidcConfig();
-  const returnTo = getSafeReturnTo(req.query.returnTo);
+  const returnTo = getSafeReturnTo(req.body?.returnTo);
   const postLogoutRedirectUrl = new URL(returnTo, `${origin}/`).href;
 
   const sid = getSessionId(req);

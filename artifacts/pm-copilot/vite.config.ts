@@ -1,3 +1,4 @@
+import { browserHeaders } from "../../lib/browser-security/headers.mjs";
 import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -65,6 +66,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    headers: browserHeaders(false),
     port,
     strictPort: true,
     host: '0.0.0.0',

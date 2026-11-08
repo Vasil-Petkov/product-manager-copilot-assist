@@ -1,3 +1,4 @@
+import { csrfHeaders } from "./csrf-client.fixture.ts";
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import http from "node:http";
@@ -163,6 +164,9 @@ async function request(
   const address = server.address();
   assert.ok(address && typeof address !== "string");
 
+  const headers = options.cookie
+    ? await csrfHeaders(`http://127.0.0.1:${address.port}/api`, options.cookie)
+    : undefined;
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
@@ -170,7 +174,7 @@ async function request(
         port: address.port,
         path,
         method: options.method ?? "GET",
-        headers: options.cookie ? { cookie: options.cookie } : undefined,
+        headers,
       },
       (res) => {
         const chunks: Buffer[] = [];
