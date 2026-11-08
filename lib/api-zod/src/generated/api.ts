@@ -170,7 +170,7 @@ export const GetDashboardStatsResponse = zod.object({
 /**
  * @summary Get AI-generated daily discovery summary
  */
-export const GetDailySummaryResponse = zod.object({
+export const GenerateDailySummaryResponse = zod.object({
   "summary": zod.string(),
   "keyThemes": zod.array(zod.string()).optional(),
   "urgentItems": zod.array(zod.string()).optional(),

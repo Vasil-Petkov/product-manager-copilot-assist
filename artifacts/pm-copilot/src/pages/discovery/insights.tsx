@@ -1,4 +1,4 @@
-import { useListInsights, useGetTrendingInsights, useGenerateInsights, getListInsightsQueryKey, getGetTrendingInsightsQueryKey, useGetDailySummary } from "@workspace/api-client-react";
+import { useListInsights, useGetTrendingInsights, useGenerateInsights, getListInsightsQueryKey, getGetTrendingInsightsQueryKey, useGenerateDailySummary } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ const TYPE_CONFIG = {
 export default function AiInsights() {
   const { data: insights, isLoading: insightsLoading } = useListInsights();
   const { data: trending, isLoading: trendingLoading } = useGetTrendingInsights();
-  const { data: summary } = useGetDailySummary();
+  const { data: summary, mutate: generateSummary, isPending: summaryPending, isError: summaryError } = useGenerateDailySummary();
   
   const generate = useGenerateInsights();
   const queryClient = useQueryClient();
@@ -61,6 +61,10 @@ export default function AiInsights() {
         </Button>
       </header>
 
+      <Button variant="outline" disabled={summaryPending} onClick={() => generateSummary()}>
+        {summaryPending ? "Generating…" : summary ? "Regenerate briefing" : "Generate briefing"}
+      </Button>
+      {summaryError && <p role="alert">Unable to generate the briefing. Please retry.</p>}
       {summary && (
         <Card className="bg-ai/5 border-ai/20 shadow-none">
           <CardContent className="p-6 flex gap-6">

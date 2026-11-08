@@ -1126,7 +1126,7 @@ export function useGetDashboardStats<TData = Awaited<ReturnType<typeof getDashbo
 
 
 
-export const getGetDailySummaryUrl = () => {
+export const getGenerateDailySummaryUrl = () => {
 
 
 
@@ -1137,12 +1137,12 @@ export const getGetDailySummaryUrl = () => {
 /**
  * @summary Get AI-generated daily discovery summary
  */
-export const getDailySummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<DailySummary> => {
+export const generateDailySummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<DailySummary> => {
 
-  return customFetch<DailySummary>(getGetDailySummaryUrl(),
+  return customFetch<DailySummary>(getGenerateDailySummaryUrl(),
   {
     ...options,
-    method: 'GET'
+    method: 'POST'
 
 
   }
@@ -1152,80 +1152,53 @@ export const getDailySummary = async ( options?: Parameters<typeof customFetch>[
 
 
 
-export const getGetDailySummaryQueryKey = () => {
-    return [
-    `/api/dashboard/daily-summary`
-    ] as const;
-    }
+export const getGenerateDailySummaryMutationKey = () => ['generateDailySummary'] as const;
 
+export const getGenerateDailySummaryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateDailySummary>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateDailySummary>>, TError,void, TContext> => {
 
-export const getGetDailySummaryQueryOptions = <TData = Awaited<ReturnType<typeof getDailySummary>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDailySummary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetDailySummaryQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDailySummary>>> = ({ signal }) => getDailySummary({ signal, ...requestOptions });
+const mutationKey = getGenerateDailySummaryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDailySummary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetDailySummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getDailySummary>>>
-export type GetDailySummaryQueryError = ErrorType<unknown>
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateDailySummary>>, void> = () => {
 
 
-export function useGetDailySummary<TData = Awaited<ReturnType<typeof getDailySummary>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDailySummary>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getDailySummary>>,
-          TError,
-          Awaited<ReturnType<typeof getDailySummary>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetDailySummary<TData = Awaited<ReturnType<typeof getDailySummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDailySummary>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getDailySummary>>,
-          TError,
-          Awaited<ReturnType<typeof getDailySummary>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetDailySummary<TData = Awaited<ReturnType<typeof getDailySummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDailySummary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+          return  generateDailySummary(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateDailySummaryMutationResult = NonNullable<Awaited<ReturnType<typeof generateDailySummary>>>
+
+    export type GenerateDailySummaryMutationError = ErrorType<unknown>
+
+
+    /**
  * @summary Get AI-generated daily discovery summary
  */
-
-export function useGetDailySummary<TData = Awaited<ReturnType<typeof getDailySummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDailySummary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetDailySummaryQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useGenerateDailySummary = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateDailySummary>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof generateDailySummary>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGenerateDailySummaryMutationOptions(options), queryClient);
+    }
 
 export const getListOpportunitiesUrl = (params?: ListOpportunitiesParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -219,8 +219,8 @@ paths:
                 $ref: "#/components/schemas/DashboardStats"
 
   /dashboard/daily-summary:
-    get:
-      operationId: getDailySummary
+    post:
+      operationId: generateDailySummary
       tags: [dashboard]
       summary: Get AI-generated daily discovery summary
       responses:

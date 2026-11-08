@@ -20,7 +20,7 @@ const security = readSecurityConfig();
 const counterSecret = process.env.SESSION_SECRET ?? "";
 const rateStore = new PostgresRateLimitStore(rateLimitPool);
 const reportStoreFailure = () => recordSecurityEvent("rate_store_unavailable");
-setSecurityMetricSink((event) => logger.info(event, "Security counters; notification alerts are not configured"));
+setSecurityMetricSink((event) => logger.info(event, "Security counters; no application alert sink configured"));
 app.disable("x-powered-by");
 app.set("trust proxy", security.isTrustedProxy);
 app.use((_req, res, next) => {
@@ -56,7 +56,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(demoSessionMiddleware);
 app.use(authMiddleware);
-app.use("/api", csrfProtection(counterSecret).guard);
+app.use("/api", csrfProtection(counterSecret, security.origins).guard);
 app.use("/api", securityRateLimit(rateStore, security.policies, "authenticated", counterSecret, reportStoreFailure));
 
 app.use("/api", router);

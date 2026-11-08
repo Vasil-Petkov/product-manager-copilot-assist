@@ -8,6 +8,7 @@ import { db, usersTable } from '@workspace/db';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import * as oidc from 'openid-client';
 import { csrfProtection } from '../middlewares/csrf';
+import { recordSecurityEvent } from '../lib/security-events';
 import {
   getSafeReturnTo,
   getTrustedAppOrigin,
@@ -166,7 +167,8 @@ router.get('/login', async (req: Request, res: Response) => {
 
 // Query params are not validated because the OIDC provider may include
 // parameters not expressed in the schema.
-router.get('/callback', async (req: Request, res: Response) => {
+router.get('/callback', async (req: Request, res: Response, next) => {
+  try {
   const callbackUrl = `${getOrigin(req)}/api/callback`;
   const config = await getOidcConfig();
 
@@ -175,6 +177,7 @@ router.get('/callback', async (req: Request, res: Response) => {
   const expectedState = req.cookies?.state;
 
   if (!codeVerifier || !expectedState) {
+    recordSecurityEvent('auth_callback_error', 'auth');
     res.redirect('/api/login');
     return;
   }
@@ -191,6 +194,7 @@ router.get('/callback', async (req: Request, res: Response) => {
       idTokenExpected: true,
     });
   } catch {
+    recordSecurityEvent('auth_callback_error', 'auth');
     res.redirect('/api/login');
     return;
   }
@@ -204,6 +208,7 @@ router.get('/callback', async (req: Request, res: Response) => {
 
   const claims = tokens.claims();
   if (!claims) {
+    recordSecurityEvent('auth_callback_error', 'auth');
     res.redirect('/api/login');
     return;
   }
@@ -227,6 +232,10 @@ router.get('/callback', async (req: Request, res: Response) => {
   const sid = await createSession(sessionData);
   setSessionCookie(res, sid);
   redirectToLocalPath(res, returnTo);
+  } catch (error) {
+    recordSecurityEvent('auth_callback_error', 'auth');
+    next(error);
+  }
 });
 
 router.get('/auth/csrf', (req: Request, res: Response) => {
@@ -316,6 +325,7 @@ router.post(
       const sid = await createSession(sessionData);
       res.json(ExchangeMobileAuthorizationCodeResponse.parse({ token: sid }));
     } catch (err) {
+      recordSecurityEvent('auth_callback_error', 'auth');
       req.log.error(getSafeErrorMetadata(err), 'Mobile token exchange error');
       res.status(500).json({ error: 'Token exchange failed' });
     }

@@ -23,6 +23,8 @@ test("production frontend actually sends enforced CSP/headers, serves SPA/assets
       assert.match(response.headers.get("content-security-policy"), /script-src 'self';/);
       assert.equal(response.headers.get("x-content-type-options"), "nosniff");
       assert.equal(response.headers.get("x-frame-options"), "DENY");
+      assert.equal(response.headers.get("strict-transport-security"), "max-age=63072000; includeSubDomains");
+      assert.equal(response.headers.get("permissions-policy"), "camera=(), microphone=(), geolocation=()");
       assert.equal(response.headers.get("referrer-policy"), "no-referrer");
       assert.equal(response.headers.get("cache-control"), "no-store");
       assert.match(await response.text(), /assets\/app.js/);

@@ -18,7 +18,7 @@ export function policyFor(method: string, path: string): PolicyName | undefined 
   if (method === "POST" && /^\/openai\/conversations\/[^/]+\/messages$/.test(path)) return "chat";
   if (method === "POST" && (/^\/documents\/[^/]+\/regenerate$/.test(path)
     || ["/documents/generate", "/insights/generate", "/roadmap/proposal"].includes(path))) return "generation";
-  if (method === "GET" && path === "/dashboard/daily-summary") return "analysis";
+  if (method === "POST" && path === "/dashboard/daily-summary") return "analysis";
   if (method === "POST" && (
     /^\/(competitors|meetings|opportunities)\/[^/]+\/analyze$/.test(path)
     || /^\/product-ideas\/[^/]+\/similarity$/.test(path)

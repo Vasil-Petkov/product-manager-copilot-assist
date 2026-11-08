@@ -9,8 +9,7 @@ export async function csrfFetch(input: RequestInfo | URL, init: RequestInit = {}
   const method = (init.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
   if (typeof window === "undefined" || typeof window.location?.origin !== "string") return transport(input, init);
   const url = new URL(input instanceof Request ? input.url : input.toString(), window.location.origin);
-  const costlyRead = /^\/api\/dashboard\/daily-summary\/?$/i.test(url.pathname);
-  if (["GET", "HEAD", "OPTIONS"].includes(method) && !costlyRead) return transport(input, init);
+  if (["GET", "HEAD", "OPTIONS"].includes(method)) return transport(input, init);
   if (url.origin !== window.location.origin || !url.pathname.startsWith("/api/")) return transport(input, init);
   const bootstrap = async () => {
     const response = await transport("/api/auth/csrf", { credentials: "include", cache: "no-store", signal: init.signal });

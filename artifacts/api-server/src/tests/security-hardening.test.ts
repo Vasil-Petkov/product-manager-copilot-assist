@@ -159,7 +159,10 @@ test("all public and expensive route classes have policies, including HEAD alias
     "/openai/conversations/1/messages"]) {
     assert.ok(DEFAULT_POLICIES[policyFor("POST", path)!]?.userLimit, path);
   }
-  assert.equal(policyFor("HEAD", "/DASHBOARD/DAILY-SUMMARY/"), "analysis");
+  assert.equal(policyFor("POST", "/DASHBOARD/DAILY-SUMMARY/"), "analysis");
+  assert.equal(policyFor("GET", "/DASHBOARD/DAILY-SUMMARY/"), undefined);
+  assert.equal(policyFor("HEAD", "/DASHBOARD/DAILY-SUMMARY/"), undefined);
+  assert.equal(policyFor("HEAD", "/AUTH/USER/"), "authRead");
   assert.equal(policyFor("OPTIONS", "/documents/generate"), undefined);
 });
 

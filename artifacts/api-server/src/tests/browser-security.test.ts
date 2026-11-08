@@ -5,24 +5,28 @@ import { after, before, test } from "node:test";
 import cookieParser from "cookie-parser";
 import express from "express";
 import { csrfProtection } from "../middlewares/csrf.ts";
-import { SecurityMetrics } from "../lib/security-events.ts";
+import { SecurityMetrics, flushSecurityMetrics, reportDatabaseFailure, setSecurityMetricSink } from "../lib/security-events.ts";
+import { DrizzleQueryError } from "drizzle-orm";
 import { browserHeaders } from "../../../../lib/browser-security/headers.mjs";
 let server: http.Server;
 let base: string;
 let writes = 0;
+const allowed = new Set<string>();
 before(async () => {
   const app = express();
-  const csrf = csrfProtection("test-only".repeat(8));
+  const csrf = csrfProtection("test-only".repeat(8), allowed);
   app.use(cookieParser(), express.json(), express.urlencoded({ extended: false }));
   app.get("/csrf", (req, res) => res.json({ token: csrf.issue(req, res) }));
   app.use(csrf.guard);
   app.post(["/write", "/logout"], (_req, res) => { writes++; res.sendStatus(204); });
-  app.get("/dashboard/daily-summary", (_req, res) => res.sendStatus(204));
+  app.get("/dashboard/daily-summary", (_req, res) => res.set("Allow", "POST").sendStatus(405));
+  app.post("/dashboard/daily-summary", (_req, res) => res.sendStatus(204));
   server = http.createServer(app).listen(0, "127.0.0.1");
   await once(server, "listening");
   const address = server.address();
   assert.ok(address && typeof address !== "string");
   base = `http://127.0.0.1:${address.port}`;
+  allowed.add(base);
 });
 after(async () => { await new Promise<void>((resolve) => server.close(() => resolve())); });
 async function issue(sid = "owner-a") {
@@ -62,11 +66,35 @@ test("logout confirmation form supports body proof, but proof from a previous se
   assert.equal((await fetch(`${base}/logout`, { method: "POST", headers: { cookie: a.cookie }, body: new URLSearchParams({ _csrf: a.token }) })).status, 204);
   assert.equal((await fetch(`${base}/logout`, { method: "POST", headers: { cookie: a.cookie.replace("owner-a", "owner-b") }, body: new URLSearchParams({ _csrf: a.token }) })).status, 403);
 });
-test("cost-incurring GET and HEAD cannot be triggered with ambient cookies without proof", async () => {
+test("generation rejects GET/HEAD even with proof; POST needs CSRF proof", async () => {
   const a = await issue();
   for (const method of ["GET", "HEAD"]) {
-    assert.equal((await fetch(`${base}/dashboard/daily-summary`, { method, headers: { cookie: a.cookie } })).status, 403);
-    assert.equal((await fetch(`${base}/dashboard/daily-summary`, { method, headers: { cookie: a.cookie, "X-CSRF-Token": a.token } })).status, 204);
+    assert.equal((await fetch(`${base}/dashboard/daily-summary`, { method, headers: { cookie: a.cookie } })).status, 405);
+    assert.equal((await fetch(`${base}/dashboard/daily-summary`, { method, headers: { cookie: a.cookie, "X-CSRF-Token": a.token } })).status, 405);
+  }
+  assert.equal((await fetch(`${base}/dashboard/daily-summary`, { method: "POST", headers: { cookie: a.cookie } })).status, 403);
+  assert.equal((await fetch(`${base}/dashboard/daily-summary`, { method: "POST", headers: { cookie: a.cookie, "X-CSRF-Token": a.token } })).status, 204);
+});
+test("cross-site form/fetch sources are rejected even with a valid token; exact origins and Referer pass", async () => {
+  const a = await issue();
+  const before = writes;
+  for (const source of [
+    { origin: "https://attacker.invalid" }, { origin: "null" },
+    { referer: `${base}.attacker.invalid/form` }, { referer: "not a URL" },
+    { referer: `${base.replace("://", "://user:pass@")}/form` },
+    { "sec-fetch-site": "cross-site" },
+    { origin: "https://attacker.invalid", referer: `${base}/form` },
+  ]) {
+    const headers = { cookie: a.cookie, "X-CSRF-Token": a.token, ...source };
+    assert.equal((await fetch(`${base}/write`, { method: "POST", headers })).status, 403);
+  }
+  assert.equal(writes, before);
+  for (const source of [{ origin: base }, { referer: `${base}/form?private=not-logged` }, {}]) {
+    assert.equal((await fetch(`${base}/write`, { method: "POST", headers: { cookie: a.cookie, "X-CSRF-Token": a.token, ...source } })).status, 204);
+  }
+  assert.equal(writes, before + 3);
+  for (const source of [{ origin: base }, { referer: `${base}/form` }, {}]) {
+    assert.equal((await fetch(`${base}/write`, { method: "POST", headers: { cookie: a.cookie, ...source } })).status, 403);
   }
 });
 test("production nonce cookie is host-only Secure and is not reissued from client input", async () => {
@@ -111,4 +139,20 @@ test("security counters use bounded labels, aggregate and flush without request 
     { event: "security_metrics", windowSeconds: 60, counters: [{ name: "rate_limited", policy: "generation", count: 2 }, { name: "csrf_rejected", policy: "all", count: 1 }] },
     { event: "security_metrics", windowSeconds: 60, counters: [] },
   ]);
+});
+test("database operational events classify wrapped errors without logging driver messages, SQL or credentials", () => {
+  const records: unknown[] = [];
+  setSecurityMetricSink((event) => records.push(event));
+  flushSecurityMetrics();
+  records.length = 0;
+  assert.equal(reportDatabaseFailure({ cause: { code: "08006", message: "private-driver-detail", query: "private-query" } }), true);
+  assert.equal(reportDatabaseFailure({ code: "42703", detail: "private-row-detail" }), true);
+  assert.equal(reportDatabaseFailure({ code: "23505" }), false, "Expected duplicate validation is not an availability alert");
+  assert.equal(reportDatabaseFailure({ code: "ENOTFOUND" }), false, "An OIDC/AI DNS failure is not a database failure");
+  const transport = Object.assign(new Error("private-transport-detail"), { code: "ECONNREFUSED" });
+  assert.equal(reportDatabaseFailure(new DrizzleQueryError("private-query", ["private-param"], transport)), true);
+  flushSecurityMetrics();
+  assert.match(JSON.stringify(records), /database_failure/);
+  assert.match(JSON.stringify(records), /migration_readiness_failure/);
+  assert.doesNotMatch(JSON.stringify(records), /private-|08006|42703/);
 });

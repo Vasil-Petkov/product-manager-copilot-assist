@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { db, pool, rateLimitPool, usersTable, sessionsTable } from "@workspace/db";
 import { csrfHeaders } from "./csrf-client.fixture.ts";
+import { verifyDatabaseReadiness } from "../lib/database-readiness.ts";
+import { flushSecurityMetrics, setSecurityMetricSink } from "../lib/security-events.ts";
 
 let server: http.Server;
 let base: string;
@@ -17,6 +19,7 @@ before(async () => {
   assert.equal(new URL(process.env.DATABASE_URL!).searchParams.get("host"), directory);
   assert.equal((await pool.query("SHOW data_directory")).rows[0].data_directory, join(directory, "data"));
   process.env.ISSUER_URL = issuer;
+  process.env.CORS_ALLOWED_ORIGINS = "https://csrf-fixture.example.invalid";
   // Stub only public provider metadata; no OAuth completion, forged auth claims
   // or authorization/session-store mocks. All state is in the isolated cluster.
   globalThis.fetch = async (input, init) => {
@@ -89,4 +92,75 @@ test("native Bearer owner can mutate and log out without browser cookies or CSRF
   assert.equal((await fetch(`${base}/opportunities/${id}`, { method: "DELETE", headers })).status, 204);
   assert.equal((await fetch(`${base}/mobile-auth/logout`, { method: "POST", headers })).status, 200);
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM sessions WHERE sid = 'csrf-mobile'")).rows[0].n, 0);
+});
+test("real same-origin form/fetch pass; cross-site Origin/Referer and missing proof cannot write", async () => {
+  const proof = await csrfHeaders(base, "sid=csrf-other");
+  const before = (await pool.query("SELECT count(*)::int AS n FROM opportunities")).rows[0].n;
+  for (const source of [
+    { origin: "https://attacker.invalid" },
+    { referer: "https://csrf-fixture.example.invalid.attacker.invalid/form" },
+    { referer: "null" },
+    { "sec-fetch-site": "cross-site" },
+  ]) {
+    const response = await fetch(`${base}/opportunities`, {
+      method: "POST", headers: { ...proof, ...source }, body: new URLSearchParams({ title: "Blocked", description: "Cross-site fixture", _csrf: proof["X-CSRF-Token"] }),
+    });
+    assert.equal(response.status, 403);
+  }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM opportunities")).rows[0].n, before);
+  for (const source of [{ origin: "https://csrf-fixture.example.invalid" }, { referer: "https://csrf-fixture.example.invalid/workspace" }, {}]) {
+    const response = await fetch(`${base}/opportunities`, {
+      method: "POST", headers: { ...proof, ...source, "content-type": "application/json" },
+      body: '{"title":"Allowed source","description":"Isolated origin regression"}',
+    });
+    assert.equal(response.status, 201);
+    const { id } = await response.json() as { id: number };
+    assert.equal((await fetch(`${base}/opportunities/${id}`, { method: "DELETE", headers: proof })).status, 204);
+    assert.equal((await fetch(`${base}/opportunities`, {
+      method: "POST", headers: { cookie: proof.cookie, ...source }, body: new URLSearchParams({ title: "No proof", description: "Blocked" }),
+    })).status, 403);
+  }
+});
+test("actual API rejects GET/HEAD generation and permits protected POST; response headers do not trust forwarded HTTPS", async () => {
+  const proof = await csrfHeaders(base, "sid=csrf-other");
+  for (const method of ["GET", "HEAD"]) {
+    const response = await fetch(`${base}/dashboard/daily-summary`, { method, headers: proof });
+    assert.equal(response.status, 405);
+    assert.equal(response.headers.get("allow"), "POST");
+  }
+  assert.equal((await fetch(`${base}/dashboard/daily-summary`, { method: "POST", headers: { cookie: proof.cookie } })).status, 403);
+  const generated = await fetch(`${base}/dashboard/daily-summary`, { method: "POST", headers: proof });
+  assert.equal(generated.status, 200); // No owned ideas => no provider call.
+  const response = await fetch(`${base}/auth/user`, { headers: { ...proof, "x-forwarded-proto": "https" } });
+  assert.match(response.headers.get("content-security-policy")!, /object-src 'none'/);
+  assert.doesNotMatch(response.headers.get("content-security-policy")!, /unsafe-eval/);
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+  assert.match(response.headers.get("permissions-policy")!, /camera=\(\)/);
+  assert.equal(response.headers.get("strict-transport-security"), null);
+  assert.equal(response.headers.get("x-powered-by"), null);
+});
+test("callback failures emit bounded auth events without codes, query parameters or credentials", async () => {
+  const events: unknown[] = [];
+  setSecurityMetricSink((event) => events.push(event));
+  flushSecurityMetrics();
+  events.length = 0;
+  const response = await fetch(`${base}/callback?code=do-not-log-fixture-value`, { redirect: "manual" });
+  assert.equal(response.status, 302);
+  flushSecurityMetrics();
+  assert.match(JSON.stringify(events), /auth_callback_error/);
+  assert.doesNotMatch(JSON.stringify(events), /do-not-log|csrf-other|example.invalid/);
+});
+test("readiness is SELECT-only and fails closed for missing ownership schema in an isolated rollback transaction", async () => {
+  await verifyDatabaseReadiness(pool);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("ALTER TABLE signals RENAME COLUMN user_id TO fixture_hidden_owner");
+    await assert.rejects(verifyDatabaseReadiness(client), /Required database schema is not ready/);
+  } finally {
+    await client.query("ROLLBACK");
+    client.release();
+  }
+  await verifyDatabaseReadiness(pool);
 });

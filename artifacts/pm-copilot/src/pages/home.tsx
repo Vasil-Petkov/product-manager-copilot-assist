@@ -18,7 +18,7 @@ import {
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useGetDashboardStats, useGetDailySummary, useListOpportunities } from "@workspace/api-client-react";
+import { useGetDashboardStats, useGenerateDailySummary, useListOpportunities } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
@@ -34,7 +34,7 @@ const LIFECYCLE_STAGES = [
 
 export default function Home() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
-  const { data: summary, isLoading: summaryLoading } = useGetDailySummary();
+  const { data: summary, isPending: summaryLoading, mutate: generateSummary, isError: summaryError } = useGenerateDailySummary();
   const { data: opps, isLoading: oppsLoading } = useListOpportunities({ status: "new" });
 
   return (
@@ -82,9 +82,13 @@ export default function Home() {
           <CardTitle className="flex items-center gap-2 text-primary text-lg">
             <Brain className="size-5" />
             Daily AI Briefing
+            <Button className="ml-auto" size="sm" disabled={summaryLoading} onClick={() => generateSummary()}>
+              {summaryLoading ? "Generating…" : summary ? "Regenerate" : "Generate briefing"}
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {summaryError && <p role="alert" className="mb-3 text-sm text-destructive">Unable to generate the briefing. Please retry.</p>}
           {summaryLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-4 w-full" />
@@ -94,7 +98,7 @@ export default function Home() {
           ) : (
             <div className="space-y-4">
               <p className="text-foreground leading-relaxed">
-                {summary?.summary?.replace("PM Copilot Assist", "Product Manager AI Assist")}
+                {summary?.summary?.replace("PM Copilot Assist", "Product Manager AI Assist") ?? "Generate a briefing when you need it. Opening this page does not make an AI request."}
               </p>
               {summary?.urgentItems && summary.urgentItems.length > 0 && (
                 <div className="flex gap-2 bg-destructive/10 text-destructive p-3 rounded-md text-sm">
