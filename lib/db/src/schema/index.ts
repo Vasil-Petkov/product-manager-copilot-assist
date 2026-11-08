@@ -15,3 +15,4 @@ export * from "./idea-comments";
 export * from "./idea-timeline";
 export * from "./idea-relations";
 export * from "./documents";
+export * from "./security-rate-limits";

@@ -6,3 +6,4 @@
 - [Ownership test safety](ownership-test-safety.md) — isolate destructive fixtures in a fresh cluster; static scans do not prove cross-user data isolation.
 - [Legacy ownership policy](legacy-ownership-policy.md) — preserve unknown owners; parent relationships may authorize evidence, but never guess or silently backfill ownership.
 - [Publish schema review](publish-schema-review.md) — review the whole diff; production-only indexes can be dropped even when structural data-loss checks are clear.
+- [Replit config isolation](replit-config-isolation.md) — preserve platform-only configuration history separately; recheck staged and final diffs for module reordering.
