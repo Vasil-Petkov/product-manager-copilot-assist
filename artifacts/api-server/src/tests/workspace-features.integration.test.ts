@@ -3,6 +3,7 @@ import { once } from "node:events";
 import http from "node:http";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
+import { csrfHeaders } from "./csrf-client.fixture.ts";
 import { eq } from "drizzle-orm";
 import {
   db, pool, usersTable, sessionsTable, opportunitiesTable, competitorsTable,
@@ -35,7 +36,7 @@ async function request(path: string, method = "GET", body?: unknown, user = user
   assert.ok(address && typeof address !== "string");
   const response = await fetch(`http://127.0.0.1:${address.port}/api${path}`, {
     method, redirect: "manual",
-    headers: { cookie: `sid=${user}`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+    headers: { ...(await csrfHeaders(`http://127.0.0.1:${address.port}/api`, `sid=${user}`)), ...(body === undefined ? {} : { "content-type": "application/json" }) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   return { status: response.status, body: response.status === 204 ? null : await response.json() as unknown };

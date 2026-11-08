@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { after, before, beforeEach, test } from "node:test";
 import { db, pool, rateLimitPool, sessionsTable, usersTable } from "@workspace/db";
 import { createDemoSession } from "../lib/demoSession.ts";
+import { csrfHeaders } from "./csrf-client.fixture.ts";
 
 let server: http.Server;
 let base: string;
@@ -39,7 +40,12 @@ after(async () => {
   await pool.end();
 });
 async function request(path: string, init: RequestInit = {}) {
-  return fetch(base + path, { ...init, headers: { connection: "close", ...init.headers } });
+  const headers = new Headers(init.headers);
+  if (headers.has("cookie") || (headers.get("origin") === origin && init.method !== "OPTIONS")) {
+    for (const [name, value] of Object.entries(await csrfHeaders(base, headers.get("cookie") ?? ""))) headers.set(name, value);
+  }
+  headers.set("connection", "close");
+  return fetch(base + path, { ...init, headers });
 }
 
 test("real application rejects foreign Origin before counters and permits configured preflight", async () => {
@@ -47,10 +53,11 @@ test("real application rejects foreign Origin before counters and permits config
   assert.equal(denied.status, 403);
   assert.equal((await pool.query("SELECT count(*)::int AS count FROM security_rate_limits")).rows[0].count, 0);
   const preflight = await request("/demo/session", { method: "OPTIONS", headers: {
-    origin, "access-control-request-method": "POST", "access-control-request-headers": "content-type",
+    origin, "access-control-request-method": "POST", "access-control-request-headers": "content-type,x-csrf-token",
   } });
   assert.equal(preflight.status, 204);
   assert.equal(preflight.headers.get("access-control-allow-origin"), origin);
+  assert.match(preflight.headers.get("access-control-allow-headers")!, /X-CSRF-Token/i);
   assert.equal((await request("/demo/session", { method: "POST", headers: { origin } })).status, 201);
 });
 

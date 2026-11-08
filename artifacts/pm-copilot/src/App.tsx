@@ -6,6 +6,7 @@ import { useState } from 'react';
 import NotFound from '@/pages/not-found';
 import { AppLayout } from './components/layout';
 import { useAuth } from '@workspace/replit-auth-web';
+import { csrfFetch } from '@workspace/api-client-react/csrf';
 import { AccessSelection } from './demo/access-selection';
 import { DemoApiCleanup, installDemoApi } from './demo/demo-api';
 
@@ -157,7 +158,7 @@ function App() {
     setDemoExitError(null);
     setDemoStarting(true);
     try {
-      const response = await window.fetch('/api/demo/session', {
+      const response = await csrfFetch('/api/demo/session', {
         method: 'POST',
         credentials: 'include',
       });
@@ -190,10 +191,10 @@ function App() {
   const exitDemo = async () => {
     const cleanup = demoCleanup;
     try {
-      const response = await (cleanup?.originalFetch ?? window.fetch)('/api/demo/session/exit', {
+      const response = await csrfFetch('/api/demo/session/exit', {
         method: 'POST',
         credentials: 'include',
-      });
+      }, cleanup?.originalFetch ?? window.fetch);
       if (!response.ok) {
         throw new Error(`Demo session exit failed with HTTP ${response.status}`);
       }

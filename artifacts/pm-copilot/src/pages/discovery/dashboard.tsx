@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetDashboardStats, useGetDailySummary } from "@workspace/api-client-react";
+import { useGetDashboardStats, useGenerateDailySummary } from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
 import { Brain, Compass, Users, Map, AlertCircle, BarChart3, MessageSquare } from "lucide-react";
 import { HelpTooltip } from "@/components/help-tooltip";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -14,7 +15,7 @@ const COLORS = {
 
 export default function DiscoveryDashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
-  const { data: summary, isLoading: summaryLoading } = useGetDailySummary();
+  const { data: summary, isPending: summaryLoading, mutate: generateSummary, isError: summaryError } = useGenerateDailySummary();
 
   const sentimentData = stats?.sentimentBreakdown?.map(item => ({
     name: item.sentiment,
@@ -82,6 +83,10 @@ export default function DiscoveryDashboard() {
               </div>
               <div className="space-y-2 w-full">
                 <h4 className="text-sm font-semibold text-ai">Daily Insight</h4>
+                <Button size="sm" disabled={summaryLoading} onClick={() => generateSummary()}>
+                  {summaryLoading ? "Generating…" : summary ? "Regenerate briefing" : "Generate briefing"}
+                </Button>
+                {summaryError && <p role="alert">Unable to generate the briefing. Please retry.</p>}
                 {summaryLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-3 w-full" />
@@ -89,7 +94,7 @@ export default function DiscoveryDashboard() {
                   </div>
                 ) : (
                   <p className="text-sm text-foreground/80 leading-relaxed line-clamp-3">
-                    {summary?.summary || "No insights generated yet."}
+                    {summary?.summary || "Generate a briefing when you need it."}
                   </p>
                 )}
               </div>

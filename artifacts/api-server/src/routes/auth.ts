@@ -7,6 +7,8 @@ import {
 import { db, usersTable } from '@workspace/db';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import * as oidc from 'openid-client';
+import { csrfProtection } from '../middlewares/csrf';
+import { recordSecurityEvent } from '../lib/security-events';
 import {
   getSafeReturnTo,
   getTrustedAppOrigin,
@@ -165,7 +167,8 @@ router.get('/login', async (req: Request, res: Response) => {
 
 // Query params are not validated because the OIDC provider may include
 // parameters not expressed in the schema.
-router.get('/callback', async (req: Request, res: Response) => {
+router.get('/callback', async (req: Request, res: Response, next) => {
+  try {
   const callbackUrl = `${getOrigin(req)}/api/callback`;
   const config = await getOidcConfig();
 
@@ -174,6 +177,7 @@ router.get('/callback', async (req: Request, res: Response) => {
   const expectedState = req.cookies?.state;
 
   if (!codeVerifier || !expectedState) {
+    recordSecurityEvent('auth_callback_error', 'auth');
     res.redirect('/api/login');
     return;
   }
@@ -190,6 +194,7 @@ router.get('/callback', async (req: Request, res: Response) => {
       idTokenExpected: true,
     });
   } catch {
+    recordSecurityEvent('auth_callback_error', 'auth');
     res.redirect('/api/login');
     return;
   }
@@ -203,6 +208,7 @@ router.get('/callback', async (req: Request, res: Response) => {
 
   const claims = tokens.claims();
   if (!claims) {
+    recordSecurityEvent('auth_callback_error', 'auth');
     res.redirect('/api/login');
     return;
   }
@@ -226,12 +232,33 @@ router.get('/callback', async (req: Request, res: Response) => {
   const sid = await createSession(sessionData);
   setSessionCookie(res, sid);
   redirectToLocalPath(res, returnTo);
+  } catch (error) {
+    recordSecurityEvent('auth_callback_error', 'auth');
+    next(error);
+  }
 });
 
-router.get('/logout', async (req: Request, res: Response) => {
+router.get('/auth/csrf', (req: Request, res: Response) => {
+  res.json({ csrfToken: csrfProtection(process.env.SESSION_SECRET ?? '').issue(req, res) });
+});
+
+// GET/HEAD must never delete a session or initiate provider logout.
+// Existing logout links remain valid, but require an explicit protected POST.
+router.get('/logout', (req: Request, res: Response) => {
+  const token = csrfProtection(process.env.SESSION_SECRET ?? '').issue(req, res);
+  const returnTo = getSafeReturnTo(req.query.returnTo);
+  const escape = (value: string) => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Confirm sign out</title></head>
+<body><main><h1>Sign out?</h1><p>Your session will remain active until you confirm.</p>
+<form action="/api/logout" method="post"><input type="hidden" name="_csrf" value="${escape(token)}">
+<input type="hidden" name="returnTo" value="${escape(returnTo)}"><button type="submit">Sign out</button></form>
+<a href="/">Cancel</a></main></body></html>`);
+});
+
+router.post('/logout', async (req: Request, res: Response) => {
   const origin = getOrigin(req);
   const config = await getOidcConfig();
-  const returnTo = getSafeReturnTo(req.query.returnTo);
+  const returnTo = getSafeReturnTo(req.body?.returnTo);
   const postLogoutRedirectUrl = new URL(returnTo, `${origin}/`).href;
 
   const sid = getSessionId(req);
@@ -298,6 +325,7 @@ router.post(
       const sid = await createSession(sessionData);
       res.json(ExchangeMobileAuthorizationCodeResponse.parse({ token: sid }));
     } catch (err) {
+      recordSecurityEvent('auth_callback_error', 'auth');
       req.log.error(getSafeErrorMetadata(err), 'Mobile token exchange error');
       res.status(500).json({ error: 'Token exchange failed' });
     }

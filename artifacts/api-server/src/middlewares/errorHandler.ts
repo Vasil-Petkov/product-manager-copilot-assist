@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { logger } from "../lib/logger.ts";
+import { reportDatabaseFailure } from "../lib/security-events.ts";
 
 export class AppError extends Error {
   constructor(
@@ -77,8 +78,9 @@ export function errorHandler(
     return;
   }
 
-  // Unexpected error — log fully, return generic message
-  logger.error({ err }, "Unhandled error");
+  // Driver errors can contain SQL, parameters and connection details.
+  reportDatabaseFailure(err);
+  logger.error({ event: "request_failure" }, "Unhandled request failure");
   res.status(500).json({
     error: "Internal server error",
     code: "INTERNAL_ERROR",

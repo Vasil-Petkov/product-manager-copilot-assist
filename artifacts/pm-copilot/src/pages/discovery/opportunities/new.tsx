@@ -10,6 +10,7 @@ import { ArrowLeft, Lightbulb, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { trackEvent } from "@/lib/analytics";
+import { csrfFetch } from "@workspace/api-client-react/csrf";
 
 export default function NewProductIdea() {
   const [, navigate] = useLocation();
@@ -40,7 +41,7 @@ export default function NewProductIdea() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/opportunities", {
+      const res = await csrfFetch("/api/opportunities", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

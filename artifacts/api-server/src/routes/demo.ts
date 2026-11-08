@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { recordSecurityEvent } from "../lib/security-events.ts";
 import {
   createDemoSession,
   deleteDemoSession,
@@ -22,6 +23,7 @@ router.post("/demo/session", (req: Request, res: Response) => {
   let sessionId: string;
   try { sessionId = createDemoSession(); } catch (error) {
     if (!(error instanceof DemoCapacityError)) throw error;
+    recordSecurityEvent("demo_capacity");
     res.setHeader("Retry-After", "60");
     res.status(429).json({ error: "Demo is temporarily at capacity. Please retry later." });
     return;

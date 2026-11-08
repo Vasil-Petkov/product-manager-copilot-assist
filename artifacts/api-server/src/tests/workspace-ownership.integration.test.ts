@@ -3,6 +3,7 @@ import { once } from "node:events";
 import http from "node:http";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
+import { csrfHeaders } from "./csrf-client.fixture.ts";
 import {
   db, pool, usersTable, sessionsTable, opportunitiesTable, competitorsTable,
   meetingsTable, feedbackTable, signalsTable, aiInsightsTable,
@@ -28,7 +29,7 @@ async function request(path: string, method = "GET", body?: unknown, sid = fixtu
   const response = await fetch(`http://127.0.0.1:${address.port}/api${path}`, {
     method,
     headers: {
-      cookie: `sid=${sid}`,
+      ...(await csrfHeaders(`http://127.0.0.1:${address.port}/api`, `sid=${sid}`)),
       ...(body === undefined ? {} : { "content-type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),

@@ -93,7 +93,12 @@ router.get("/dashboard/stats", requireAuth, async (req, res, next): Promise<void
   });
 });
 
-router.get("/dashboard/daily-summary", requireAuth, async (req, res, next): Promise<void> => {
+router.get("/dashboard/daily-summary", requireAuth, (_req, res): void => {
+  res.setHeader("Allow", "POST");
+  res.status(405).json({ error: "Generate daily summaries with POST" });
+});
+
+router.post("/dashboard/daily-summary", requireAuth, async (req, res, next): Promise<void> => {
   const [recentInsights, allOpps, urgentOpps, recentMeetings] = await Promise.all([
     db.select().from(aiInsightsTable).where(eq(aiInsightsTable.userId, req.user!.id)).orderBy(desc(aiInsightsTable.createdAt)).limit(5),
     db.select({ total: count() }).from(opportunitiesTable).where(eq(opportunitiesTable.userId, req.user!.id)),

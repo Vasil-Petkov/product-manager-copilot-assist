@@ -1,25 +1,28 @@
-import app from "./app";
 import { logger } from "./lib/logger";
+import { recordSecurityFailure, setSecurityMetricSink } from "./lib/security-events";
+import { verifyDatabaseReadiness } from "./lib/database-readiness";
 
-const rawPort = process.env["PORT"];
+setSecurityMetricSink((event) => logger.info(event, "Security counters; no application alert sink configured"));
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
+async function start() {
+  const port = Number(process.env.PORT);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Valid PORT is required");
+  // Dynamic import catches configuration/DB initialization errors as well.
+  const { default: app } = await import("./app");
+  const { pool, rateLimitPool } = await import("@workspace/db");
+  for (const client of [pool, rateLimitPool]) {
+    client.on("error", () => recordSecurityFailure("database_failure"));
   }
-
+  await verifyDatabaseReadiness(pool);
+  await new Promise<void>((resolve, reject) => {
+    const server = app.listen(port, () => resolve());
+    server.once("error", reject);
+  });
   logger.info({ port }, "Server listening");
+}
+start().catch(() => {
+  recordSecurityFailure("startup_failure");
+  // No raw error/SQL/connection string. A failed readiness check may have
+  // opened a pool connection, so exit explicitly after the immediate event.
+  process.exit(1);
 });
